@@ -173,7 +173,7 @@ async def search(
 
     vector_queries = []
     if use_vector_query and embedding_field:
-        vector_queries.append(VectorizableTextQuery(text=query, k_nearest_neighbors=50, fields=embedding_field))
+        vector_queries.append(VectorizableTextQuery(text=query, k_nearest_neighbors=15, fields=embedding_field))
 
     # Only request fields we actually format into the result string
     select_fields = [
@@ -189,7 +189,7 @@ async def search(
             search_text=query,
             query_type="semantic",
             semantic_configuration_name=semantic_configuration,
-            top=5,
+            top=3,
             vector_queries=vector_queries or None,
             select=select_fields,
         )
@@ -202,7 +202,7 @@ async def search(
                 search_text=query,
                 query_type="semantic",
                 semantic_configuration_name=semantic_configuration,
-                top=5,
+                top=3,
                 vector_queries=vector_queries or None,
                 select=[f for f in fallback_select if f],
             )
@@ -270,7 +270,7 @@ async def update_order(args, session_id: str) -> ToolResult:
 
     item_name = args["item_name"]
     if args["action"] == "add" and _is_extra_item(item_name):
-        current_items = order_state_singleton.get_order_summary(session_id).items
+        current_items = order_state_singleton.get_order_items(session_id)
         has_allowed_base = False
         has_blocked_base = False
 
@@ -303,8 +303,7 @@ async def update_order(args, session_id: str) -> ToolResult:
         args.get("price", 0.0),
     )
 
-    order_summary = order_state_singleton.get_order_summary(session_id)
-    json_order_summary = order_summary.model_dump_json()
+    json_order_summary = order_state_singleton.get_order_summary_json(session_id)
     logger.debug("Session %s order summary after update: %s", session_id, json_order_summary)
 
     return ToolResult(json_order_summary, ToolResultDirection.TO_CLIENT)
@@ -326,8 +325,7 @@ async def get_order(_args: Any, session_id: str) -> ToolResult:
     """Retrieve the current order summary."""
 
     logger.info("Retrieving order summary for session %s", session_id)
-    order_summary = order_state_singleton.get_order_summary(session_id)
-    return ToolResult(order_summary.model_dump_json(), ToolResultDirection.TO_SERVER)
+    return ToolResult(order_state_singleton.get_order_summary_json(session_id), ToolResultDirection.TO_SERVER)
 
 
 def attach_tools_rtmt(

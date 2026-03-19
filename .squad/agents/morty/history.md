@@ -15,3 +15,14 @@
 - Font changed from Fredoka to Nunito Sans for a cleaner, more energetic Sonic-aligned feel.
 - Test data (dummyOrder.json, dummyTranscripts.json) and test assertions must be kept in sync with branding — they reference specific menu items and branding text.
 - **Team Orchestration (2026-03-19T04-06)**: Rick provided scope analysis, Morty completed frontend rebrand (13 tests pass), Summer completed backend rebrand (69 tests pass), Birdperson created verification tests (12 tests pass).
+- **Performance Pass (2026-03-19)**: Major frontend perf overhaul. Key findings and fixes:
+  - AudioContext is expensive to create (~50-100ms). Recorder and Player now reuse contexts across sessions instead of recreating per start/reset.
+  - Audio recorder had O(n²) buffer copying — new Uint8Array created on every append. Replaced with pre-allocated ring buffer using copyWithin() for zero-alloc shifting.
+  - Audio player base64 decode used `Uint8Array.from(binary, c => c.charCodeAt(0))` which is slow due to per-char callback. Replaced with direct charCodeAt loop.
+  - TranscriptPanel had a `setInterval` running every 1s to update `currentTime`, causing full component re-renders constantly. Removed — timestamp comparison now uses adjacent transcript timestamps only.
+  - Key components memoized with React.memo: OrderSummary, OrderItemRow, TranscriptPanel, TranscriptItem, MenuPanel, StatusMessage, BrandHero, SessionTokenBanner.
+  - Settings component lazy-loaded (7.4 kB saved from critical path).
+  - Vite config: replaced per-package manualChunks (created hundreds of tiny files) with strategic vendor groups (react-vendor, ui-vendor, i18n, motion). Disabled sourcemaps in prod. Added cache-busting hash filenames.
+  - WebSocket reconnection now uses exponential backoff with jitter (1s→30s cap) instead of instant retry.
+  - getUserMedia now requests specific audio constraints (sampleRate: 24000, mono, echoCancellation, noiseSuppression, autoGainControl) for lower latency capture.
+  - Tailwind CSS purge was already correctly configured via `content` array in tailwind.config.js. PostCSS handles minification via autoprefixer.

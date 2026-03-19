@@ -1,11 +1,12 @@
 import "./status-message.css";
 import { useTranslation } from "react-i18next";
+import { memo } from "react";
 
 type Properties = {
     isRecording: boolean;
 };
 
-export default function StatusMessage({ isRecording }: Properties) {
+export default memo(function StatusMessage({ isRecording }: Properties) {
     const { t } = useTranslation();
     if (!isRecording) {
         return (
@@ -27,4 +28,4 @@ export default function StatusMessage({ isRecording }: Properties) {
             </p>
         </div>
     );
-}
+});

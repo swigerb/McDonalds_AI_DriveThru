@@ -31,15 +31,20 @@ class OrderState:
         total = sum(item.price * item.quantity for item in order_items)
         tax = total * 0.08  # 8% tax
         finalTotal = total + tax
-        session["order_summary"] = OrderSummary(items=order_items, total=total, tax=tax, finalTotal=finalTotal)
+        summary = OrderSummary(items=order_items, total=total, tax=tax, finalTotal=finalTotal)
+        session["order_summary"] = summary
+        # Cache the JSON representation to avoid repeated Pydantic serialization
+        session["order_summary_json"] = summary.model_dump_json()
         logger.debug("Order summary updated for session %s (items=%d, total=%.2f)", session_id, len(order_items), finalTotal)
 
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
         session_token = str(uuid.uuid4())
+        empty_summary = OrderSummary(items=[], total=0.0, tax=0.0, finalTotal=0.0)
         self.sessions[session_id] = {
             "order_state": [],
-            "order_summary": OrderSummary(items=[], total=0.0, tax=0.0, finalTotal=0.0),
+            "order_summary": empty_summary,
+            "order_summary_json": empty_summary.model_dump_json(),
             "session_token": session_token,
             "round_trip_index": 0,
             "round_trip_token": self._format_round_trip_token(session_token, 0)
@@ -92,6 +97,14 @@ class OrderState:
 
     def get_order_summary(self, session_id: str) -> OrderSummary:
         return self.sessions[session_id]["order_summary"]
+
+    def get_order_items(self, session_id: str) -> list:
+        """Return raw order item list — avoids Pydantic overhead for validation checks."""
+        return self.sessions[session_id]["order_state"]
+
+    def get_order_summary_json(self, session_id: str) -> str:
+        """Return cached JSON string — avoids repeated Pydantic serialization."""
+        return self.sessions[session_id]["order_summary_json"]
 
     def get_session_identifiers(self, session_id: str) -> SessionIdentifiers:
         session = self.sessions[session_id]

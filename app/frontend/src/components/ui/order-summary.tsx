@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 export interface OrderItem {
@@ -29,7 +29,18 @@ export function calculateOrderSummary(items: OrderItem[]): OrderSummaryProps {
     };
 }
 
-export default function OrderSummary({ order }: { order: OrderSummaryProps }) {
+const OrderItemRow = memo(function OrderItemRow({ item }: { item: OrderItem }) {
+    return (
+        <div className="flex justify-between rounded-2xl bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:bg-white/5 dark:text-white">
+            <span className="font-semibold">
+                {item.display} {item.quantity > 1 && `(x${item.quantity})`}
+            </span>
+            <span className="font-mono text-[#E40046] dark:text-[#FF6B8A]">${(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+    );
+});
+
+export default memo(function OrderSummary({ order }: { order: OrderSummaryProps }) {
     const [isExpanded, setIsExpanded] = useState(true);
     const { items, total, tax, finalTotal } = order;
 
@@ -55,12 +66,7 @@ export default function OrderSummary({ order }: { order: OrderSummaryProps }) {
             <div className={`space-y-2 ${isExpanded ? "block" : "hidden md:block"}`}>
                 {items.length === 0 && <p className="text-sm text-muted-foreground dark:text-white/70">Add a slush, burger, or shake to kick things off.</p>}
                 {items.map((item, index) => (
-                    <div key={index} className="flex justify-between rounded-2xl bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:bg-white/5 dark:text-white">
-                        <span className="font-semibold">
-                            {item.display} {item.quantity > 1 && `(x${item.quantity})`}
-                        </span>
-                        <span className="font-mono text-[#E40046] dark:text-[#FF6B8A]">${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
+                    <OrderItemRow key={index} item={item} />
                 ))}
 
                 <div className="mt-4 space-y-2 border-t border-dashed border-primary/30 pt-4 dark:border-white/15">
@@ -80,4 +86,4 @@ export default function OrderSummary({ order }: { order: OrderSummaryProps }) {
             </div>
         </div>
     );
-}
+});

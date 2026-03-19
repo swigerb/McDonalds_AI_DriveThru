@@ -1,12 +1,33 @@
 export class Player {
     private playbackNode: AudioWorkletNode | null = null;
+    private audioContext: AudioContext | null = null;
+    private workletReady = false;
     private drainWaiters: Array<() => void> = [];
 
     async init(sampleRate: number) {
-        const audioContext = new AudioContext({ sampleRate });
-        await audioContext.audioWorklet.addModule("audio-playback-worklet.js");
+        // Reuse existing AudioContext to avoid expensive re-creation
+        if (!this.audioContext || this.audioContext.state === "closed") {
+            this.audioContext = new AudioContext({ sampleRate });
+            this.workletReady = false;
+        }
 
-        this.playbackNode = new AudioWorkletNode(audioContext, "audio-playback-worklet");
+        if (this.audioContext.state === "suspended") {
+            await this.audioContext.resume();
+        }
+
+        // Clear any queued audio from previous session
+        if (this.playbackNode) {
+            this.playbackNode.port.postMessage(null);
+            this.playbackNode.disconnect();
+            this.playbackNode = null;
+        }
+
+        if (!this.workletReady) {
+            await this.audioContext.audioWorklet.addModule("audio-playback-worklet.js");
+            this.workletReady = true;
+        }
+
+        this.playbackNode = new AudioWorkletNode(this.audioContext, "audio-playback-worklet");
         this.playbackNode.port.onmessage = event => {
             if (event?.data?.type === "drained") {
                 const waiters = this.drainWaiters;
@@ -14,7 +35,7 @@ export class Player {
                 waiters.forEach(resolve => resolve());
             }
         };
-        this.playbackNode.connect(audioContext.destination);
+        this.playbackNode.connect(this.audioContext.destination);
     }
 
     play(buffer: Int16Array) {

@@ -4,6 +4,7 @@ export class Recorder {
     private mediaStream: MediaStream | null = null;
     private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
     private workletNode: AudioWorkletNode | null = null;
+    private workletReady = false;
 
     public constructor(onDataAvailable: (buffer: Iterable<number>) => void) {
         this.onDataAvailable = onDataAvailable;
@@ -11,13 +12,20 @@ export class Recorder {
 
     async start(stream: MediaStream) {
         try {
-            if (this.audioContext) {
-                await this.audioContext.close();
+            // Reuse existing AudioContext instead of recreating (expensive operation)
+            if (!this.audioContext || this.audioContext.state === "closed") {
+                this.audioContext = new AudioContext({ sampleRate: 24000 });
+                this.workletReady = false;
             }
 
-            this.audioContext = new AudioContext({ sampleRate: 24000 });
+            if (this.audioContext.state === "suspended") {
+                await this.audioContext.resume();
+            }
 
-            await this.audioContext.audioWorklet.addModule("./audio-processor-worklet.js");
+            if (!this.workletReady) {
+                await this.audioContext.audioWorklet.addModule("./audio-processor-worklet.js");
+                this.workletReady = true;
+            }
 
             this.mediaStream = stream;
             this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.mediaStream);
@@ -40,12 +48,14 @@ export class Recorder {
             this.mediaStream = null;
         }
 
-        if (this.audioContext) {
-            await this.audioContext.close();
-            this.audioContext = null;
+        // Disconnect nodes but keep AudioContext alive for reuse
+        if (this.workletNode) {
+            this.workletNode.disconnect();
+            this.workletNode = null;
         }
-
-        this.mediaStreamSource = null;
-        this.workletNode = null;
+        if (this.mediaStreamSource) {
+            this.mediaStreamSource.disconnect();
+            this.mediaStreamSource = null;
+        }
     }
 }

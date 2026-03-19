@@ -79,6 +79,12 @@ param serviceType string = ''
 @description('The target port for the container')
 param targetPort int = 80
 
+@description('Health probe path for liveness and readiness checks')
+param healthProbePath string = ''
+
+@description('Enable WebSocket transport for the container app ingress')
+param enableWebSocket bool = false
+
 param workloadProfile string = 'Consumption'
 
 resource userIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (!empty(identityName)) {
@@ -131,7 +137,7 @@ resource app 'Microsoft.App/containerApps@2023-05-02-preview' = {
       ingress: ingressEnabled ? {
         external: external
         targetPort: targetPort
-        transport: 'auto'
+        transport: enableWebSocket ? 'http' : 'auto'
         corsPolicy: {
           allowedOrigins: union([ 'https://portal.azure.com', 'https://ms.portal.azure.com' ], allowedOrigins)
         }
@@ -162,11 +168,59 @@ resource app 'Microsoft.App/containerApps@2023-05-02-preview' = {
             cpu: json(containerCpuCoreCount)
             memory: containerMemory
           }
+          probes: !empty(healthProbePath) ? [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: healthProbePath
+                port: targetPort
+                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 15
+              periodSeconds: 30
+              failureThreshold: 3
+              timeoutSeconds: 5
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: healthProbePath
+                port: targetPort
+                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              failureThreshold: 3
+              timeoutSeconds: 5
+            }
+            {
+              type: 'Startup'
+              httpGet: {
+                path: healthProbePath
+                port: targetPort
+                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 0
+              periodSeconds: 5
+              failureThreshold: 10
+              timeoutSeconds: 5
+            }
+          ] : []
         }
       ]
       scale: {
         minReplicas: containerMinReplicas
         maxReplicas: containerMaxReplicas
+        rules: ingressEnabled ? [
+          {
+            name: 'http-scaling'
+            http: {
+              metadata: {
+                concurrentRequests: '20'
+              }
+            }
+          }
+        ] : []
       }
     }
   }

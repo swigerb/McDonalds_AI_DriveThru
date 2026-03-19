@@ -76,6 +76,12 @@ param serviceBinds array = []
 @description('The target port for the container')
 param targetPort int = 80
 
+@description('Health probe path for liveness and readiness checks')
+param healthProbePath string = ''
+
+@description('Enable WebSocket transport for the container app ingress')
+param enableWebSocket bool = false
+
 @allowed(['Consumption', 'D4', 'D8', 'D16', 'D32', 'E4', 'E8', 'E16', 'E32', 'NC24-A100', 'NC48-A100', 'NC96-A100'])
 param workloadProfile string = 'Consumption'
 
@@ -118,6 +124,8 @@ module app 'container-app.bicep' = {
     ]
     imageName: !empty(imageName) ? imageName : exists ? existingApp.properties.template.containers[0].image : ''
     targetPort: targetPort
+    healthProbePath: healthProbePath
+    enableWebSocket: enableWebSocket
     serviceBinds: serviceBinds
   }
 }

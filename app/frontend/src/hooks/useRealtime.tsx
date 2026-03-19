@@ -1,4 +1,5 @@
 import useWebSocket from "react-use-websocket";
+import { useRef, useCallback } from "react";
 
 import {
     InputAudioBufferAppendCommand,
@@ -37,6 +38,11 @@ type Parameters = {
     onReceivedError?: (message: Message) => void;
 };
 
+// Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+const MAX_RETRIES = 10;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 30000;
+
 export default function useRealTime({
     useDirectAoaiApi,
     aoaiEndpointOverride,
@@ -61,54 +67,9 @@ export default function useRealTime({
         ? `${aoaiEndpointOverride}/openai/realtime?api-key=${aoaiApiKeyOverride}&deployment=${aoaiModelOverride}&api-version=2024-10-01-preview`
         : `/realtime`;
 
-    const { sendJsonMessage } = useWebSocket(wsEndpoint, {
-        onOpen: () => onWebSocketOpen?.(),
-        onClose: () => onWebSocketClose?.(),
-        onError: event => onWebSocketError?.(event),
-        onMessage: event => onMessageReceived(event),
-        shouldReconnect: () => true
-    });
+    const retryCountRef = useRef(0);
 
-    const startSession = () => {
-        const command: SessionUpdateCommand = {
-            type: "session.update",
-            session: {
-                turn_detection: {
-                    type: "server_vad",
-                    threshold: 0.7,
-                    prefix_padding_ms: 300,
-                    silence_duration_ms: 500
-                }
-            }
-        };
-
-        if (enableInputAudioTranscription) {
-            command.session.input_audio_transcription = {
-                model: "whisper-1"
-            };
-        }
-
-        sendJsonMessage(command);
-    };
-
-    const addUserAudio = (base64Audio: string) => {
-        const command: InputAudioBufferAppendCommand = {
-            type: "input_audio_buffer.append",
-            audio: base64Audio
-        };
-
-        sendJsonMessage(command);
-    };
-
-    const inputAudioBufferClear = () => {
-        const command: InputAudioBufferClearCommand = {
-            type: "input_audio_buffer.clear"
-        };
-
-        sendJsonMessage(command);
-    };
-
-    const onMessageReceived = (event: MessageEvent<any>) => {
+    const onMessageReceived = useCallback((event: MessageEvent<any>) => {
         onWebSocketMessage?.(event);
 
         let message: Message;
@@ -148,6 +109,73 @@ export default function useRealTime({
                 onReceivedError?.(message);
                 break;
         }
+    }, [
+        onWebSocketMessage,
+        onReceivedResponseDone,
+        onReceivedResponseAudioDelta,
+        onReceivedResponseAudioTranscriptDelta,
+        onReceivedInputAudioBufferSpeechStarted,
+        onReceivedInputAudioTranscriptionCompleted,
+        onReceivedExtensionMiddleTierToolResponse,
+        onReceivedSessionMetadata,
+        onReceivedRoundTripToken,
+        onReceivedError
+    ]);
+
+    const { sendJsonMessage } = useWebSocket(wsEndpoint, {
+        onOpen: () => {
+            retryCountRef.current = 0;
+            onWebSocketOpen?.();
+        },
+        onClose: () => onWebSocketClose?.(),
+        onError: event => onWebSocketError?.(event),
+        onMessage: onMessageReceived,
+        shouldReconnect: () => true,
+        reconnectAttempts: MAX_RETRIES,
+        reconnectInterval: (attemptNumber: number) => {
+            const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attemptNumber), MAX_DELAY_MS);
+            // Add jitter to prevent thundering herd
+            return delay + Math.random() * 500;
+        }
+    });
+
+    const startSession = () => {
+        const command: SessionUpdateCommand = {
+            type: "session.update",
+            session: {
+                turn_detection: {
+                    type: "server_vad",
+                    threshold: 0.6,
+                    prefix_padding_ms: 200,
+                    silence_duration_ms: 400
+                }
+            }
+        };
+
+        if (enableInputAudioTranscription) {
+            command.session.input_audio_transcription = {
+                model: "whisper-1"
+            };
+        }
+
+        sendJsonMessage(command);
+    };
+
+    const addUserAudio = (base64Audio: string) => {
+        const command: InputAudioBufferAppendCommand = {
+            type: "input_audio_buffer.append",
+            audio: base64Audio
+        };
+
+        sendJsonMessage(command);
+    };
+
+    const inputAudioBufferClear = () => {
+        const command: InputAudioBufferClearCommand = {
+            type: "input_audio_buffer.clear"
+        };
+
+        sendJsonMessage(command);
     };
 
     return { startSession, addUserAudio, inputAudioBufferClear };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense, memo } from "react";
 import { Mic, MicOff, Menu, MessageSquare, LogOut, Github } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +10,7 @@ import StatusMessage from "@/components/ui/status-message";
 import MenuPanel from "@/components/ui/menu-panel";
 import OrderSummary, { calculateOrderSummary, OrderSummaryProps } from "@/components/ui/order-summary";
 import TranscriptPanel from "@/components/ui/transcript-panel";
-import Settings from "@/components/ui/settings";
+const Settings = lazy(() => import("@/components/ui/settings"));
 import useRealTime from "@/hooks/useRealtime";
 import useAzureSpeech from "@/hooks/useAzureSpeech";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
@@ -84,7 +84,7 @@ function SonicApp() {
         finalTotal: 0
     };
 
-    const dummyOrder: OrderSummaryProps = calculateOrderSummary(dummyOrderData);
+    const dummyOrder = useMemo<OrderSummaryProps>(() => calculateOrderSummary(dummyOrderData), []);
 
     const [order, setOrder] = useState<OrderSummaryProps>(initialOrder);
     const [sessionIdentifiers, setSessionIdentifiers] = useState<SessionIdentifiersState | null>(null);
@@ -98,13 +98,13 @@ function SonicApp() {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
     }, [showSessionTokens]);
 
-    const handleSessionIdentifiers = (message: ExtensionSessionMetadata | ExtensionRoundTripToken) => {
+    const handleSessionIdentifiers = useCallback((message: ExtensionSessionMetadata | ExtensionRoundTripToken) => {
         setSessionIdentifiers({
             sessionToken: message.sessionToken,
             roundTripIndex: message.roundTripIndex,
             roundTripToken: message.roundTripToken
         });
-    };
+    }, []);
 
     const isSessionActiveRef = useRef(false);
     const awaitingGreetingDoneRef = useRef(false);
@@ -163,9 +163,7 @@ function SonicApp() {
                     startMicInFlightRef.current = (async () => {
                         // If we received audio deltas for the greeting, wait until playback drains.
                         if (greetingAudioSeenRef.current) {
-                            await waitForAudioDrain(2500);
-                            // Small extra delay for device/driver buffer drain.
-                            await new Promise(resolve => setTimeout(resolve, 150));
+                            await waitForAudioDrain(2000);
                         }
 
                         if (!isSessionActiveRef.current) return;
@@ -246,7 +244,7 @@ function SonicApp() {
                     startMicInFlightRef.current = startAudioRecording().finally(() => {
                         startMicInFlightRef.current = null;
                     });
-                }, 5000);
+                }, 3500);
             }
 
             setIsRecording(true);
@@ -290,11 +288,13 @@ function SonicApp() {
                         <span>Source on GitHub</span>
                     </a>
                     <div className="flex items-center gap-2">
-                        <Settings
-                            isMobile={isMobile}
-                            showSessionTokens={showSessionTokens}
-                            onShowSessionTokensChange={setShowSessionTokens}
-                        />
+                        <Suspense fallback={null}>
+                            <Settings
+                                isMobile={isMobile}
+                                showSessionTokens={showSessionTokens}
+                                onShowSessionTokensChange={setShowSessionTokens}
+                            />
+                        </Suspense>
                         {authEnabled && (
                             <Button variant="ghost" size="icon" className="rounded-full" onClick={logout} title="Logout">
                                 <LogOut className="h-4 w-4" />
@@ -401,7 +401,7 @@ function SonicApp() {
     );
 }
 
-function BrandHero() {
+const BrandHero = memo(function BrandHero() {
     return (
         <section className="hero-card rounded-[32px] border border-white/40 bg-white/80 p-6 shadow-[0_25px_70px_rgba(40,87,128,0.18)] backdrop-blur-lg">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
@@ -469,7 +469,7 @@ function BrandHero() {
             </div>
         </section>
     );
-}
+});
 
 function HeroHighlightCard({ title, detail, tone }: { title: string; detail: string; tone: HighlightTone }) {
     const gradientMap: Record<HighlightTone, string> = {
@@ -486,7 +486,7 @@ function HeroHighlightCard({ title, detail, tone }: { title: string; detail: str
     );
 }
 
-function SessionTokenBanner({ identifiers }: { identifiers: SessionIdentifiersState }) {
+const SessionTokenBanner = memo(function SessionTokenBanner({ identifiers }: { identifiers: SessionIdentifiersState }) {
     const truncatedSession = formatToken(identifiers.sessionToken);
     const truncatedRoundTrip = formatToken(identifiers.roundTripToken, 6);
 
@@ -504,7 +504,7 @@ function SessionTokenBanner({ identifiers }: { identifiers: SessionIdentifiersSt
             </div>
         </div>
     );
-}
+});
 
 function formatToken(token: string, prefix: number = 8, suffix: number = 4): string {
     if (!token) {

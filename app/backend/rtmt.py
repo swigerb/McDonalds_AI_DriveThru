@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import Callable
+import re
 from enum import Enum
 from typing import Any
 
@@ -18,7 +18,7 @@ __all__ = ["RTMiddleTier", "RTToolCall", "Tool", "ToolResult", "ToolResultDirect
 
 # High-frequency message types that are never modified by the middleware.
 # Returning early for these avoids match/case overhead on the audio hot-path.
-_PASSTHROUGH_TYPES = frozenset({
+_PASSTHROUGH_SERVER_TYPES = frozenset({
     "response.audio.delta",
     "response.audio.done",
     "response.audio_transcript.delta",
@@ -34,6 +34,18 @@ _PASSTHROUGH_TYPES = frozenset({
     "rate_limits.updated",
 })
 
+# Client messages that never need middleware modification — pass straight through.
+# input_audio_buffer.append is BY FAR the most frequent client message (every ~100ms).
+_PASSTHROUGH_CLIENT_TYPES = frozenset({
+    "input_audio_buffer.append",
+    "input_audio_buffer.clear",
+    "input_audio_buffer.commit",
+})
+
+# Regex to extract "type":"..." from raw JSON without full parse.
+# This lets us skip json.loads entirely for passthrough messages on the hot path.
+_TYPE_RE = re.compile(r'"type"\s*:\s*"([^"]+)"')
+
 # Pre-serialized static payloads to avoid repeated json.dumps on every round-trip
 _RESPONSE_CREATE_MSG = json.dumps({"type": "response.create"})
 
@@ -41,6 +53,18 @@ _RESPONSE_CREATE_MSG = json.dumps({"type": "response.create"})
 _WS_HEARTBEAT_SEC = 15.0
 _WS_CLOSE_TIMEOUT_SEC = 5.0
 _WS_CONNECT_TIMEOUT = aiohttp.ClientTimeout(total=30, connect=10)
+
+# Pre-serialized greeting to avoid json.dumps at connection time
+_GREETING_MSG = json.dumps({
+    "type": "conversation.item.create",
+    "item": {
+        "type": "message",
+        "role": "user",
+        "content": [
+            {"type": "input_text", "text": "Greet the guest: 'Welcome to Sonic Drive-In! What can I get started for you today?'"}
+        ]
+    }
+})
 
 class ToolResultDirection(Enum):
     TO_SERVER = 1
@@ -126,12 +150,15 @@ class RTMiddleTier:
 
     async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall]) -> str | None:
         data = msg.data
+
+        # FAST PATH: extract type via regex without full JSON parse.
+        # Audio deltas are ~95% of server messages — avoid json.loads entirely.
+        m = _TYPE_RE.search(data)
+        if m is not None and m.group(1) in _PASSTHROUGH_SERVER_TYPES:
+            return data
+
         message = json.loads(data)
         msg_type = message.get("type", "")
-
-        # Fast path: audio deltas are the hottest messages — return immediately
-        if msg_type in _PASSTHROUGH_TYPES:
-            return data
 
         updated_message = data
         session_id = self._session_map.get(client_ws)
@@ -210,13 +237,10 @@ class RTMiddleTier:
                         tools_pending.clear()
                         await server_ws.send_str(_RESPONSE_CREATE_MSG)
                     if "response" in message:
-                        replace = False
                         output = message["response"]["output"]
-                        for i in range(len(output) - 1, -1, -1):
-                            if output[i]["type"] == "function_call":
-                                output.pop(i)
-                                replace = True
-                        if replace:
+                        filtered = [o for o in output if o.get("type") != "function_call"]
+                        if len(filtered) != len(output):
+                            message["response"]["output"] = filtered
                             updated_message = json.dumps(message)
                     if session_id is not None:
                         identifiers = order_state_singleton.advance_round_trip(session_id)
@@ -225,8 +249,16 @@ class RTMiddleTier:
         return updated_message
 
     async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse) -> str | None:
-        message = json.loads(msg.data)
-        updated_message = msg.data
+        data = msg.data
+
+        # FAST PATH: input_audio_buffer.append is the most frequent client message
+        # (~10 per second). Skip JSON parse entirely — it never needs modification.
+        m = _TYPE_RE.search(data)
+        if m is not None and m.group(1) in _PASSTHROUGH_CLIENT_TYPES:
+            return data
+
+        message = json.loads(data)
+        updated_message = data
         if message is not None:
             match message["type"]:
                 case "session.update":
@@ -277,16 +309,8 @@ class RTMiddleTier:
                     nonlocal greeting_sent
                     if greeting_sent:
                         return
-                    await target_ws.send_json({
-                        "type": "conversation.item.create",
-                        "item": {
-                            "type": "message",
-                            "role": "user",
-                            "content": [
-                                {"type": "input_text", "text": "Please greet the guest with: 'Welcome to Sonic Drive-In! What can I get started for you today?'"}
-                            ]
-                        }
-                    })
+                    # Use pre-serialized greeting — avoids json.dumps at connection time
+                    await target_ws.send_str(_GREETING_MSG)
                     await target_ws.send_str(_RESPONSE_CREATE_MSG)
                     greeting_sent = True
                     if session_id is not None:

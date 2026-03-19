@@ -1,4 +1,5 @@
 import menuItemsData from "@/data/menuItems.json";
+import { memo } from "react";
 
 interface Size {
     size: string;
@@ -27,7 +28,7 @@ const categoryIcons: Record<string, string> = {
 
 const menuItems = menuItemsData.menuItems as MenuCategory[];
 
-export default function MenuPanel() {
+export default memo(function MenuPanel() {
 
     return (
         <div className="space-y-8">
@@ -78,4 +79,4 @@ export default function MenuPanel() {
             ))}
         </div>
     );
-}
+});

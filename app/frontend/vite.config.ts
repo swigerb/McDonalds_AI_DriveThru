@@ -8,22 +8,29 @@ export default defineConfig({
     build: {
         outDir: "../backend/static",
         emptyOutDir: true,
-        sourcemap: true, // Ensure sourcemaps are generated
-        chunkSizeWarningLimit: 1000, // Adjust the chunk size limit
+        sourcemap: false,
+        chunkSizeWarningLimit: 1000,
+        target: "es2020",
+        minify: "esbuild",
+        cssMinify: true,
         rollupOptions: {
             output: {
-                manualChunks(id) {
-                    if (id.includes("node_modules")) {
-                        return id.toString().split("node_modules/")[1].split("/")[0].toString();
-                    }
+                manualChunks: {
+                    "react-vendor": ["react", "react-dom"],
+                    "ui-vendor": [
+                        "@radix-ui/react-dialog",
+                        "@radix-ui/react-select",
+                        "@radix-ui/react-slider",
+                        "@radix-ui/react-slot",
+                        "@radix-ui/react-label",
+                        "@radix-ui/react-tooltip"
+                    ],
+                    "i18n": ["i18next", "react-i18next", "i18next-browser-languagedetector", "i18next-http-backend"],
+                    "motion": ["framer-motion"]
                 },
-                // Handle empty chunks
-                chunkFileNames: chunkInfo => {
-                    if (chunkInfo.isDynamicEntry && chunkInfo.moduleIds.length === 0) {
-                        return "empty-chunk-[name].js";
-                    }
-                    return "[name]-[hash].js";
-                }
+                assetFileNames: "assets/[name]-[hash][extname]",
+                chunkFileNames: "js/[name]-[hash].js",
+                entryFileNames: "js/[name]-[hash].js"
             }
         }
     },

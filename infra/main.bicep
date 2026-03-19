@@ -198,6 +198,10 @@ module acaBackend 'core/host/container-app-upsert.bicep' = {
     targetPort: 8000
     containerCpuCoreCount: '1.0'
     containerMemory: '2Gi'
+    containerMinReplicas: 1
+    containerMaxReplicas: 5
+    healthProbePath: '/health'
+    enableWebSocket: true
     env: {
       AZURE_SEARCH_ENDPOINT: reuseExistingSearch
         ? searchEndpoint
@@ -212,7 +216,6 @@ module acaBackend 'core/host/container-app-upsert.bicep' = {
       AZURE_OPENAI_EASTUS2_ENDPOINT: reuseExistingOpenAi ? openAiEndpoint : openAi.outputs.endpoint
       AZURE_OPENAI_REALTIME_DEPLOYMENT: reuseExistingOpenAi ? openAiRealtimeDeployment : openAiDeployments[0].name
       AZURE_OPENAI_REALTIME_VOICE_CHOICE: openAiRealtimeVoiceChoice
-      // CORS support, for frontends on other hosts
       RUNNING_IN_PRODUCTION: 'true'
       // For using managed identity to access Azure resources. See https://github.com/microsoft/azure-container-apps/issues/442
       AZURE_CLIENT_ID: acaIdentity.outputs.clientId
