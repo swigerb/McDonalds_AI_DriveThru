@@ -27,11 +27,12 @@ class OrderState:
 
     def _update_summary(self, session_id: str):
         session = self.sessions[session_id]
-        total = sum(item.price * item.quantity for item in session["order_state"])
+        order_items = session["order_state"]
+        total = sum(item.price * item.quantity for item in order_items)
         tax = total * 0.08  # 8% tax
         finalTotal = total + tax
-        session["order_summary"] = OrderSummary(items=session["order_state"], total=total, tax=tax, finalTotal=finalTotal)
-        logger.info(f"Order Summary Updated for session {session_id}: {session['order_summary']}")
+        session["order_summary"] = OrderSummary(items=order_items, total=total, tax=tax, finalTotal=finalTotal)
+        logger.debug("Order summary updated for session %s (items=%d, total=%.2f)", session_id, len(order_items), finalTotal)
 
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
@@ -43,14 +44,12 @@ class OrderState:
             "round_trip_index": 0,
             "round_trip_token": self._format_round_trip_token(session_token, 0)
         }
-        self._update_summary(session_id)
-        logger.info(f"Session created with ID {session_id}")
+        logger.info("Session created: %s", session_id)
         return session_id
 
     def delete_session(self, session_id: str) -> None:
-        if session_id in self.sessions:
-            del self.sessions[session_id]
-            logger.info("Session deleted with ID %s", session_id)
+        if self.sessions.pop(session_id, None) is not None:
+            logger.info("Session deleted: %s", session_id)
 
     def _format_round_trip_token(self, session_token: str, round_trip_index: int) -> str:
         return f"{session_token}-{round_trip_index:04d}"
@@ -76,25 +75,23 @@ class OrderState:
         if action == "add":
             if existing_item_index != -1:
                 order_state[existing_item_index].quantity += quantity
-                logger.info(f"Updated quantity for {display} in session {session_id}")
+                logger.debug("Updated quantity for %s in session %s", display, session_id)
             else:
                 order_state.append(OrderItem(item=item_name, size=size, quantity=quantity, price=price, display=display))
-                logger.info(f"Added {display} to session {session_id}")
+                logger.debug("Added %s to session %s", display, session_id)
         elif action == "remove":
             if existing_item_index != -1:
                 if order_state[existing_item_index].quantity > quantity:
                     order_state[existing_item_index].quantity -= quantity
-                    logger.info(f"Decreased quantity for {display} in session {session_id}")
+                    logger.debug("Decreased quantity for %s in session %s", display, session_id)
                 else:
                     order_state.pop(existing_item_index)
-                    logger.info(f"Removed {display} from session {session_id}")
+                    logger.debug("Removed %s from session %s", display, session_id)
 
         self._update_summary(session_id)
 
     def get_order_summary(self, session_id: str) -> OrderSummary:
-        order_summary = self.sessions[session_id]["order_summary"]
-        logger.info(f"Order Summary Retrieved for session {session_id}: {order_summary}")
-        return order_summary
+        return self.sessions[session_id]["order_summary"]
 
     def get_session_identifiers(self, session_id: str) -> SessionIdentifiers:
         session = self.sessions[session_id]
@@ -110,7 +107,7 @@ class OrderState:
         session["round_trip_token"] = self._format_round_trip_token(
             session["session_token"], session["round_trip_index"]
         )
-        logger.info(
+        logger.debug(
             "Round trip %s recorded for session %s", session["round_trip_index"], session_id
         )
         return self.get_session_identifiers(session_id)

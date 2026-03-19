@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from rtmt import ToolResultDirection
-from tools import _infer_category, _is_extra_item, search
+from tools import _infer_category, _is_extra_item, _search_cache, search
 
 
 class IsExtraItemTests(unittest.TestCase):
@@ -61,6 +61,9 @@ class InferCategoryTests(unittest.TestCase):
 
 class SearchToolTests(unittest.TestCase):
     """Tests for the search() tool function with mocked Azure Search client."""
+
+    def setUp(self):
+        _search_cache.clear()
 
     def _make_mock_client(self, records):
         """Create a mock SearchClient whose .search() returns an async iterable of records."""

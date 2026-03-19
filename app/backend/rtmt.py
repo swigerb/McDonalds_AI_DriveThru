@@ -16,13 +16,38 @@ logger = logging.getLogger("sonic-drive-in")
 
 __all__ = ["RTMiddleTier", "RTToolCall", "Tool", "ToolResult", "ToolResultDirection"]
 
+# High-frequency message types that are never modified by the middleware.
+# Returning early for these avoids match/case overhead on the audio hot-path.
+_PASSTHROUGH_TYPES = frozenset({
+    "response.audio.delta",
+    "response.audio.done",
+    "response.audio_transcript.delta",
+    "response.audio_transcript.done",
+    "response.text.delta",
+    "response.text.done",
+    "response.content_part.added",
+    "response.content_part.done",
+    "input_audio_buffer.speech_started",
+    "input_audio_buffer.speech_stopped",
+    "input_audio_buffer.committed",
+    "error",
+    "rate_limits.updated",
+})
+
+# Pre-serialized static payloads to avoid repeated json.dumps on every round-trip
+_RESPONSE_CREATE_MSG = json.dumps({"type": "response.create"})
+
+# Connection tuning constants
+_WS_HEARTBEAT_SEC = 15.0
+_WS_CLOSE_TIMEOUT_SEC = 5.0
+_WS_CONNECT_TIMEOUT = aiohttp.ClientTimeout(total=30, connect=10)
+
 class ToolResultDirection(Enum):
     TO_SERVER = 1
     TO_CLIENT = 2
 
 class ToolResult:
-    text: str
-    destination: ToolResultDirection
+    __slots__ = ("text", "destination")
 
     def __init__(self, text: str, destination: ToolResultDirection):
         self.text = text
@@ -34,16 +59,14 @@ class ToolResult:
         return self.text if isinstance(self.text, str) else json.dumps(self.text)
 
 class Tool:
-    target: Callable[..., ToolResult]
-    schema: Any
+    __slots__ = ("target", "schema")
 
     def __init__(self, target: Any, schema: Any):
         self.target = target
         self.schema = schema
 
 class RTToolCall:
-    tool_call_id: str
-    previous_id: str
+    __slots__ = ("tool_call_id", "previous_id")
 
     def __init__(self, tool_call_id: str, previous_id: str):
         self.tool_call_id = tool_call_id
@@ -73,7 +96,6 @@ class RTMiddleTier:
         self.deployment = deployment
         self.voice_choice = voice_choice
         self.tools = {}
-        self._tools_pending: dict[str, RTToolCall] = {}
         self._token_provider = None
         self._session_map: dict[web.WebSocketResponse, str] = {}
         self._sent_greeting: set[str] = set()
@@ -102,12 +124,19 @@ class RTMiddleTier:
             }
         )
 
-    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse) -> str | None:
-        message = json.loads(msg.data)
-        updated_message = msg.data
+    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall]) -> str | None:
+        data = msg.data
+        message = json.loads(data)
+        msg_type = message.get("type", "")
+
+        # Fast path: audio deltas are the hottest messages — return immediately
+        if msg_type in _PASSTHROUGH_TYPES:
+            return data
+
+        updated_message = data
         session_id = self._session_map.get(client_ws)
         if message is not None:
-            match message["type"]:
+            match msg_type:
                 case "session.created":
                     session = message["session"]
                     # Hide the instructions, tools and max tokens from clients, if we ever allow client-side 
@@ -129,8 +158,8 @@ class RTMiddleTier:
                 case "conversation.item.created":
                     if "item" in message and message["item"]["type"] == "function_call":
                         item = message["item"]
-                        if item["call_id"] not in self._tools_pending:
-                            self._tools_pending[item["call_id"]] = RTToolCall(item["call_id"], message["previous_item_id"])
+                        if item["call_id"] not in tools_pending:
+                            tools_pending[item["call_id"]] = RTToolCall(item["call_id"], message["previous_item_id"])
                         updated_message = None
                     elif "item" in message and message["item"]["type"] == "function_call_output":
                         updated_message = None
@@ -144,47 +173,49 @@ class RTMiddleTier:
                 case "response.output_item.done":
                     if "item" in message and message["item"]["type"] == "function_call":
                         item = message["item"]
-                        tool_call = self._tools_pending[message["item"]["call_id"]]
-                        tool = self.tools[item["name"]]
-                        args = item["arguments"]
-                        if item["name"] in ["update_order", "get_order"]:
-                            result = await tool.target(json.loads(args), session_id)
+                        tool_call = tools_pending.get(item["call_id"])
+                        if tool_call is None:
+                            logger.warning("Tool call %s not found in pending tools", item["call_id"])
+                            updated_message = None
                         else:
-                            result = await tool.target(json.loads(args))
-                        await server_ws.send_json({
-                            "type": "conversation.item.create",
-                            "item": {
-                                "type": "function_call_output",
-                                "call_id": item["call_id"],
-                                "output": result.to_text() if result.destination == ToolResultDirection.TO_SERVER else ""
-                            }
-                        })
-                        if result.destination == ToolResultDirection.TO_CLIENT:
-                            # TODO: this will break clients that don't know about this extra message, rewrite 
-                            # this to be a regular text message with a special marker of some sort
-                            await client_ws.send_json({
-                                "type": "extension.middle_tier_tool_response",
-                                "previous_item_id": tool_call.previous_id,
-                                "tool_name": item["name"],
-                                "tool_result": result.to_text()
-                            })
-                        updated_message = None
+                            tool = self.tools.get(item["name"])
+                            if tool is None:
+                                logger.error("Unknown tool requested: %s", item["name"])
+                                updated_message = None
+                            else:
+                                args = json.loads(item["arguments"])
+                                if item["name"] in ("update_order", "get_order"):
+                                    result = await tool.target(args, session_id)
+                                else:
+                                    result = await tool.target(args)
+                                await server_ws.send_json({
+                                    "type": "conversation.item.create",
+                                    "item": {
+                                        "type": "function_call_output",
+                                        "call_id": item["call_id"],
+                                        "output": result.to_text() if result.destination == ToolResultDirection.TO_SERVER else ""
+                                    }
+                                })
+                                if result.destination == ToolResultDirection.TO_CLIENT:
+                                    await client_ws.send_json({
+                                        "type": "extension.middle_tier_tool_response",
+                                        "previous_item_id": tool_call.previous_id,
+                                        "tool_name": item["name"],
+                                        "tool_result": result.to_text()
+                                    })
+                                updated_message = None
 
                 case "response.done":
-                    if len(self._tools_pending) > 0:
-                        self._tools_pending.clear() # Any chance tool calls could be interleaved across different outstanding responses?
-                        await server_ws.send_json({
-                            "type": "response.create"
-                        })
+                    if tools_pending:
+                        tools_pending.clear()
+                        await server_ws.send_str(_RESPONSE_CREATE_MSG)
                     if "response" in message:
                         replace = False
-                        try:
-                            for i in range(len(message["response"]["output"]) - 1, -1, -1):
-                                if message["response"]["output"][i]["type"] == "function_call":
-                                    message["response"]["output"].pop(i)
-                                    replace = True
-                        except IndexError as e:
-                            logging.error(f"Error processing message: {e}")
+                        output = message["response"]["output"]
+                        for i in range(len(output) - 1, -1, -1):
+                            if output[i]["type"] == "function_call":
+                                output.pop(i)
+                                replace = True
                         if replace:
                             updated_message = json.dumps(message)
                     if session_id is not None:
@@ -217,7 +248,13 @@ class RTMiddleTier:
         return updated_message
 
     async def _forward_messages(self, ws: web.WebSocketResponse):
-        async with aiohttp.ClientSession(base_url=self.endpoint) as session:
+        # Per-connection tool tracking — prevents cross-connection interference
+        tools_pending: dict[str, RTToolCall] = {}
+
+        async with aiohttp.ClientSession(
+            base_url=self.endpoint,
+            timeout=_WS_CONNECT_TIMEOUT,
+        ) as session:
             params = { "api-version": self.api_version, "deployment": self.deployment}
             headers = {}
             if "x-ms-client-request-id" in ws.headers:
@@ -226,7 +263,13 @@ class RTMiddleTier:
                 headers = { "api-key": self.key }
             else:
                 headers = { "Authorization": f"Bearer {self._token_provider()}" } # NOTE: no async version of token provider, maybe refresh token on a timer?
-            async with session.ws_connect("/openai/realtime", headers=headers, params=params) as target_ws:
+            async with session.ws_connect(
+                "/openai/realtime",
+                headers=headers,
+                params=params,
+                heartbeat=_WS_HEARTBEAT_SEC,
+                close_timeout=_WS_CLOSE_TIMEOUT_SEC,
+            ) as target_ws:
                 session_id = self._session_map.get(ws)
                 greeting_sent = session_id in self._sent_greeting
 
@@ -244,10 +287,11 @@ class RTMiddleTier:
                             ]
                         }
                     })
-                    await target_ws.send_json({"type": "response.create"})
+                    await target_ws.send_str(_RESPONSE_CREATE_MSG)
                     greeting_sent = True
                     if session_id is not None:
                         self._sent_greeting.add(session_id)
+
                 async def from_client_to_server():
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
@@ -256,37 +300,48 @@ class RTMiddleTier:
                             new_msg = await self._process_message_to_server(msg, ws)
                             if new_msg is not None:
                                 await target_ws.send_str(new_msg)
-                        else:
-                            logger.warning("Unexpected message type from client: %s", msg.type)
+                        elif msg.type == aiohttp.WSMsgType.ERROR:
+                            logger.error("Client WebSocket error: %s", ws.exception())
+                            break
+                        elif msg.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING, aiohttp.WSMsgType.CLOSED):
+                            break
                     
                     # Means it is gracefully closed by the client then time to close the target_ws
-                    if target_ws:
+                    if target_ws and not target_ws.closed:
                         logger.info("Closing OpenAI's realtime socket connection.")
                         await target_ws.close()
                         
                 async def from_server_to_client():
                     async for msg in target_ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
-                            new_msg = await self._process_message_to_client(msg, ws, target_ws)
+                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending)
                             if new_msg is not None:
                                 await ws.send_str(new_msg)
-                        else:
-                            logger.warning("Unexpected message type from server: %s", msg.type)
+                        elif msg.type == aiohttp.WSMsgType.ERROR:
+                            logger.error("Server WebSocket error: %s", target_ws.exception())
+                            break
+                        elif msg.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING, aiohttp.WSMsgType.CLOSED):
+                            break
 
                 try:
                     await asyncio.gather(from_client_to_server(), from_server_to_client())
                 except ConnectionResetError:
                     # Ignore the errors resulting from the client disconnecting the socket
                     pass
+                except Exception:
+                    logger.exception("Unexpected error in WebSocket forwarding")
                 finally:
                     if session_id is not None:
                         order_state_singleton.delete_session(session_id)
                     # Clean up the session map when the connection is closed
-                    if ws in self._session_map:
-                        del self._session_map[ws]
+                    self._session_map.pop(ws, None)
 
     async def _websocket_handler(self, request: web.Request):
-        ws = web.WebSocketResponse()
+        ws = web.WebSocketResponse(
+            heartbeat=_WS_HEARTBEAT_SEC,
+            autoping=True,
+            autoclose=True,
+        )
         await ws.prepare(request)
         
         # Create a new session for each WebSocket connection

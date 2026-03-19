@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,43 @@ from rtmt import RTMiddleTier, Tool, ToolResult, ToolResultDirection
 logger = logging.getLogger(__name__)
 
 __all__ = ["attach_tools_rtmt"]
+
+# ---------------------------------------------------------------------------
+# Search result cache — avoids redundant Azure AI Search round-trips for
+# repeated menu queries within a short window (e.g. "what sizes do you have?").
+# ---------------------------------------------------------------------------
+_SEARCH_CACHE_TTL_SEC = 60.0
+_SEARCH_CACHE_MAX_SIZE = 128
+
+class _SearchCache:
+    """Simple TTL cache for search results. Not thread-safe, but fine for
+    single-threaded asyncio where all access is from the event loop."""
+    __slots__ = ("_store", "_max_size")
+
+    def __init__(self, max_size: int = _SEARCH_CACHE_MAX_SIZE):
+        self._store: dict[str, tuple[float, ToolResult]] = {}
+        self._max_size = max_size
+
+    def get(self, key: str) -> ToolResult | None:
+        entry = self._store.get(key)
+        if entry is None:
+            return None
+        ts, result = entry
+        if time.monotonic() - ts > _SEARCH_CACHE_TTL_SEC:
+            del self._store[key]
+            return None
+        return result
+
+    def put(self, key: str, result: ToolResult) -> None:
+        if len(self._store) >= self._max_size:
+            oldest_key = min(self._store, key=lambda k: self._store[k][0])
+            del self._store[oldest_key]
+        self._store[key] = (time.monotonic(), result)
+
+    def clear(self) -> None:
+        self._store.clear()
+
+_search_cache = _SearchCache()
 
 
 # Extras may only be applied to specific beverage categories.
@@ -121,28 +159,30 @@ async def search(
     use_vector_query: bool,
     args: Any,
 ) -> ToolResult:
-    """Execute a hybrid Azure AI Search query with safe fallbacks."""
+    """Execute a hybrid Azure AI Search query with caching and safe fallbacks."""
 
     query = args["query"]
     logger.info("Knowledge search requested for query '%s'", query)
+
+    # Check cache first — repeated questions about the same menu item are common
+    cache_key = query.strip().lower()
+    cached = _search_cache.get(cache_key)
+    if cached is not None:
+        logger.debug("Search cache hit for '%s'", query)
+        return cached
 
     vector_queries = []
     if use_vector_query and embedding_field:
         vector_queries.append(VectorizableTextQuery(text=query, k_nearest_neighbors=50, fields=embedding_field))
 
-    select_fields = {
+    # Only request fields we actually format into the result string
+    select_fields = [
         identifier_field or "id",
-        content_field or "content",
-        "category",
         "name",
+        "category",
         "description",
-        "longDescription",
-        "origin",
-        "caffeineContent",
-        "brewingMethod",
-        "popularity",
         "sizes",
-    }
+    ]
 
     try:
         search_results = await search_client.search(
@@ -151,7 +191,7 @@ async def search(
             semantic_configuration_name=semantic_configuration,
             top=5,
             vector_queries=vector_queries or None,
-            select=list(select_fields),
+            select=select_fields,
         )
     except HttpResponseError as exc:
         # Gracefully handle schema/field mismatches (e.g., invalid $select fields) by retrying with a minimal projection.
@@ -182,7 +222,11 @@ async def search(
 
     joined_results = "\n-----\n".join(results)
     logger.debug("Search results returned %d documents", len(results))
-    return ToolResult(joined_results or "No matching menu entries found.", ToolResultDirection.TO_SERVER)
+    result = ToolResult(joined_results or "No matching menu entries found.", ToolResultDirection.TO_SERVER)
+
+    # Cache the result for repeated queries
+    _search_cache.put(cache_key, result)
+    return result
 
 
 update_order_tool_schema = {

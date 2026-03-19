@@ -1,3 +1,4 @@
+import gzip
 import logging
 import os
 from pathlib import Path
@@ -10,8 +11,19 @@ from dotenv import load_dotenv
 from rtmt import RTMiddleTier
 from tools import attach_tools_rtmt
 
-logging.basicConfig(level=logging.INFO)
+# Production: INFO; override with LOG_LEVEL env var for debugging
+_log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, _log_level, logging.INFO))
 logger = logging.getLogger(__name__)
+
+# Minimum response size worth compressing (bytes)
+_COMPRESS_MIN_SIZE = 256
+# Cache-Control for immutable hashed assets (JS/CSS bundles from Vite)
+_STATIC_IMMUTABLE_MAX_AGE = 31_536_000  # 1 year
+# Cache-Control for mutable files (index.html, etc.)
+_STATIC_DEFAULT_MAX_AGE = 3600  # 1 hour
+# Compressible content-type substrings
+_COMPRESSIBLE_TYPES = ("text/", "application/json", "application/javascript", "image/svg")
 
 
 def _get_bool_env(variable_name: str, default: bool = False) -> bool:
@@ -20,6 +32,54 @@ def _get_bool_env(variable_name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
+
+@web.middleware
+async def _compression_middleware(request: web.Request, handler):
+    """Gzip-compress eligible responses when the client accepts it."""
+    response = await handler(request)
+
+    # Only compress regular Response objects (not FileResponse, StreamResponse, WebSocket)
+    if not isinstance(response, web.Response) or isinstance(response, web.WebSocketResponse):
+        return response
+    if response.body is None or len(response.body) < _COMPRESS_MIN_SIZE:
+        return response
+
+    accept_encoding = request.headers.get("Accept-Encoding", "")
+    if "gzip" not in accept_encoding:
+        return response
+
+    content_type = response.content_type or ""
+    if not any(ct in content_type for ct in _COMPRESSIBLE_TYPES):
+        return response
+
+    compressed = gzip.compress(response.body, compresslevel=6)
+    if len(compressed) >= len(response.body):
+        return response
+
+    response.body = compressed
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Vary"] = "Accept-Encoding"
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Static file helpers
+# ---------------------------------------------------------------------------
+
+async def _index_handler(_request: web.Request) -> web.FileResponse:
+    current_directory = Path(__file__).parent
+    resp = web.FileResponse(current_directory / "static" / "index.html")
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+async def _health_handler(_request: web.Request) -> web.Response:
+    return web.json_response({"status": "healthy"})
 
 
 async def create_app() -> web.Application:
@@ -49,7 +109,10 @@ async def create_app() -> web.Application:
     llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
     search_credential = AzureKeyCredential(search_key) if search_key else credential
 
-    app = web.Application()
+    app = web.Application(
+        middlewares=[_compression_middleware],
+        client_max_size=4 * 1024 * 1024,  # 4 MB max request body
+    )
 
     rtmt = RTMiddleTier(
         credentials=llm_credential,
@@ -90,13 +153,32 @@ async def create_app() -> web.Application:
     rtmt.attach_to_app(app, "/realtime")
 
     current_directory = Path(__file__).parent
-    app.add_routes([web.get('/', lambda _: web.FileResponse(current_directory / 'static/index.html'))])
-    app.router.add_static('/', path=current_directory / 'static', name='static')
+    app.add_routes([
+        web.get('/', _index_handler),
+        web.get('/health', _health_handler),
+    ])
+    app.router.add_static(
+        '/',
+        path=current_directory / 'static',
+        name='static',
+        append_version=True,
+    )
+
+    async def _on_shutdown(app: web.Application):
+        logger.info("Graceful shutdown initiated — cleaning up active sessions")
+
+    app.on_shutdown.append(_on_shutdown)
 
     return app
 
 
 if __name__ == "__main__":
-    host = os.environ.get("HOST", "localhost")  # Change default host to localhost
-    port = int(os.environ.get("PORT", 8000))  # Change default port to 8000
-    web.run_app(create_app(), host=host, port=port)
+    host = os.environ.get("HOST", "localhost")
+    port = int(os.environ.get("PORT", 8000))
+    web.run_app(
+        create_app(),
+        host=host,
+        port=port,
+        shutdown_timeout=10.0,
+        keepalive_timeout=75.0,
+    )
