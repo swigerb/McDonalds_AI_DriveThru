@@ -34,6 +34,24 @@
 - **Exclusions**: .squad/, .git/, node_modules/, __pycache__/, voice_rag_README.md, test file itself
 - **Status**: All 12 tests passing post-rebrand
 
+## Sonic Menu Items Search Index Name (2026-03-19)
+
+**Author:** Summer (Backend Dev)
+
+### Decision
+Changed the default Azure AI Search index name to `sonic-menu-items` across:
+- `.env-sample` (was `sonic-drive-in`)
+- `infra/main.parameters.json` (was `voicerag-intvect`)
+- New `sonic_menu_ingestion_search.ipynb` notebook (hardcoded)
+
+### Rationale
+Brian requested a distinct index for Sonic menu ingestion. The new notebook creates a `sonic-menu-items` index, so the default config should match. The app reads the index from `AZURE_SEARCH_INDEX` env var, so runtime behavior depends on what's in the actual `.env` file.
+
+### Impact
+- Any new deployment using `azd` defaults will provision with `sonic-menu-items` index name
+- Existing deployments are unaffected (they use their own `.env` values)
+- Team members should update their local `.env` if they want to match the new default
+
 ## Previous Decisions (Archived)
 
 ### Copilot Directive (2026-02-25T22-39)
