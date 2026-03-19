@@ -35,9 +35,9 @@
 
 ## Model
 
-- **Preferred:** auto
-- **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
-- **Fallback:** Standard chain — the coordinator handles fallback automatically
+- **Preferred:** claude-opus-4.6
+- **Rationale:** Rick is the lead architect and deep thinker — always uses Claude Opus 4.6 for maximum reasoning quality
+- **Fallback:** claude-opus-4.6 (no fallback — always Opus)
 
 ## Collaboration
 
