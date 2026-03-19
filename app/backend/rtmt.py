@@ -51,7 +51,6 @@ _RESPONSE_CREATE_MSG = json.dumps({"type": "response.create"})
 
 # Connection tuning constants
 _WS_HEARTBEAT_SEC = 15.0
-_WS_CLOSE_TIMEOUT_SEC = 5.0
 _WS_CONNECT_TIMEOUT = aiohttp.ClientTimeout(total=30, connect=10)
 
 # Pre-serialized greeting to avoid json.dumps at connection time
@@ -300,7 +299,6 @@ class RTMiddleTier:
                 headers=headers,
                 params=params,
                 heartbeat=_WS_HEARTBEAT_SEC,
-                close_timeout=_WS_CLOSE_TIMEOUT_SEC,
             ) as target_ws:
                 session_id = self._session_map.get(ws)
                 greeting_sent = session_id in self._sent_greeting
