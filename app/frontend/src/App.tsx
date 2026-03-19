@@ -407,7 +407,7 @@ function BrandHero() {
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
                 <div className="flex-1 space-y-5">
                     <div className="flex flex-wrap items-center gap-3">
-                        <img src={sonicLogo} alt="Sonic Drive-In logo" className="h-12 w-[120px] drop-shadow-sm" loading="lazy" />
+                        <img src={sonicLogo} alt="Sonic Drive-In logo" className="h-20 w-auto drop-shadow-sm" loading="lazy" />
                         <span className="rounded-full bg-[#E40046]/10 px-3 py-1 text-xs font-black uppercase tracking-[0.3em] text-[#E40046]">
                             Voice Ordering Demo
                         </span>
