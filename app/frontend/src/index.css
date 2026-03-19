@@ -1,0 +1,110 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Montserrat:wght@400;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    font-family: "Fredoka", "Montserrat", "Segoe UI", sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+    :root {
+        --brand-orange: 28 100% 58%;
+        --brand-pink: 329 100% 45%;
+        --brand-cream: 32 77% 96%;
+        --brand-brown: 17 40% 25%;
+        --background: var(--brand-cream);
+        --foreground: var(--brand-brown);
+        --card: 0 0% 100%;
+        --card-foreground: 18 28% 18%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 18 28% 18%;
+        --primary: var(--brand-orange);
+        --primary-foreground: 0 0% 100%;
+        --secondary: 27 89% 92%;
+        --secondary-foreground: 17 48% 24%;
+        --muted: 27 45% 90%;
+        --muted-foreground: 20 20% 32%;
+        --accent: var(--brand-pink);
+        --accent-foreground: 27 100% 97%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 27 45% 85%;
+        --input: 27 45% 85%;
+        --ring: 19 100% 56%;
+        --chart-1: 19 100% 56%;
+        --chart-2: 326 100% 45%;
+        --chart-3: 42 94% 56%;
+        --chart-4: 184 44% 54%;
+        --chart-5: 296 54% 55%;
+        --radius: 0.5rem;
+    }
+    .dark {
+        --background: 0 0% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 0 0% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 0 0% 14.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 0 0% 14.9%;
+        --muted-foreground: 0 0% 63.9%;
+        --accent: 0 0% 14.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 14.9%;
+        --input: 0 0% 14.9%;
+        --ring: 0 0% 83.1%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+        background-image: radial-gradient(40% 40% at 15% 20%, rgba(255, 103, 31, 0.18), transparent),
+            radial-gradient(38% 38% at 85% 10%, rgba(227, 0, 127, 0.15), transparent),
+            radial-gradient(32% 32% at 75% 60%, rgba(255, 212, 0, 0.25), transparent),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 242, 229, 0.95));
+        min-height: 100vh;
+    }
+
+    body::before,
+    body::after {
+        content: "";
+        position: fixed;
+        pointer-events: none;
+        z-index: -1;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), rgba(255, 103, 31, 0.15));
+        filter: blur(40px);
+    }
+
+    body::before {
+        top: 4rem;
+        left: -3rem;
+    }
+
+    body::after {
+        bottom: 2rem;
+        right: -2rem;
+    }
+}

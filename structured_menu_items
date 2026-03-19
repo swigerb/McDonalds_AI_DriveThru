@@ -1,0 +1,295 @@
+{
+    "menuItems": [
+        {
+            "category": "Coffee",
+            "items": [
+                {
+                    "name": "Espresso",
+                    "description": "Rich and bold single or double shot",
+                    "longDescription": "Espresso is the quintessential coffee experience, brewed under pressure to extract its bold, rich flavor. A favorite in Italy and around the world, it forms the base for many coffee drinks, including cappuccinos and lattes. Perfect for those who enjoy an intense coffee kick with a creamy layer of crema.",
+                    "origin": "Italy",
+                    "caffeineContent": "63 mg per shot",
+                    "brewingMethod": "Espresso Machine",
+                    "popularity": "High",
+                    "sizes": [
+                        {
+                            "size": "single",
+                            "price": 1
+                        },
+                        {
+                            "size": "double",
+                            "price": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Americano",
+                    "description": "Espresso with hot water",
+                    "longDescription": "The Americano is a smooth, diluted espresso drink inspired by American GIs in Italy during WWII who added water to espresso to mimic drip coffee. It retains the rich essence of espresso while offering a milder flavor profile, perfect for those who prefer a less intense coffee experience.",
+                    "origin": "United States",
+                    "caffeineContent": "95 mg for medium",
+                    "brewingMethod": "Espresso Machine with water dilution",
+                    "popularity": "Moderate",
+                    "sizes": [
+                        {
+                            "size": "small",
+                            "price": 2.5
+                        },
+                        {
+                            "size": "medium",
+                            "price": 4
+                        },
+                        {
+                            "size": "large",
+                            "price": 5
+                        }
+                    ]
+                },
+                {
+                    "name": "Cappuccino",
+                    "description": "Espresso with steamed milk and foam",
+                    "longDescription": "Cappuccino combines the boldness of espresso with a luxurious layer of steamed milk and a light, frothy foam topping. Originating in Italy, it's a classic choice for those who enjoy a balanced, creamy texture with every sip.",
+                    "origin": "Italy",
+                    "caffeineContent": "75 mg for medium",
+                    "brewingMethod": "Espresso Machine with milk frothing",
+                    "popularity": "High",
+                    "sizes": [
+                        {
+                            "size": "small",
+                            "price": 3.5
+                        },
+                        {
+                            "size": "medium",
+                            "price": 4.5
+                        },
+                        {
+                            "menuItems": [
+                                {
+                                    "category": "Signature Lattes",
+                                    "items": [
+                                        {
+                                            "name": "Caramel Craze Latte",
+                                            "description": "Espresso with caramel drizzle and whipped cream",
+                                            "longDescription": "A Dunkin signature latte layered with bold espresso, caramel swirl, and steamed milk topped with whipped cream and caramel drizzle.",
+                                            "origin": "Dunkin U.S. Menu",
+                                            "caffeineContent": "166 mg (medium)",
+                                            "brewingMethod": "Espresso machine",
+                                            "popularity": "Guest Favorite",
+                                            "sizes": [
+                                                { "size": "small", "price": 4.49 },
+                                                { "size": "medium", "price": 4.99 },
+                                                { "size": "large", "price": 5.49 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Cocoa Mocha Latte",
+                                            "description": "Chocolate-forward espresso drink finished with mocha drizzle",
+                                            "longDescription": "Balanced espresso, mocha swirl, and steamed milk create a smooth chocolate latte crowned with whipped cream and cocoa powder.",
+                                            "origin": "Inspire Brands Innovation Lab",
+                                            "caffeineContent": "170 mg (medium)",
+                                            "brewingMethod": "Espresso machine",
+                                            "popularity": "Seasonal Spotlight",
+                                            "sizes": [
+                                                { "size": "small", "price": 4.59 },
+                                                { "size": "medium", "price": 5.09 },
+                                                { "size": "large", "price": 5.59 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Toasted Almond Cold Foam Latte",
+                                            "description": "Iced latte with toasted almond swirl and cold foam cap",
+                                            "longDescription": "Chilled espresso poured over ice with toasted almond flavor and vanilla cold foam for layered texture and sweetness.",
+                                            "origin": "Dunkin Next-Gen Restaurant",
+                                            "caffeineContent": "187 mg (medium)",
+                                            "brewingMethod": "Espresso over ice",
+                                            "popularity": "Emerging Favorite",
+                                            "sizes": [
+                                                { "size": "small", "price": 4.79 },
+                                                { "size": "medium", "price": 5.29 },
+                                                { "size": "large", "price": 5.79 }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "category": "Cold Beverages",
+                                    "items": [
+                                        {
+                                            "name": "Original Cold Brew",
+                                            "description": "12-hour steeped cold brew over ice",
+                                            "longDescription": "Smooth, full-bodied cold brew handcrafted daily and served over ice. Add cold foam or a swirl for personalization.",
+                                            "origin": "Dunkin Breweries",
+                                            "caffeineContent": "260 mg (medium)",
+                                            "brewingMethod": "Cold steep",
+                                            "popularity": "High",
+                                            "sizes": [
+                                                { "size": "small", "price": 3.79 },
+                                                { "size": "medium", "price": 4.29 },
+                                                { "size": "large", "price": 4.79 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Strawberry Dragonfruit Refresher",
+                                            "description": "Green tea-based refresher with B vitamins",
+                                            "longDescription": "Vibrant strawberry dragonfruit flavor balanced with green tea and B vitamins for a light, energizing beverage.",
+                                            "origin": "Dunkin Beverage Innovation",
+                                            "caffeineContent": "99 mg (medium)",
+                                            "brewingMethod": "Green tea infusion",
+                                            "popularity": "Always On Menu",
+                                            "sizes": [
+                                                { "size": "small", "price": 3.29 },
+                                                { "size": "medium", "price": 3.79 },
+                                                { "size": "large", "price": 4.29 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Brown Sugar Cream Cold Brew",
+                                            "description": "Cold brew with brown sugar syrup and cinnamon-sugar cold foam",
+                                            "longDescription": "Slow-steeped cold brew sweetened with brown sugar syrup and topped with cinnamon-sugar dusted cold foam.",
+                                            "origin": "Inspire Brands Test Kitchen",
+                                            "caffeineContent": "267 mg (medium)",
+                                            "brewingMethod": "Cold steep",
+                                            "popularity": "Limited Time Feature",
+                                            "sizes": [
+                                                { "size": "small", "price": 4.29 },
+                                                { "size": "medium", "price": 4.79 },
+                                                { "size": "large", "price": 5.29 }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "category": "Donuts & Bakery",
+                                    "items": [
+                                        {
+                                            "name": "Glazed Donut",
+                                            "description": "Classic yeast donut coated in vanilla glaze",
+                                            "longDescription": "Soft, airy donut finished with a signature sweet glaze. Perfect with hot or iced coffee.",
+                                            "origin": "Dunkin Bakery",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Baked",
+                                            "popularity": "Iconic",
+                                            "sizes": [
+                                                { "size": "standard", "price": 1.49 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Boston Kreme Donut",
+                                            "description": "Custard-filled donut topped with chocolate icing",
+                                            "longDescription": "A nod to Dunkin's New England roots featuring silky Bavarian cream and rich chocolate icing.",
+                                            "origin": "Boston, MA",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Baked",
+                                            "popularity": "Regional Favorite",
+                                            "sizes": [
+                                                { "size": "standard", "price": 1.79 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Everything Bagel & Cream Cheese",
+                                            "description": "Toasted everything bagel with plain cream cheese",
+                                            "longDescription": "Sesame, poppy seeds, garlic, and onion topped bagel served with cool cream cheese spread.",
+                                            "origin": "Dunkin Bakery",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Baked",
+                                            "popularity": "Morning Rush MVP",
+                                            "sizes": [
+                                                { "size": "standard", "price": 3.29 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "MUNCHKINS Donut Hole Treats (10 ct)",
+                                            "description": "Assorted bite-sized donuts",
+                                            "longDescription": "Shareable assortment of glazed, chocolate, and jelly MUNCHKINS donut holes.",
+                                            "origin": "Dunkin Bakery",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Baked",
+                                            "popularity": "Group Favorite",
+                                            "sizes": [
+                                                { "size": "standard", "price": 3.99 }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "category": "Breakfast Sandwiches",
+                                    "items": [
+                                        {
+                                            "name": "Bacon Egg & Cheese on Croissant",
+                                            "description": "Cherrywood smoked bacon, eggs, and American cheese",
+                                            "longDescription": "Flaky croissant stacked with cherrywood smoked bacon, fluffy eggs, and melty cheese.",
+                                            "origin": "Dunkin Kitchens",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Griddled",
+                                            "popularity": "Top Seller",
+                                            "sizes": [
+                                                { "size": "standard", "price": 4.99 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Power Breakfast Sandwich",
+                                            "description": "Multi-grain bread with turkey sausage and egg whites",
+                                            "longDescription": "Veggie egg white omelet, turkey sausage, and aged white cheddar on seeded multigrain bread.",
+                                            "origin": "Inspire Brands Nutrition Lab",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Griddled",
+                                            "popularity": "Balanced Choice",
+                                            "sizes": [
+                                                { "size": "standard", "price": 5.49 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Turkey Sausage Wake-Up Wrap",
+                                            "description": "Egg and turkey sausage in a warm tortilla",
+                                            "longDescription": "Portable protein with scrambled egg, turkey sausage, and American cheese inside a grilled tortilla.",
+                                            "origin": "Dunkin Anytime Menu",
+                                            "caffeineContent": "0 mg",
+                                            "brewingMethod": "Griddled",
+                                            "popularity": "Value Leader",
+                                            "sizes": [
+                                                { "size": "standard", "price": 2.59 }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "category": "Extras",
+                                    "items": [
+                                        {
+                                            "name": "Flavor Swirl Add-On",
+                                            "description": "Caramel, mocha, French vanilla, or seasonal swirl",
+                                            "longDescription": "Rich, creamy swirls add sweetness and color to any hot or iced beverage.",
+                                            "origin": "Dunkin Beverage Line",
+                                            "caffeineContent": "0 mg",
+                                            "availability": "Always",
+                                            "sizes": [
+                                                { "size": "standard", "price": 0.75 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Whipped Cream",
+                                            "description": "Add whipped cream topping",
+                                            "longDescription": "Finish drinks with house-made whipped cream for extra texture and presentation.",
+                                            "origin": "Dunkin Beverage Line",
+                                            "caffeineContent": "0 mg",
+                                            "availability": "Always",
+                                            "sizes": [
+                                                { "size": "standard", "price": 0.5 }
+                                            ]
+                                        },
+                                        {
+                                            "name": "Extra Espresso Shot",
+                                            "description": "Add one additional espresso shot",
+                                            "longDescription": "Boost any beverage with a fresh-pulled Dunkin espresso shot for added intensity.",
+                                            "origin": "Dunkin Espresso Bar",
+                                            "caffeineContent": "75 mg per shot",
+                                            "availability": "Always",
+                                            "sizes": [
+                                                { "size": "standard", "price": 1 }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    "sizes": [
