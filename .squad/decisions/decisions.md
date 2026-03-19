@@ -72,6 +72,39 @@ Raised the cap to 250 tokens. This gives enough room for a 1-2 sentence response
 - Fixes voice truncation on closing phrases
 - No measurable latency impact for typical 1-2 sentence responses (model stops naturally before hitting the cap)
 
+## Canonical Size Labels for Menu Data (2026-03-20)
+
+**Author:** Summer (Backend Dev)
+
+### Decision
+All size labels in the search index must use one of five canonical values: **Mini**, **Small**, **Medium**, **Large**, **RT 44**. The ingestion notebook normalizes raw product display names (e.g., "Sm Cherry Limeade") to these labels. The system prompt enumerates these valid sizes explicitly.
+
+### Rationale
+Raw Sonic API data embeds the product name in each size variant's display name. Without normalization, the AI model sees inconsistent labels across products and can't reliably match customer size requests to search result data. Standardized labels make the `update_order` tool call deterministic.
+
+### Impact
+- Next time the ingestion notebook is re-run, the search index will contain clean size labels
+- The AI model now has explicit guidance on valid size names
+- Any downstream code that checks size names should expect only these 5 values plus "Standard" (for items without size variants)
+
+## Menu Sizes Sourced from Production Data (2026-03-19)
+
+**Author:** Morty (Frontend Dev)
+
+### Context
+The UI menu panel (`menuItems.json`) had only Small/Medium/Large for drinks, while the AI voice assistant and Azure AI Search index offered 5 sizes (Mini, Small, Medium, Large, RT 44). This caused customer confusion.
+
+### Decision
+- Drink items (Cherry Limeade, Blue Raspberry Slush, Ocean Water) now show all 5 sizes: mini, small, medium, large, rt 44
+- Shake items get mini added (4 sizes total). No RT 44 exists for shakes in production data
+- SONIC Blast corrected to mini/small/medium — production data only has 3 sizes for this category
+- All prices sourced from `sonic-menu-items.json` (production data), not manually set
+- A reusable script (`scripts/update_menu_sizes.py`) was created to re-sync sizes/prices from production data whenever it changes
+
+### Impact
+- UI and voice assistant now show consistent size options
+- Future price changes can be synced by re-running the script
+
 ## Previous Decisions (Archived)
 
 ### Copilot Directive (2026-02-25T22-39)
