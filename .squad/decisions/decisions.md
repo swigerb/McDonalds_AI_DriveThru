@@ -52,6 +52,26 @@ Brian requested a distinct index for Sonic menu ingestion. The new notebook crea
 - Existing deployments are unaffected (they use their own `.env` values)
 - Team members should update their local `.env` if they want to match the new default
 
+## Increase max_response_output_tokens from 150 → 250 (2026-03-19)
+
+**Author:** Summer (Backend Dev)  
+**Supersedes:** Decision #2 (Constrain Model Output Tokens)
+
+### Context
+Decision #2 set `max_response_output_tokens = 150` to keep voice responses concise. In practice, this truncated the closing phrase "Thank you! Your carhop will have that right out to you!" — the AI would say "Your carhop will have that right—" and stop.
+
+### Decision
+Raised the cap to 250 tokens. This gives enough room for a 1-2 sentence response + order recap + full closing phrase, while still preventing runaway generation.
+
+### Trade-offs
+- Slightly longer max possible response (~187 words vs ~112 words)
+- Still well under the model's natural output limit
+- If further truncation issues appear, consider removing the cap entirely and relying solely on the system prompt's "be brief" instruction
+
+### Impact
+- Fixes voice truncation on closing phrases
+- No measurable latency impact for typical 1-2 sentence responses (model stops naturally before hitting the cap)
+
 ## Previous Decisions (Archived)
 
 ### Copilot Directive (2026-02-25T22-39)
