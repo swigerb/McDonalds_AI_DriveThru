@@ -115,6 +115,13 @@
 - **Impact:** Regression protection, team confidence in production readiness.
 - **Trade-off:** Thresholds can be tightened post-optimization if needed.
 
+#### 23. Audio Feedback Loop Prevention (Morty)
+- **Decision:** Multi-layered approach: VAD threshold `0.6` → `0.8`, silence duration `400ms` → `500ms`, auto gain control disabled, recorder worklet isolation via gain node, mic muting during AI playback.
+- **Rationale:** AI speech output was being captured by microphone, creating feedback loop. Higher VAD threshold + longer silence buffer reject echo artifacts. AGC disable prevents amplification of speaker output. Gain node isolates recorder while preserving echo cancellation. Active muting while AI speaks blocks feedback path entirely.
+- **Files:** `useRealtime.tsx`, `useAudioRecorder.tsx`, `recorder.ts`, `App.tsx`
+- **Constraints:** Barge-in capability preserved (user can still interrupt with loud speech via server VAD). No permission re-prompts (mic stream kept alive, muted via gain node). Server-side VAD maintained.
+- **Impact:** Eliminates infinite self-response loop. Maintains natural conversation flow.
+
 ## Governance
 
 - All meaningful changes require team consensus
