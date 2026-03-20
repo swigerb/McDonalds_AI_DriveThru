@@ -72,6 +72,60 @@ Raised the cap to 250 tokens. This gives enough room for a 1-2 sentence response
 - Fixes voice truncation on closing phrases
 - No measurable latency impact for typical 1-2 sentence responses (model stops naturally before hitting the cap)
 
+## Azure Speech Mode Architecture (2026-03-20)
+
+**Author:** Summer (Backend Dev)
+
+### Decision
+
+The Azure Speech mode now uses a combined endpoint pattern (`POST /azurespeech/speech-to-text`) that performs STT + chat completion + tool calling in a single HTTP request. This differs from the Realtime WebSocket mode which streams continuously.
+
+### Key Design Choices
+
+1. **Async OpenAI client (`AsyncAzureOpenAI`)** — avoids blocking the event loop during chat completion. The sync `AzureOpenAI` client was a correctness issue in an aiohttp server.
+
+2. **Executor for Speech SDK** — `recognize_once()` is synchronous. Wrapped in `run_in_executor()` to keep the event loop free. Same pattern for TTS.
+
+3. **Separate SearchClient instance** — Azure Speech gets its own `SearchClient` (vs sharing with the Realtime pipeline). This keeps connection pools isolated so Speech mode load can't starve the WebSocket pipeline.
+
+4. **Conversation history per session** — Multi-turn context stored in-memory with a 20-message sliding window (plus system message). This lets the model reference prior turns without unbounded memory growth.
+
+5. **Conditional mount** — Azure Speech routes only mount if `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` are configured. The Realtime WebSocket mode is unaffected if Speech env vars are missing.
+
+6. **Session ID in response** — The endpoint creates an `order_state_singleton` session on first call and returns the `session_id`. The frontend can pass it back on subsequent calls for order continuity.
+
+### Impact on Frontend
+
+The frontend hook (`useAzureSpeech.tsx`) now consumes `tool_results` from the response and invokes `onReceivedToolResponse` for each entry to update the order panel in real-time.
+
+### Risks
+
+- Conversation history is in-memory; lost on server restart. Acceptable for drive-thru ordering sessions (short-lived).
+- No extras validation in the Azure Speech update_order path (unlike the Realtime pipeline's tools.py which checks extras against base items). Could be added if needed.
+
+## Azure Speech Hook — Tool Response Processing & Session Management (2026-03-20)
+
+**Author:** Morty (Frontend Dev)
+
+### Context
+
+The `useAzureSpeech` hook had `onReceivedToolResponse` defined in its `Parameters` interface and passed by `App.tsx`, but the parameter was never destructured or used. This meant Azure Speech mode silently ignored all order updates from the backend — the carhop ticket always showed $0.00.
+
+### Decisions
+
+#### 1. Tool result processing matches real-time pattern
+The hook now processes `tool_results` from the REST response and constructs `ExtensionMiddleTierToolResponse` objects with the same shape the real-time WebSocket hook uses. This lets `App.tsx` use one callback pattern for both modes.
+
+#### 2. Session ID via `useRef` + `crypto.randomUUID()`
+Each `startSession()` call generates a fresh UUID. The session ID is sent in every `/azurespeech/speech-to-text` request body so the backend can maintain order state per conversation. This parallels how the WebSocket mode implicitly gets a session per connection.
+
+#### 3. Backward compatible
+If the backend response omits `tool_results`, the hook works exactly as before — no errors, no regressions.
+
+### Impact
+- Azure Speech mode now properly updates the order panel with prices and items
+- Backend now returns `tool_results` array and accepts `session_id` in the request body
+
 ## Canonical Size Labels for Menu Data (2026-03-20)
 
 **Author:** Summer (Backend Dev)
