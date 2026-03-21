@@ -11,6 +11,7 @@ How to decide who handles what.
 | Python backend, Azure OpenAI, AI Search, WebSockets | Summer 🔧 | API endpoints, rtmt.py, tool calling, order state, speech SDK |
 | Tests, quality, edge cases | Birdperson 🧪 | pytest, integration tests, test fixtures, coverage |
 | Bicep, Docker, azd, CI/CD, Azure resources | Squanchy ⚙️ | Infrastructure, deployment, container config, dev containers |
+| OpenAI Realtime API, system prompts, VAD, voice AI | Unity 🤖 | gpt-realtime-1.5, session config, audio pipeline architecture, demo readiness |
 | Code review | Rick 🏗️ | Review PRs, check quality, suggest improvements |
 | Testing strategy | Birdperson 🧪 | Write tests, find edge cases, verify fixes |
 | Scope & priorities | Rick 🏗️ | What to build next, trade-offs, decisions |
@@ -27,6 +28,7 @@ How to decide who handles what.
 | `squad:summer` | Backend implementation | Summer 🔧 |
 | `squad:birdperson` | Test writing, QA | Birdperson 🧪 |
 | `squad:squanchy` | Infrastructure, deployment | Squanchy ⚙️ |
+| `squad:unity` | AI/Realtime API, voice quality | Unity 🤖 |
 
 ### How Issue Assignment Works
 

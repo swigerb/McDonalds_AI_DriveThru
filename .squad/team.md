@@ -17,6 +17,7 @@
 | Summer | Backend Dev | `.squad/agents/summer/charter.md` | 🔧 Active |
 | Birdperson | Tester | `.squad/agents/birdperson/charter.md` | 🧪 Active |
 | Squanchy | DevOps | `.squad/agents/squanchy/charter.md` | ⚙️ Active |
+| Unity | AI / Realtime Expert | `.squad/agents/unity/charter.md` | 🤖 Active |
 | Scribe | Session Logger | `.squad/agents/scribe/charter.md` | 📋 Active |
 | Ralph | Work Monitor | — | 🔄 Monitor |
 

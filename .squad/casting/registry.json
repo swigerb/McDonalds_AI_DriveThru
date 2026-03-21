@@ -39,6 +39,14 @@
       "created_at": "2026-03-19T03:45:33Z",
       "legacy_named": false,
       "status": "active"
+    },
+    "unity": {
+      "persistent_name": "Unity",
+      "universe": "Rick and Morty",
+      "role": "AI / Realtime Expert",
+      "created_at": "2026-03-21T19:32:07Z",
+      "legacy_named": false,
+      "status": "active"
     }
   }
 }
