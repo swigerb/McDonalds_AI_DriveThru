@@ -34,9 +34,9 @@
 
 ## Model
 
-- **Preferred:** auto
-- **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
-- **Fallback:** Standard chain — the coordinator handles fallback automatically
+- **Preferred:** claude-opus-4.6
+- **Rationale:** Morty owns the WebSocket audio client and barge-in UI logic — always uses Claude Opus 4.6 for deep reasoning on audio state machines and race conditions
+- **Fallback:** claude-opus-4.6 (no fallback — always Opus)
 
 ## Collaboration
 

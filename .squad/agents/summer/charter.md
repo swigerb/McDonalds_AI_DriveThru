@@ -37,9 +37,9 @@
 
 ## Model
 
-- **Preferred:** auto
-- **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
-- **Fallback:** Standard chain — the coordinator handles fallback automatically
+- **Preferred:** claude-opus-4.6
+- **Rationale:** Summer owns the critical real-time audio pipeline and tool-calling logic — always uses Claude Opus 4.6 for maximum reasoning depth on async patterns and failure modes
+- **Fallback:** claude-opus-4.6 (no fallback — always Opus)
 
 ## Collaboration
 

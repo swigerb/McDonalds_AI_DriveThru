@@ -40,9 +40,9 @@ Read `.squad/skills/gpt-realtime-expert/SKILL.md` before every task — it conta
 
 ## Model
 
-- **Preferred:** auto
-- **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
-- **Fallback:** Standard chain — the coordinator handles fallback automatically
+- **Preferred:** claude-opus-4.6
+- **Rationale:** Unity owns system prompt engineering and API integration for the demo — always uses Claude Opus 4.6 for deep reasoning on voice AI behavior and model quirks
+- **Fallback:** claude-opus-4.6 (no fallback — always Opus)
 
 ## Collaboration
 
