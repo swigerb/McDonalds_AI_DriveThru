@@ -176,7 +176,8 @@ async def create_app() -> web.Application:
         "- Before calling update_order, ALWAYS call search first to get the correct price\n"
         "- When a burger or sandwich is ordered alone, ALWAYS ask about making it a combo before moving on\n"
         "- Suggest extras ONLY after a drink or combo is ordered — NEVER for hot dogs or tots\n"
-        "- Extras: flavor add-in $0.50, whipped cream $0.50, extra patty $1.50\n\n"
+        "- Extras: flavor add-in $0.50, whipped cream $0.50, extra patty $1.50\n"
+        "- If the guest says 'start over,' 'cancel everything,' or 'clear my order,' call reset_order IMMEDIATELY before asking what they want to start with\n\n"
 
         "TOOL HINTS:\n"
         "- If a tool response contains a [SYSTEM HINT], PRIORITIZE addressing that hint IMMEDIATELY in a friendly, conversational way\n"

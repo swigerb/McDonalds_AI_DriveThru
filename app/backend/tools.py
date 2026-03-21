@@ -458,6 +458,26 @@ async def get_order(_args: Any, session_id: str) -> ToolResult:
     return ToolResult(readback, ToolResultDirection.TO_BOTH, client_text=json_summary)
 
 
+reset_order_tool_schema = {
+    "type": "function",
+    "name": "reset_order",
+    "description": "Clear all items from the current order and start fresh.",
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": False
+    }
+}
+
+async def reset_order(_args: Any, session_id: str) -> ToolResult:
+    """Clear the entire order ticket."""
+    logger.info("Resetting entire order for session %s", session_id)
+    order_state_singleton.reset_order(session_id)
+    json_summary = order_state_singleton.get_order_summary_json(session_id)
+    return ToolResult(f"Order cleared. {json_summary}", ToolResultDirection.TO_CLIENT)
+
+
 def attach_tools_rtmt(
     rtmt: RTMiddleTier,
     credentials: AzureKeyCredential | DefaultAzureCredential,
@@ -479,5 +499,6 @@ def attach_tools_rtmt(
     rtmt.tools["search"] = Tool(schema=search_tool_schema, target=lambda args: search(search_client, semantic_configuration, identifier_field, content_field, embedding_field, use_vector_query, args))
     rtmt.tools["update_order"] = Tool(schema=update_order_tool_schema, target=lambda args, session_id: update_order(args, session_id))
     rtmt.tools["get_order"] = Tool(schema=get_order_tool_schema, target=lambda args, session_id: get_order(args, session_id))
+    rtmt.tools["reset_order"] = Tool(schema=reset_order_tool_schema, target=lambda args, session_id: reset_order(args, session_id))
 
 

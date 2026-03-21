@@ -163,6 +163,13 @@ class OrderState:
         total = session["order_summary"].finalTotal
         return f"I have {summary_str}. Your total is {total:.2f}. "
 
+    def reset_order(self, session_id: str):
+        """Clears all items from the current session's order."""
+        session = self.sessions[session_id]
+        session["order_state"] = []
+        self._update_summary(session_id)
+        logger.info("Order fully reset for session %s", session_id)
+
     def get_order_summary_json(self, session_id: str) -> str:
         """Return cached JSON string — avoids repeated Pydantic serialization."""
         return self.sessions[session_id]["order_summary_json"]
