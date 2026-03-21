@@ -12,8 +12,9 @@ export class Recorder {
     private isMuted = false;
 
     // RMS energy threshold for barge-in detection on the raw (pre-gain) stream.
-    // Tuned so normal echo doesn't trigger but a user speaking clearly does.
-    private static readonly BARGE_IN_THRESHOLD = 0.08;
+    // Must be high enough that speaker echo doesn't trigger it, but low enough
+    // that a user speaking clearly at drive-thru distance does.
+    private static readonly BARGE_IN_THRESHOLD = 0.15;
     private static readonly BARGE_IN_CHECK_MS = 100;
 
     public constructor(onDataAvailable: (buffer: Iterable<number>) => void, onBargeIn?: () => void) {

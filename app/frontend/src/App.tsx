@@ -239,8 +239,10 @@ function SonicApp() {
     // Barge-in handler: when the Recorder detects the user speaking while
     // the mic is muted (AI is talking), unmute, cancel the AI response,
     // and stop audio playback so the user can be heard immediately.
+    // BLOCKED during greeting to prevent echo-driven greeting loop.
     const handleBargeIn = useCallback(() => {
         if (!isAiSpeakingRef.current) return;
+        if (awaitingGreetingDoneRef.current) return;
         console.log("Barge-in detected — interrupting AI");
         isAiSpeakingRef.current = false;
         stopAudioPlayer();

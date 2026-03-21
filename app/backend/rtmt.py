@@ -30,7 +30,6 @@ _PASSTHROUGH_SERVER_TYPES = frozenset({
     "input_audio_buffer.speech_started",
     "input_audio_buffer.speech_stopped",
     "input_audio_buffer.committed",
-    "error",
     "rate_limits.updated",
 })
 
@@ -189,6 +188,11 @@ class RTMiddleTier:
         session_id = self._session_map.get(client_ws)
         if message is not None:
             match msg_type:
+                case "error":
+                    # Surface OpenAI errors (e.g. rejected session.update, malformed tool schemas)
+                    # so they don't silently vanish into the client.
+                    logger.error("OpenAI Realtime API error: %s", json.dumps(message, default=str)[:1000])
+
                 case "session.created":
                     session = message["session"]
                     # Hide the instructions, tools and max tokens from clients, if we ever allow client-side 
@@ -212,7 +216,7 @@ class RTMiddleTier:
                         item = message["item"]
                         call_id = item.get("call_id")
                         if call_id and call_id not in tools_pending:
-                            logger.debug("Tool call %s pre-registered via output_item.added", call_id)
+                            logger.info("Tool call received: name=%s, call_id=%s", item.get("name"), call_id)
                             tools_pending[call_id] = RTToolCall(call_id, "")
                         updated_message = None
 
@@ -275,6 +279,13 @@ class RTMiddleTier:
                         await server_ws.send_str(_RESPONSE_CREATE_MSG)
                     if "response" in message:
                         output = message["response"]["output"]
+                        fn_calls = [o for o in output if o.get("type") == "function_call"]
+                        if fn_calls:
+                            logger.info("Response contained %d tool call(s): %s",
+                                        len(fn_calls), [o.get("name", "?") for o in fn_calls])
+                        else:
+                            out_types = [o.get("type", "?") for o in output]
+                            logger.info("Response completed with NO tool calls (output types: %s)", out_types)
                         filtered = [o for o in output if o.get("type") != "function_call"]
                         if len(filtered) != len(output):
                             message["response"]["output"] = filtered
@@ -312,7 +323,12 @@ class RTMiddleTier:
                         session["voice"] = self.voice_choice
                     session["tool_choice"] = "auto" if len(self.tools) > 0 else "none"
                     session["tools"] = [tool.schema for tool in self.tools.values()]
-                    logger.info("session.update: injected %d tools, tool_choice=%s", len(session["tools"]), session["tool_choice"])
+                    tool_names = [t.get("name", "?") for t in session["tools"]]
+                    logger.info(
+                        "session.update: injected %d tools %s, tool_choice=%s, max_tokens=%s",
+                        len(session["tools"]), tool_names, session["tool_choice"],
+                        session.get("max_response_output_tokens"),
+                    )
                     updated_message = json.dumps(message)
 
         return updated_message
@@ -352,10 +368,11 @@ class RTMiddleTier:
                 session_id = self._session_map.get(ws)
                 greeting_sent = session_id in self._sent_greeting
 
-                async def send_greeting_once():
+                async def send_greeting_once(trigger: str = "unknown"):
                     nonlocal greeting_sent, ai_speaking, greeting_in_progress
                     if greeting_sent:
                         return
+                    logger.info("Greeting firing via trigger=%s (session=%s)", trigger, session_id)
                     # Pre-set echo suppression: the AI will start speaking as soon as
                     # OpenAI processes response.create.  Without this, there's a gap
                     # between response.create and the first response.audio.delta where
@@ -398,7 +415,7 @@ class RTMiddleTier:
                             # always fires even if the API doesn't send session.updated.
                             if not greeting_sent and _MARKER_SESSION_UPDATE in msg.data and _MARKER_SESSION_UPDATED not in msg.data:
                                 logger.info("Fallback greeting: session.update forwarded — sending greeting without waiting for session.updated")
-                                await send_greeting_once()
+                                await send_greeting_once(trigger="fallback-after-session.update")
                         elif msg.type == aiohttp.WSMsgType.ERROR:
                             logger.error("Client WebSocket error: %s", ws.exception())
                             break
@@ -452,7 +469,7 @@ class RTMiddleTier:
                             # model completion (response.create).
                             if _MARKER_SESSION_UPDATED in data and not greeting_sent:
                                 logger.info("session.updated received — tools are configured, sending greeting")
-                                await send_greeting_once()
+                                await send_greeting_once(trigger="session.updated")
 
                             new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending)
                             if new_msg is not None:

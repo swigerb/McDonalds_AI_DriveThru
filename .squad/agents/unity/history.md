@@ -71,3 +71,12 @@
 - **Placement rationale:** Each section placed adjacent to its most related existing section — PERSONALIZATION near VOICE STYLE for persona continuity, PATIENCE near CONVERSATIONAL FLOW for interaction rules, COMBO LOGIC between TOOL HINTS and SUGGESTIVE SELLING to enforce the priority gate, VISUAL SYNC near CLOSING for output-facing behavior.
 - **Prompt stayed lean:** 2-3 bullets per section. Total prompt growth is minimal — within first-response latency budget.
 
+### Token Limit & Prompt Restructure Fix (2026-07-22)
+- **Root cause of mid-sentence cutoff:** `max_response_output_tokens = 250` was too low. Tool calls (search, update_order) consume response tokens from the same budget as verbal output. A multi-item order readback easily exceeds 250 tokens when the model needs to list 5+ items with prices and a closing phrase.
+- **Fix: max_tokens 250 → 1024.** 1024 is generous enough for any response scenario (tool call + verbal confirmation + full 5-item readback) without introducing latency concerns. The system prompt's "ONE or TWO sentences" instruction still governs brevity for normal responses.
+- **Prompt restructured for compliance priority:** TOOL-CALLING RULES moved from section #5 to section #2 (right after VOICE STYLE). In gpt-realtime-1.5, instructions near the top of the system prompt get significantly more attention. This was already documented as best practice but had drifted as new sections were added.
+- **Prompt trimmed from ~1500 to ~1008 tokens:** Merged PERSONALIZATION into a condensed section, merged PATIENCE & CLARITY into CONVERSATIONAL FLOW, trimmed verbose examples throughout. Moved low-priority sections (HAPPY HOUR, VISUAL SYNC, OOS PROTOCOL, PERSONALIZATION) to the end. 18 sections → 16 sections.
+- **New prompt section order (priority-weighted):** VOICE STYLE → TOOL-CALLING RULES → MENU & PRICING → ORDERING → CONVERSATIONAL FLOW → BRAND IDENTITY → COMBO LOGIC → TOOL HINTS → SUGGESTIVE SELLING → CLOSING → QUANTITY LIMITS → TECHNICAL GUARDRAILS → PERSONALIZATION → HAPPY HOUR → VISUAL SYNC → OOS → BOUNDARIES.
+- **Key insight:** The 250-token limit was originally set as "demo-safe" (Decision #2 suggested 150, audit bumped to 250). But as the system prompt grew and ordering flows became more complex (combo hints, suggestive selling), 250 became insufficient. Token limits must be re-evaluated whenever prompt complexity increases.
+- **All 8 app tests pass after changes.**
+
