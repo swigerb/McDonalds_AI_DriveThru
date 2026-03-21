@@ -56,3 +56,12 @@
 ### Backend Message Reordering Fix (2026-03-22)
 - **Coordinated with Summer:** Summer fixed the greeting-before-session.update bug in `rtmt.py` that caused tools to never register with OpenAI. While Unity's system prompt mandate fix ensures the AI WANTS to call tools (via explicit negative instructions), Summer's backend fix ensures the AI CAN call tools (by registering them before the first completion). Defense-in-depth approach: AI-side mandate + backend registration both required for reliable tool-calling.
 
+### Carhop Personality & Combo Logic Sections (2026-07-22)
+- **Four new sections added:** PERSONALIZATION, PATIENCE & CLARITY, VISUAL SYNC, COMBO LOGIC — DETERMINISTIC. All follow gpt-realtime-1.5 best practices (bullets, ALL CAPS emphasis, 2-3 bullets each).
+- **PERSONALIZATION (after VOICE STYLE):** Handles "the usual" and "happy hour" triggers with warm, brand-appropriate responses. Reinforces Sonic's high-energy carhop identity.
+- **PATIENCE & CLARITY (after CONVERSATIONAL FLOW):** Gives the AI explicit permission to wait when guests pause or say "uh" / "let me see." Includes a Fan Favorite recommendation fallback. NEVER rush the guest.
+- **VISUAL SYNC (after CLOSING AN ORDER):** Occasional spatial language ("I've got that on your ticket") to bridge voice and screen. Capped at once or twice per order to avoid being annoying.
+- **COMBO LOGIC — DETERMINISTIC (after TOOL HINTS, before SUGGESTIVE SELLING):** Enforces strict ordering priority: Item Selection → Combo Completion → Upsell → Shake/Treat. Prevents the AI from jumping to dessert suggestions before the combo side and drink are filled. Works with Summer's [SYSTEM HINT] pattern.
+- **Placement rationale:** Each section placed adjacent to its most related existing section — PERSONALIZATION near VOICE STYLE for persona continuity, PATIENCE near CONVERSATIONAL FLOW for interaction rules, COMBO LOGIC between TOOL HINTS and SUGGESTIVE SELLING to enforce the priority gate, VISUAL SYNC near CLOSING for output-facing behavior.
+- **Prompt stayed lean:** 2-3 bullets per section. Total prompt growth is minimal — within first-response latency budget.
+
