@@ -16,7 +16,17 @@ Beyond the drive-in experience, this sample demonstrates how Microsoft’s Respo
     - [Mobile Multilingual Ordering Demo](#mobile-multilingual-ordering-demo)
     - [UI Elements Walkthrough](#ui-elements-walkthrough)
   - [Features](#features)
+    - [Core AI & Voice Experience](#core-ai--voice-experience)
+    - [Audio Intelligence & Stability](#audio-intelligence--stability)
+    - [Smart Order Intelligence](#smart-order-intelligence)
+    - [Search & Performance Optimization](#search--performance-optimization)
+    - [Retrieval-Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
+    - [Real-Time Transcription + Translation](#real-time-transcription--translation)
+    - [Live Order Synchronization](#live-order-synchronization)
+    - [Audio Output + Accessibility](#audio-output--accessibility)
+    - [Session & Analytics](#session--analytics)
     - [Architecture Diagram](#architecture-diagram)
+    - [Technical Stack](#technical-stack)
   - [Getting Started](#getting-started)
     - [GitHub Codespaces](#github-codespaces)
     - [VS Code Dev Containers](#vs-code-dev-containers)
@@ -45,18 +55,81 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 
 ## Features
 
-- **Sonic-specific conversational AI**: GPT-4o Realtime is constrained to verified menu data through Azure AI Search so it always sounds like a Sonic carhop.
-- **Retrieval-Augmented Generation (RAG)**: Azure OpenAI tool-calling plus semantic hybrid search keep recommendations grounded with pricing, nutrition, and add-on guidance.
-- **Real-Time Transcription + Translation**: Multilingual guests receive accurate transcripts in their language of choice with instant pivots between English, Spanish, Mandarin, French, and more.
-- **Live Order Synchronization**: Function calls update the shared cart so drive-in screens, mobile devices, and carhop tablets stay aligned without race conditions.
-- **Audio Output + Accessibility**: Browser audio playback mirrors what a guest would hear at a Sonic stall, supporting screenless or low-vision ordering.
-- **Durable Session Tokens**: Every realtime conversation emits a session token plus per-turn identifiers so transcripts can map back to telemetry, QA findings, or Azure logs.
+### Core AI & Voice Experience
+- **Sonic-specific conversational AI**: GPT-4o Realtime 1.5 with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition) and **Coral voice**—a warm, friendly female voice that embodies the Sonic carhop persona.
+- **Natural turn-taking**: VAD tuning (threshold 0.7, prefix padding 300ms, silence duration 500ms) for seamless back-and-forth conversations.
+- **Spoken currency**: "Four dollars and nineteen cents" instead of "$4.19"—more natural, more Sonic.
+- **Temperature 0.5**: Tight, focused responses optimized for fast Time to First Token.
+
+### Audio Intelligence & Stability
+- **Echo suppression (defense-in-depth)**: Server-side audio gating in rtmt.py (ai_speaking flag + 300ms cooldown + input_audio_buffer.clear) plus frontend mic muting at response.created.
+- **Barge-in support**: Users can interrupt the AI naturally; speech_started event overrides suppression for natural conversation flow.
+
+### Smart Order Intelligence
+- **Combo conversion**: AI asks "Want to make that a combo with fries or tots and a drink?" for solo burgers and sandwiches, driving average check value.
+- **Tots-first branding**: Sonic's famous tots always mentioned before fries in upsell suggestions.
+- **Sonic Signature treats**: AI proactively suggests shakes and blasts to round out orders based on what's already in the cart.
+- **Combo validation**: `get_combo_requirements()` deterministically tracks missing sides and drinks, sending [SYSTEM HINT] to the AI to guide conversation without relying on LLM memory.
+- **Grouped readback**: "Two Medium Cherry Limeades and one Coney" instead of listing every item individually—faster, more natural.
+- **Delta summaries**: Natural voice deltas for the AI to speak, full JSON for screen display.
+- **Quantity limits**: Max 10 per item, 25 total with friendly carhop-style responses ("Whoa, that's a lot of tots!").
+- **Price validation**: Rejects $0 items with retry messages.
+- **Route 44 size support**: Sonic's iconic 44-ounce size handled correctly.
+
+### Search & Performance Optimization
+- **TTL search cache**: 60-second, 128-entry cache for Azure AI Search results eliminates redundant queries.
+- **Human-readable sizes**: "Small ($2.49), Medium ($3.29)" instead of raw JSON in tool results.
+- **Gzip compression**: 60–70% reduction on HTTP responses for mobile-first experience.
+- **Strategic vendor chunking**: Optimized frontend bundle splitting in Vite.
+
+### Retrieval-Augmented Generation (RAG)
+- **Grounded recommendations**: Azure OpenAI tool-calling plus semantic hybrid search keep menu suggestions grounded with pricing, nutrition, and add-on guidance—zero hallucinated items.
+- **[SYSTEM HINT] pattern**: Deterministic Python logic drives conversation direction, not LLM memory. Tools return both voice-friendly text for the AI and JSON metadata for the frontend.
+
+### Real-Time Transcription + Translation
+- **Multilingual ordering**: Guests receive accurate transcripts in their language of choice with instant pivots between English, Spanish, Mandarin, French, and more.
+
+### Live Order Synchronization
+- **Function calls**: Update the shared cart so drive-in screens, mobile devices, and carhop tablets stay aligned without race conditions.
+
+### Audio Output + Accessibility
+- **Browser audio playback**: Mirrors what a guest would hear at a Sonic stall, supporting screenless or low-vision ordering.
+
+### Session & Analytics
+- **Durable session tokens**: Every realtime conversation emits a session token plus per-turn identifiers so transcripts can map back to telemetry, QA findings, or Azure logs.
 
 ### Architecture Diagram
 
-The `RTClient` in the frontend receives the audio input, sends that to the Python backend which uses an `RTMiddleTier` object to interface with the Azure OpenAI real-time API, and includes a tool for searching Azure AI Search.
+The `RTClient` in the frontend receives the audio input, sends that to the Python backend which uses an `RTMiddleTier` object to interface with the Azure OpenAI Realtime API, and includes a tool for searching Azure AI Search.
 
 ![Diagram of real-time RAG pattern](docs/RTMTPattern.png)
+
+The architecture implements a **WebSocket middle tier** that bridges the browser and Azure OpenAI in real-time, with the backend handling:
+- **Audio gating & echo suppression** for stable, interrupt-friendly conversations
+- **Tool-calling orchestration**: Menu search, combo validation, order management
+- **[SYSTEM HINT] injection**: Deterministic Python logic guides conversation without relying on LLM memory
+- **TO_BOTH payloads**: Split responses between voice-friendly text for the AI and JSON metadata for the frontend
+
+### Technical Stack
+
+**Frontend:**
+- React, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- WebSocket client for real-time audio and order updates
+
+**Backend:**
+- Python 3.11+ with aiohttp, WebSockets
+- Azure OpenAI GPT-4o Realtime API (1.5 model)
+- Azure Speech SDK for voice synthesis
+
+**AI & Search:**
+- Azure AI Search for semantic hybrid search with menu grounding
+- Function calling for tool-driven order intelligence
+
+**Infrastructure:**
+- Bicep IaC for reproducible deployments
+- Azure Container Apps for serverless, scale-to-zero hosting
+- Docker for consistent local and cloud environments
+- Azure Developer CLI (`azd`) for one-command provisioning
 
 This repository includes infrastructure as code and a `Dockerfile` to deploy the app to Azure Container Apps, but it can also be run locally as long as Azure AI Search and Azure OpenAI services are configured.
 
