@@ -75,7 +75,7 @@ _GREETING_MSG = json.dumps({
         "type": "message",
         "role": "user",
         "content": [
-            {"type": "input_text", "text": "A guest just pulled up to the drive-thru speaker. Greet them now — be brief and warm. Say ONLY the greeting itself. Do NOT explain how to greet or offer multiple options."}
+            {"type": "input_text", "text": "Say EXACTLY this greeting and NOTHING else: Welcome to Sonic Drive-In! What can I get started for you today?"}
         ]
     }
 })
@@ -322,6 +322,10 @@ class RTMiddleTier:
         # Safe without locks: single-threaded asyncio event loop guarantees no concurrent mutation.
         ai_speaking = False
         cooldown_end = 0.0  # loop.time() value after which user audio is accepted again
+        # Blocks barge-in (speech_started) during the greeting response.
+        # Without this, the greeting audio echoing into the mic triggers VAD,
+        # which resets ai_speaking and allows the echo through — causing a second greeting.
+        greeting_in_progress = False
 
         async with aiohttp.ClientSession(
             base_url=self.endpoint,
@@ -346,7 +350,7 @@ class RTMiddleTier:
                 greeting_sent = session_id in self._sent_greeting
 
                 async def send_greeting_once():
-                    nonlocal greeting_sent, ai_speaking
+                    nonlocal greeting_sent, ai_speaking, greeting_in_progress
                     if greeting_sent:
                         return
                     # Pre-set echo suppression: the AI will start speaking as soon as
@@ -354,6 +358,7 @@ class RTMiddleTier:
                     # between response.create and the first response.audio.delta where
                     # mic audio could leak through and cause an echo loop.
                     ai_speaking = True
+                    greeting_in_progress = True
                     # Flush any stale audio that arrived before session was configured
                     await target_ws.send_str(_INPUT_AUDIO_CLEAR_MSG)
                     await target_ws.send_str(_GREETING_MSG)
@@ -393,7 +398,7 @@ class RTMiddleTier:
                         await target_ws.close()
                         
                 async def from_server_to_client():
-                    nonlocal ai_speaking, cooldown_end
+                    nonlocal ai_speaking, cooldown_end, greeting_in_progress
                     async for msg in target_ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             # Track AI speaking state for echo suppression.
@@ -406,16 +411,27 @@ class RTMiddleTier:
                                 ai_speaking = True
                             elif _MARKER_AUDIO_DONE in data:
                                 ai_speaking = False
-                                cooldown_end = loop.time() + _ECHO_COOLDOWN_SEC
+                                # Longer cooldown after greeting — speakers at full volume,
+                                # no prior calibration makes echo worst-case at startup.
+                                if greeting_in_progress:
+                                    cooldown_end = loop.time() + _ECHO_COOLDOWN_SEC * 2
+                                    greeting_in_progress = False
+                                    logger.debug("Echo suppression: greeting audio done — extended cooldown")
+                                else:
+                                    cooldown_end = loop.time() + _ECHO_COOLDOWN_SEC
                                 logger.debug("Echo suppression: AI audio done — cooldown %.1fs", _ECHO_COOLDOWN_SEC)
                                 # Flush any echoed audio that leaked into OpenAI's buffer
                                 await target_ws.send_str(_INPUT_AUDIO_CLEAR_MSG)
                             elif _MARKER_SPEECH_STARTED in data:
-                                # Server VAD detected genuine barge-in — immediately accept audio
-                                if ai_speaking:
-                                    logger.debug("Echo suppression: barge-in detected — resuming user audio")
-                                ai_speaking = False
-                                cooldown_end = 0.0
+                                # Server VAD detected speech — but during the greeting
+                                # this is almost certainly echo, not a real barge-in.
+                                if greeting_in_progress:
+                                    logger.debug("Echo suppression: ignoring speech_started during greeting")
+                                else:
+                                    if ai_speaking:
+                                        logger.debug("Echo suppression: barge-in detected — resuming user audio")
+                                    ai_speaking = False
+                                    cooldown_end = 0.0
 
                             new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending)
                             if new_msg is not None:
