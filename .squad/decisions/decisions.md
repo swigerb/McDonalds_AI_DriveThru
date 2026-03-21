@@ -449,6 +449,102 @@ For gpt-realtime-1.5, tool-calling requires EXPLICIT negative instructions and c
 - Tool-calling now reliable
 - Order flow reaches completion
 
+## Copilot Directive — Demo System Prompt Enhancements (2026-03-21T21:10)
+
+**Author:** Brian Swiger (via Copilot)  
+**Status:** Pending Review
+
+### What
+Three critical system prompt sections for Inspire Brands demo:
+1. **PERSONALIZATION** — Carhop spirit, handle "regulars" and "happy hour" mentions warmly
+2. **PATIENCE & CLARITY** — Handle stalls/silence gracefully ("No rush!"), offer Fan Favorites when asked for recommendations
+3. **VISUAL SYNC** — Occasional spatial language ("I've got that added to your ticket right now")
+4. **COMBO LOGIC — DETERMINISTIC** section enforcing priority: Item Selection → Combo Completion → Upsell → Treat Suggestion
+
+### Why
+Makes the AI feel like a person on skates, not a kiosk. Critical for emotional impact with Inspire Brands demo stakeholders.
+
+---
+
+## Demo Bug Fix Changeset — APPROVED (2026-03-22)
+
+**Author:** Rick (Lead/Architect)  
+**Status:** APPROVED
+
+### Bug 1: Tools Not Called (Greeting Race Condition) ✓
+- **Root cause:** `response.create` fired before OpenAI confirmed `session.updated`, so model hadn't loaded tool definitions.
+- **Fix:** Move greeting trigger from `from_client_to_server` to `from_server_to_client` (fire-on-`session.updated`). One-line logical move using `_MARKER_SESSION_UPDATED` substring check.
+
+### Bug 2: Barge-In Deadlock ✓
+- **Root cause:** Frontend echo suppression (gain=0) → backend drops `input_audio_buffer.append` → OpenAI never fires `speech_started` → nothing unmutes. Circular dependency.
+- **Fix:** AnalyserNode tapped before gain node detects user speech on muted stream. RMS energy calculation (textbook), 0.08 threshold (conservative), 100ms polling (cheap).
+
+### Ancillary Fixes ✓
+- `reset_order` session_id crash — fixed
+- `reset_order` TO_CLIENT → TO_BOTH — consistent with Decision #26
+- Frontend tool dispatch — add `get_order` and `reset_order` handlers for carhop ticket updates
+
+### Risk Assessment
+**Low.** All changes are additive or fix obvious bugs. Barge-in monitor only activates when mic muted (normal path is no-op). Greeting timing strictly safer.
+
+---
+
+## Happy Hour Dynamic Pricing (2026-03-22)
+
+**Author:** Summer (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+Drinks and slushes are automatically half-price between 2:00 PM and 4:00 PM local time.
+
+### Key Choices
+1. **Local time** — used `datetime.now()`, avoided new dependencies for demo environment
+2. **Summary-level discount** — original `item.price` preserved on each OrderItem; 50% applied only to calculated totals
+3. **Reused `_infer_combo_component()`** — already identifies drinks; single source of truth
+4. **Context in tool results** — `update_order` and `get_order` append `[HAPPY HOUR ACTIVE: drinks/slushes half-price!]` so AI knows to get excited
+
+### Impact
+- `order_state.py` — added `is_happy_hour()` helper, updated `_update_summary()` loop
+- `tools.py` — import, append note to tool results
+- All 118 tests pass, no regressions
+
+---
+
+## OOS Machine Status Check in Search Results (2026-03-22)
+
+**Author:** Summer (Backend Dev)  
+**Status:** Implemented
+
+### What
+Menu items dependent on down machines get `[OOS: ...]` flagged in search results so AI steers customers away.
+
+### Design
+1. **Module-level `MOCK_MACHINE_STATUS`** — easy toggle for demos; production would use Azure Function/IoT Hub
+2. **Keyword-based matching** — items with "shake", "blast", "sundae", "ice cream" tied to `ice_cream_machine` status
+3. **Non-blocking** — items still returned, just flagged; AI sees `[OOS]` tag and should advise naturally
+4. **Server-side only** — `[OOS]` tag in `TO_SERVER` result, frontend never sees it
+
+### Files Changed
+- `app/backend/tools.py` — `MOCK_MACHINE_STATUS`, `_ICE_CREAM_MACHINE_KEYWORDS`, OOS check in search loop
+
+### Impact
+All 118 existing tests pass — simple string append guarded by dict lookup.
+
+---
+
+## reset_order Tool Routing (2026-03-22)
+
+**Author:** Summer (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+`reset_order` uses `ToolResultDirection.TO_CLIENT` (not `TO_BOTH`). Response is `"Order cleared. {json_summary}"` — AI doesn't need confirmation to continue, frontend needs empty JSON for ticket.
+
+### Trade-off
+If AI needs explicit post-reset confirmation, routing should change to `TO_BOTH` with voice-friendly string. Monitor during demos.
+
+---
+
 ## Previous Decisions (Archived)
 
 ### Copilot Directive (2026-02-25T22-39)

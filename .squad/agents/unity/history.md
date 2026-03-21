@@ -18,6 +18,12 @@
 - **Key file paths:** System prompt in `app/backend/app.py` line 127+, VAD config in `app/frontend/src/hooks/useRealtime.tsx` line 163+, echo suppression in `app/backend/rtmt.py` lines 298-386.
 - **Token limits:** 250 max_tokens is the demo-safe value. 150 risks truncation on multi-item recaps. The system prompt's "ONE or TWO sentences" instruction handles brevity.
 - **Voice choice:** `coral` is the correct voice for Sonic carhop persona — warm, friendly, good energy.
+
+### Demo Polish & System Prompt Directives (2026-03-22)
+- **Copilot directive feedback (2026-03-21T21:10)**: Brian requested three new system prompt sections: PERSONALIZATION (carhop spirit, regulars, happy hour), PATIENCE & CLARITY (graceful stalls, Fan Favorites), VISUAL SYNC (spatial language). Also requested COMBO LOGIC — DETERMINISTIC section enforcing priority: Item Selection → Combo Completion → Upsell → Treat Suggestion. All proposals added to decisions.md for implementation.
+- **TOOL HINTS section implementation (2026-03-21)**: Designed section to guide AI consumption of `[SYSTEM HINT]` patterns in tool results (e.g., missing combo sides/drinks, upsell opportunities). AI recognizes hints, acts on them conversationally, NEVER reads hints aloud. Complements Summer's backend `[SYSTEM HINT]` injection.
+- **Conversational Quantity Limits Guardrail (2026-03-21)**: Designed QUANTITY LIMITS section (per-item max 10, total order max 25) matching Summer's backend enforcement. Warm, conversational tone — "suggest capping," never refuse service. Defense-in-depth with backend hard limits. All 118+ tests pass.
+- **System Prompt Tool-Calling Mandate (2026-03-21)**: Added "⚠️ TOOL-CALLING RULES — MANDATORY" section with explicit negatives ("NEVER say X WITHOUT calling Y") and consequence statements ("item WILL NOT appear"). Position matters for gpt-realtime-1.5 — tool-calling rules must appear near top (section #3). Reinforced in ORDERING and MENU & PRICING sections.
 - **Brian's priority:** Demo polish for Inspire Brands executives. Zero tolerance for robotic repetition, hallucinated menu items, or truncated responses.
 
 ### Quantity Limit Guardrails (2026-03-21)
