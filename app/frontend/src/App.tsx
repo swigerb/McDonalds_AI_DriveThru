@@ -118,28 +118,28 @@ function SonicApp() {
         onWebSocketClose: () => console.log("WebSocket connection closed"),
         onWebSocketError: event => console.error("WebSocket error:", event),
         onReceivedError: message => console.error("error", message),
+        onReceivedResponseCreated: () => {
+            if (!isSessionActiveRef.current) return;
+            // Mute mic at the EARLIEST response signal — before audio deltas arrive.
+            // The server also receives input_audio_buffer.clear (sent by useRealTime)
+            // to flush any echo already in the pipeline.
+            if (!isAiSpeakingRef.current) {
+                isAiSpeakingRef.current = true;
+                muteAudioRecording();
+            }
+        },
         onReceivedResponseAudioDelta: message => {
             if (!isSessionActiveRef.current) return;
             greetingAudioSeenRef.current = true;
-            
-            // AI is speaking - mute the microphone to prevent feedback
-            if (!isAiSpeakingRef.current) {
-                isAiSpeakingRef.current = true;
-                muteAudioRecording();
-            }
-            
             playAudio(message.delta);
         },
-        onReceivedResponseAudioTranscriptDelta: () => {
-            // AI is speaking - ensure mic is muted
-            if (!isAiSpeakingRef.current) {
-                isAiSpeakingRef.current = true;
-                muteAudioRecording();
-            }
-        },
         onReceivedInputAudioBufferSpeechStarted: () => {
-            // User speech detected - stop AI playback (barge-in)
+            // User speech detected - stop AI playback (barge-in) and unmute mic
             stopAudioPlayer();
+            if (isAiSpeakingRef.current) {
+                isAiSpeakingRef.current = false;
+                unmuteAudioRecording();
+            }
         },
         onReceivedExtensionMiddleTierToolResponse: ({ tool_name, tool_result }: ExtensionMiddleTierToolResponse) => {
             if (tool_name === "update_order") {

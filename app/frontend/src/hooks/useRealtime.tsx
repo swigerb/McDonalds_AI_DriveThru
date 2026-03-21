@@ -1,5 +1,5 @@
 import useWebSocket from "react-use-websocket";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 
 import {
     InputAudioBufferAppendCommand,
@@ -27,6 +27,7 @@ type Parameters = {
     onWebSocketError?: (event: Event) => void;
     onWebSocketMessage?: (event: MessageEvent<any>) => void;
 
+    onReceivedResponseCreated?: (message: Message) => void;
     onReceivedResponseAudioDelta?: (message: ResponseAudioDelta) => void;
     onReceivedInputAudioBufferSpeechStarted?: (message: Message) => void;
     onReceivedResponseDone?: (message: ResponseDone) => void;
@@ -53,6 +54,7 @@ export default function useRealTime({
     onWebSocketClose,
     onWebSocketError,
     onWebSocketMessage,
+    onReceivedResponseCreated,
     onReceivedResponseDone,
     onReceivedResponseAudioDelta,
     onReceivedResponseAudioTranscriptDelta,
@@ -68,6 +70,9 @@ export default function useRealTime({
         : `/realtime`;
 
     const retryCountRef = useRef(0);
+    // Ref to break circular dependency: callbacks need sendJsonMessage,
+    // but sendJsonMessage comes from useWebSocket which takes the callbacks.
+    const sendJsonMessageRef = useRef<(msg: object) => void>(() => {});
 
     const onMessageReceived = useCallback((event: MessageEvent<any>) => {
         onWebSocketMessage?.(event);
@@ -81,6 +86,12 @@ export default function useRealTime({
         }
 
         switch (message.type) {
+            case "response.created":
+                // Earliest signal that the AI is about to speak.
+                // Flush any buffered mic audio on the server to prevent echo.
+                sendJsonMessageRef.current({ type: "input_audio_buffer.clear" });
+                onReceivedResponseCreated?.(message);
+                break;
             case "response.done":
                 onReceivedResponseDone?.(message as ResponseDone);
                 break;
@@ -111,6 +122,7 @@ export default function useRealTime({
         }
     }, [
         onWebSocketMessage,
+        onReceivedResponseCreated,
         onReceivedResponseDone,
         onReceivedResponseAudioDelta,
         onReceivedResponseAudioTranscriptDelta,
@@ -138,6 +150,11 @@ export default function useRealTime({
             return delay + Math.random() * 500;
         }
     });
+
+    // Keep ref in sync so onMessageReceived can call sendJsonMessage
+    useEffect(() => {
+        sendJsonMessageRef.current = sendJsonMessage;
+    }, [sendJsonMessage]);
 
     const startSession = () => {
         const command: SessionUpdateCommand = {
