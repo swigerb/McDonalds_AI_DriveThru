@@ -61,6 +61,8 @@ _MARKER_AUDIO_APPEND = '"input_audio_buffer.append"'
 _MARKER_AUDIO_DELTA = '"response.audio.delta"'
 _MARKER_AUDIO_DONE = '"response.audio.done"'
 _MARKER_SPEECH_STARTED = '"input_audio_buffer.speech_started"'
+_MARKER_SESSION_UPDATED = '"session.updated"'
+_MARKER_RESPONSE_CANCEL = '"response.cancel"'
 
 # Connection tuning constants
 _WS_HEARTBEAT_SEC = 15.0
@@ -244,7 +246,7 @@ class RTMiddleTier:
                             else:
                                 args = json.loads(item["arguments"])
                                 logger.info("Executing tool '%s' with args %s (session=%s)", item["name"], args, session_id)
-                                if item["name"] in ("update_order", "get_order"):
+                                if item["name"] in ("update_order", "get_order", "reset_order"):
                                     result = await tool.target(args, session_id)
                                 else:
                                     result = await tool.target(args)
@@ -378,14 +380,16 @@ class RTMiddleTier:
                             if _MARKER_AUDIO_APPEND in msg.data:
                                 if ai_speaking or loop.time() < cooldown_end:
                                     continue
-                            # Forward client message FIRST — the initial session.update carries
-                            # tools + system_message.  OpenAI must have them configured before
-                            # the greeting's response.create triggers the first completion.
+                            # Barge-in: client sent response.cancel — user wants to speak.
+                            # Disable echo suppression so their audio can flow through.
+                            if _MARKER_RESPONSE_CANCEL in msg.data:
+                                logger.info("Client sent response.cancel — disabling echo suppression for barge-in")
+                                ai_speaking = False
+                                cooldown_end = 0.0
+                            # Forward client message to OpenAI.
                             new_msg = await self._process_message_to_server(msg, ws)
                             if new_msg is not None:
                                 await target_ws.send_str(new_msg)
-                            if not greeting_sent:
-                                await send_greeting_once()
                         elif msg.type == aiohttp.WSMsgType.ERROR:
                             logger.error("Client WebSocket error: %s", ws.exception())
                             break
@@ -432,6 +436,14 @@ class RTMiddleTier:
                                         logger.debug("Echo suppression: barge-in detected — resuming user audio")
                                     ai_speaking = False
                                     cooldown_end = 0.0
+
+                            # Greeting trigger: wait for session.updated confirmation
+                            # from OpenAI before sending the greeting.  This guarantees
+                            # tools + system_message are fully configured before the first
+                            # model completion (response.create).
+                            if _MARKER_SESSION_UPDATED in data and not greeting_sent:
+                                logger.info("session.updated received — tools are configured, sending greeting")
+                                await send_greeting_once()
 
                             new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending)
                             if new_msg is not None:

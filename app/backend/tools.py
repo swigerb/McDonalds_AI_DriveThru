@@ -497,7 +497,7 @@ async def reset_order(_args: Any, session_id: str) -> ToolResult:
     logger.info("Resetting entire order for session %s", session_id)
     order_state_singleton.reset_order(session_id)
     json_summary = order_state_singleton.get_order_summary_json(session_id)
-    return ToolResult(f"Order cleared. {json_summary}", ToolResultDirection.TO_CLIENT)
+    return ToolResult(f"Order cleared. {json_summary}", ToolResultDirection.TO_BOTH, client_text=json_summary)
 
 
 def attach_tools_rtmt(

@@ -195,5 +195,9 @@ export default function useRealTime({
         sendJsonMessage(command);
     };
 
-    return { startSession, addUserAudio, inputAudioBufferClear };
+    const cancelResponse = () => {
+        sendJsonMessage({ type: "response.cancel" });
+    };
+
+    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse };
 }

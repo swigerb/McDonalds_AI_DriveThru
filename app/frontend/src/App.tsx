@@ -142,7 +142,7 @@ function SonicApp() {
             }
         },
         onReceivedExtensionMiddleTierToolResponse: ({ tool_name, tool_result }: ExtensionMiddleTierToolResponse) => {
-            if (tool_name === "update_order") {
+            if (tool_name === "update_order" || tool_name === "get_order" || tool_name === "reset_order") {
                 const orderSummary: OrderSummaryProps = JSON.parse(tool_result);
                 setOrder(orderSummary);
 
@@ -235,8 +235,23 @@ function SonicApp() {
 
     const { reset: resetAudioPlayer, play: playAudio, stop: stopAudioPlayer, waitForDrain: waitForAudioDrain } =
         useAudioPlayer();
+
+    // Barge-in handler: when the Recorder detects the user speaking while
+    // the mic is muted (AI is talking), unmute, cancel the AI response,
+    // and stop audio playback so the user can be heard immediately.
+    const handleBargeIn = useCallback(() => {
+        if (!isAiSpeakingRef.current) return;
+        console.log("Barge-in detected — interrupting AI");
+        isAiSpeakingRef.current = false;
+        stopAudioPlayer();
+        // Cancel the AI's in-flight response so the middleware also
+        // resets echo suppression and lets our audio through.
+        realtime.cancelResponse();
+    }, [stopAudioPlayer, realtime]);
+
     const { start: startAudioRecording, stop: stopAudioRecording, mute: muteAudioRecording, unmute: unmuteAudioRecording } = useAudioRecorder({
-        onAudioRecorded: useAzureSpeechOn ? azureSpeech.addUserAudio : realtime.addUserAudio
+        onAudioRecorded: useAzureSpeechOn ? azureSpeech.addUserAudio : realtime.addUserAudio,
+        onBargeIn: handleBargeIn
     });
 
     const onToggleListening = async () => {

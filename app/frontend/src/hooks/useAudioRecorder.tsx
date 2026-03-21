@@ -8,9 +8,10 @@ const CHUNK_SIZE = 8192;
 
 type Parameters = {
     onAudioRecorded: (base64: string) => void;
+    onBargeIn?: () => void;
 };
 
-export default function useAudioRecorder({ onAudioRecorded }: Parameters) {
+export default function useAudioRecorder({ onAudioRecorded, onBargeIn }: Parameters) {
     const audioRecorder = useRef<Recorder>();
     // Use a pre-allocated ring buffer to avoid O(n²) array copies
     const bufferRef = useRef<Uint8Array>(new Uint8Array(BUFFER_SIZE * 4));
@@ -59,7 +60,7 @@ export default function useAudioRecorder({ onAudioRecorded }: Parameters) {
 
     const start = async () => {
         if (!audioRecorder.current) {
-            audioRecorder.current = new Recorder(handleAudioData);
+            audioRecorder.current = new Recorder(handleAudioData, onBargeIn);
         }
         bufferLenRef.current = 0;
         const stream = await navigator.mediaDevices.getUserMedia({
