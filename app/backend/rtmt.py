@@ -84,16 +84,23 @@ class ToolResultDirection(Enum):
     TO_BOTH = 3
 
 class ToolResult:
-    __slots__ = ("text", "destination")
+    __slots__ = ("text", "destination", "_client_text")
 
-    def __init__(self, text: str, destination: ToolResultDirection):
+    def __init__(self, text: str, destination: ToolResultDirection, client_text: str | None = None):
         self.text = text
         self.destination = destination
+        self._client_text = client_text
 
     def to_text(self) -> str:
         if self.text is None:
             return ""
         return self.text if isinstance(self.text, str) else json.dumps(self.text)
+
+    def to_client_text(self) -> str:
+        """Text for client display. Falls back to to_text() if no separate client payload."""
+        if self._client_text is not None:
+            return self._client_text
+        return self.to_text()
 
 class Tool:
     __slots__ = ("target", "schema")
@@ -241,7 +248,7 @@ class RTMiddleTier:
                                         "type": "extension.middle_tier_tool_response",
                                         "previous_item_id": tool_call.previous_id,
                                         "tool_name": item["name"],
-                                        "tool_result": result.to_text()
+                                        "tool_result": result.to_client_text()
                                     })
                                 updated_message = None
 

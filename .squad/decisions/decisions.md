@@ -320,6 +320,63 @@ Added a QUANTITY LIMITS section to the system prompt in `app/backend/app.py` wit
 - Summer is adding backend enforcement with the same limits (per-item 10, total 25)
 - AI-level guardrails prevent most cases from ever hitting the backend rejection path
 
+## Combo Validation & Delta Summaries (2026-03-21)
+
+**Author:** Summer (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+
+Extended order_state.py with deterministic combo validation, Sonic-specific size cleanup, and split voice/screen payloads.
+
+### 1. `get_combo_requirements()` on OrderState
+- Scans entire order for combo/side/drink ratios using `_infer_combo_component()` (lightweight keyword check in order_state.py)
+- Avoids circular import: tools.py has full `_infer_category()`, order_state.py has focused `_infer_combo_component()`
+- Returns `is_complete`, `missing_items`, `prompt_hint`
+- Replaces ad-hoc `(COMBO DETECTED: ...)` hint with persistent `[SYSTEM HINT: ...]` pattern that fires after EVERY `update_order` call
+- When combo is incomplete, upsell hints are suppressed — AI focuses on completing the combo first
+
+### 2. Sonic Size Cleanup
+- Removed Dunkin' remnants: "Kannchen" and "Pot" size formatting
+- Added Route 44 support: `rt44`, `rt 44`, `route 44` → "Route 44 " prefix
+- Unrecognized sizes now default to empty string (hidden) rather than capitalized
+
+### 3. Delta Summaries (Voice vs Screen Split)
+- `ToolResult` extended with optional `client_text` field and `to_client_text()` method
+- Server (OpenAI) receives: natural-language delta ("Added 1 Large Cherry Limeade — your total is now $8.49") + system hints
+- Client (frontend) receives: pure JSON order summary for the display panel
+- Backward-compatible: `to_client_text()` falls back to `to_text()` when no `client_text` is set
+
+### Impact
+- **Unity**: `[SYSTEM HINT: ...]` pattern is ready — add corresponding system prompt instruction for combo completion flow
+- **Morty**: Frontend now receives pure JSON in `tool_result` for `update_order` (no more appended hint text in the JSON payload)
+- **Birdperson**: 7 new combo requirement tests added (118 total, all passing)
+
+### Risk
+- `_infer_combo_component()` duplicates subset of `_infer_category()` logic — if new drink/side categories are added to `_infer_category()`, they must also be added here
+
+## System Hint Integration — Tool Hints in Prompt (2026-03-21)
+
+**Author:** Unity (AI / Realtime Expert)  
+**Status:** Implemented
+
+### Decision
+
+Added TOOL HINTS section to system prompt in `app/backend/app.py` to guide AI consumption of `[SYSTEM HINT]` patterns in tool results.
+
+### Implementation
+
+- **Location:** After ORDERING section, before SUGGESTIVE SELLING
+- **Content:** 2 bullets explaining how AI processes hints embedded in tool results (e.g., missing combo sides/drinks, upsell opportunities)
+- **Behavior:** AI recognizes hints, acts on them conversationally, NEVER reads hints aloud
+- **Defense-in-depth:** Backend decides *when* to hint (Summer's `[SYSTEM HINT]` injection), system prompt tells AI *how* to act
+
+### Coordination
+
+- Complements Summer's backend `[SYSTEM HINT]` injection in tool results
+- Hint pattern ready for immediate use in combo completion flow, upsell prompts, and other dynamic guidance
+- All hints are suppressed while combos incomplete — focus on completion first
+
 ## Previous Decisions (Archived)
 
 ### Copilot Directive (2026-02-25T22-39)

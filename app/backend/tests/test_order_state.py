@@ -41,11 +41,11 @@ class OrderStateTests(unittest.TestCase):
 
     def test_formatted_display_labels_handle_special_sizes(self):
         session_id = order_state_singleton.create_session()
-        order_state_singleton.handle_order_update(session_id, "add", "Original Cold Brew", "pot", 1, 15.0)
+        order_state_singleton.handle_order_update(session_id, "add", "Cherry Limeade", "rt44", 1, 3.99)
 
         summary = order_state_singleton.get_order_summary(session_id)
 
-        self.assertEqual(summary.items[0].display, "Pot of Original Cold Brew")
+        self.assertEqual(summary.items[0].display, "Route 44 Cherry Limeade")
 
     def test_n_a_size_is_hidden_in_display(self):
         session_id = order_state_singleton.create_session()
@@ -159,14 +159,18 @@ class OrderStateTests(unittest.TestCase):
             ("Latte", "small", "Small Latte"),
             ("Latte", "medium", "Medium Latte"),
             ("Latte", "large", "Large Latte"),
-            ("Cold Brew", "kannchen", "Kannchen of Cold Brew"),
-            ("Cold Brew", "pot", "Pot of Cold Brew"),
+            ("Cherry Limeade", "mini", "Mini Cherry Limeade"),
+            ("Cherry Limeade", "rt44", "Route 44 Cherry Limeade"),
+            ("Cherry Limeade", "rt 44", "Route 44 Cherry Limeade"),
+            ("Cherry Limeade", "route 44", "Route 44 Cherry Limeade"),
             ("Donut", "standard", "Donut"),
             ("Donut", "n/a", "Donut"),
             ("Donut", "na", "Donut"),
             ("Donut", "none", "Donut"),
             ("Donut", "", "Donut"),
             ("Donut", "n.a.", "Donut"),
+            ("Cold Brew", "pot", "Cold Brew"),
+            ("Cold Brew", "kannchen", "Cold Brew"),
         ]
         for item, size, expected_display in cases:
             order_state_singleton.sessions = {}
@@ -175,6 +179,73 @@ class OrderStateTests(unittest.TestCase):
             summary = order_state_singleton.get_order_summary(sid)
             self.assertEqual(summary.items[0].display, expected_display,
                              f"Failed for size='{size}': expected '{expected_display}'")
+
+    # ── Combo requirements tests ──
+
+    def test_combo_requirements_no_combo_is_complete(self):
+        """No combos in order means requirements are complete."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Tots", "medium", 1, 2.79)
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertTrue(result["is_complete"])
+        self.assertEqual(result["missing_items"], [])
+        self.assertEqual(result["prompt_hint"], "")
+
+    def test_combo_requirements_combo_without_side_or_drink(self):
+        """Combo with no side or drink should report both missing."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "SuperSONIC Cheeseburger Combo", "standard", 1, 8.49)
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertFalse(result["is_complete"])
+        self.assertEqual(len(result["missing_items"]), 2)
+        self.assertIn("side", result["prompt_hint"].lower())
+        self.assertIn("drink", result["prompt_hint"].lower())
+
+    def test_combo_requirements_combo_with_side_missing_drink(self):
+        """Combo with side but no drink should report drink missing."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "SuperSONIC Cheeseburger Combo", "standard", 1, 8.49)
+        order_state_singleton.handle_order_update(session_id, "add", "Tots", "medium", 1, 2.79)
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertFalse(result["is_complete"])
+        self.assertEqual(len(result["missing_items"]), 1)
+        self.assertIn("drink", result["missing_items"][0])
+
+    def test_combo_requirements_combo_with_drink_missing_side(self):
+        """Combo with drink but no side should report side missing."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "SuperSONIC Cheeseburger Combo", "standard", 1, 8.49)
+        order_state_singleton.handle_order_update(session_id, "add", "Cherry Limeade", "medium", 1, 2.99)
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertFalse(result["is_complete"])
+        self.assertEqual(len(result["missing_items"]), 1)
+        self.assertIn("side", result["missing_items"][0])
+
+    def test_combo_requirements_combo_fully_complete(self):
+        """Combo with both side and drink is complete."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "SuperSONIC Cheeseburger Combo", "standard", 1, 8.49)
+        order_state_singleton.handle_order_update(session_id, "add", "Tots", "medium", 1, 2.79)
+        order_state_singleton.handle_order_update(session_id, "add", "Cherry Limeade", "medium", 1, 2.99)
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertTrue(result["is_complete"])
+        self.assertEqual(result["missing_items"], [])
+
+    def test_combo_requirements_two_combos_one_side_one_drink(self):
+        """Two combos with only one side and one drink should still be incomplete."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "SuperSONIC Cheeseburger Combo", "standard", 2, 8.49)
+        order_state_singleton.handle_order_update(session_id, "add", "Tots", "medium", 1, 2.79)
+        order_state_singleton.handle_order_update(session_id, "add", "Cherry Limeade", "medium", 1, 2.99)
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertFalse(result["is_complete"])
+        self.assertEqual(len(result["missing_items"]), 2)
+
+    def test_combo_requirements_empty_order(self):
+        """Empty order should be complete (no combos to satisfy)."""
+        session_id = order_state_singleton.create_session()
+        result = order_state_singleton.get_combo_requirements(session_id)
+        self.assertTrue(result["is_complete"])
 
 
 if __name__ == "__main__":

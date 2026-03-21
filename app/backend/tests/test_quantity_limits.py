@@ -150,7 +150,10 @@ class QuantityLimitTests(unittest.TestCase):
         }, session_id))
 
         self.assertEqual(result.destination, ToolResultDirection.TO_BOTH)
-        self.assertIn("items", result.text)
+        # Server text is the delta (voice confirmation)
+        self.assertIn("Added", result.text)
+        # Client text is the full JSON order summary
+        self.assertIn("items", result.to_client_text())
 
     def test_limit_response_goes_to_server(self):
         """Limit-exceeded responses go TO_SERVER so the AI can relay and ask a follow-up."""

@@ -9,6 +9,16 @@ __all__ = ["OrderState", "SessionIdentifiers", "order_state_singleton"]
 logger = logging.getLogger("order_state")
 
 
+def _infer_combo_component(item_name: str) -> str:
+    """Lightweight category check for combo component validation (sides vs drinks)."""
+    n = item_name.lower()
+    if "tot" in n or "fries" in n or "onion rings" in n:
+        return "sides"
+    if any(kw in n for kw in ("slush", "limeade", "ocean water", "drink", "tea", "lemonade", "shake", "blast", "malt")):
+        return "drinks"
+    return ""
+
+
 @dataclass
 class SessionIdentifiers:
     session_token: str
@@ -66,12 +76,12 @@ class OrderState:
         normalized_size = (size or "").strip().lower()
         if normalized_size in {"", "standard", "n/a", "na", "none", "n.a."}:
             formatted_size = ""
-        elif normalized_size == "kannchen":
-            formatted_size = "Kannchen of "
-        elif normalized_size == "pot":
-            formatted_size = "Pot of "
-        else:
+        elif normalized_size in {"rt44", "rt 44", "route 44"}:
+            formatted_size = "Route 44 "
+        elif normalized_size in {"mini", "small", "medium", "large"}:
             formatted_size = f"{normalized_size.capitalize()} "
+        else:
+            formatted_size = ""
 
         display = f"{formatted_size}{item_name}".strip()
 
@@ -101,6 +111,28 @@ class OrderState:
     def get_order_items(self, session_id: str) -> list:
         """Return raw order item list — avoids Pydantic overhead for validation checks."""
         return self.sessions[session_id]["order_state"]
+
+    def get_combo_requirements(self, session_id: str) -> dict:
+        """Scans the order for combos and returns missing components.
+        Helps the AI know exactly what to ask for next."""
+        session = self.sessions[session_id]
+        order_items = session["order_state"]
+
+        combo_count = sum(item.quantity for item in order_items if "combo" in item.item.lower())
+        side_count = sum(item.quantity for item in order_items if _infer_combo_component(item.item) == "sides")
+        drink_count = sum(item.quantity for item in order_items if _infer_combo_component(item.item) in ("drinks",))
+
+        missing = []
+        if side_count < combo_count:
+            missing.append("a side (fries or tots)")
+        if drink_count < combo_count:
+            missing.append("a drink or slush")
+
+        return {
+            "is_complete": len(missing) == 0,
+            "missing_items": missing,
+            "prompt_hint": f"Ask the guest for {', and '.join(missing)} to finish their combo." if missing else ""
+        }
 
     def get_order_summary_json(self, session_id: str) -> str:
         """Return cached JSON string — avoids repeated Pydantic serialization."""

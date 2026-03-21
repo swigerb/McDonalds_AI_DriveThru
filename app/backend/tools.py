@@ -399,37 +399,42 @@ async def update_order(args, session_id: str) -> ToolResult:
     )
 
     json_order_summary = order_state_singleton.get_order_summary_json(session_id)
+    summary = order_state_singleton.get_order_summary(session_id)
     logger.debug("Session %s order summary after update: %s", session_id, json_order_summary)
 
-    # ── Combo detection: flag pending side/drink slots ──
-    combo_hint = ""
-    if args["action"] == "add" and "combo" in item_name.lower():
-        combo_hint = (
-            " (COMBO DETECTED: This combo has PENDING SLOTS that must be filled. "
-            "You MUST ask the customer to choose: 1) A Side (Tots or Fries), and 2) A Drink. "
-            "Do not move on until both side and drink are selected.)"
-        )
-        logger.info("Combo detected for '%s' in session %s — pending side/drink slots must be filled", item_name, session_id)
+    # ── Delta text for voice confirmation ──
+    action = args["action"]
+    display_size = size if size and size.lower() not in {"", "standard", "n/a", "na", "none", "n.a."} else ""
+    display_name = f"{display_size.capitalize() + ' ' if display_size else ''}{item_name}"
+    if action == "add":
+        delta_text = f"Added {quantity} {display_name} — your total is now ${summary.finalTotal:.2f}"
+    else:
+        delta_text = f"Removed {quantity} {display_name} — your total is now ${summary.finalTotal:.2f}"
 
-    # ── Category-aware upsell hints in tool results ──
-    upsell_hint = ""
-    if args["action"] == "add":
+    # ── Combo validation: flag missing components ──
+    validation = order_state_singleton.get_combo_requirements(session_id)
+
+    if not validation["is_complete"]:
+        delta_text += f"\n\n[SYSTEM HINT: {validation['prompt_hint']}]"
+        logger.info("Combo incomplete for session %s — missing: %s", session_id, validation["missing_items"])
+    elif action == "add":
+        # ── Category-aware upsell hints (only when combo requirements are met) ──
         category = _infer_category(item_name)
         if category == "combos":
-            upsell_hint = " (UPSELL HINT: Combos are a great base! Ask if they want to upgrade to a Large size, or add a delicious Shake or Dessert!)"
+            delta_text += " (UPSELL HINT: Combos are a great base! Ask if they want to upgrade to a Large size, or add a delicious Shake or Dessert!)"
         elif category in ("burgers", "burgers & sandwiches"):
-            upsell_hint = " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Tots or Fries and a refreshing Drink!)"
+            delta_text += " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Tots or Fries and a refreshing Drink!)"
         elif category in ("drinks", "slushes"):
-            upsell_hint = " (UPSELL HINT: Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!)"
+            delta_text += " (UPSELL HINT: Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!)"
         elif category in ("shakes", "desserts", "shakes & ice cream"):
-            upsell_hint = " (UPSELL HINT: Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!)"
+            delta_text += " (UPSELL HINT: Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!)"
         elif category in ("sides", "hot dogs", "hot dogs & tots"):
-            upsell_hint = " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink or Slush to complete their meal!)"
+            delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink or Slush to complete their meal!)"
         else:
-            upsell_hint = " (UPSELL HINT: Ask if they'd like to add anything else — maybe a drink, side, or dessert!)"
-        logger.debug("Upsell hint for category '%s': %s", category, upsell_hint)
+            delta_text += " (UPSELL HINT: Ask if they'd like to add anything else — maybe a drink, side, or dessert!)"
+        logger.debug("Upsell hint for category '%s'", category)
 
-    return ToolResult(json_order_summary + combo_hint + upsell_hint, ToolResultDirection.TO_BOTH)
+    return ToolResult(delta_text, ToolResultDirection.TO_BOTH, client_text=json_order_summary)
 
 
 get_order_tool_schema = {
