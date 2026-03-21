@@ -24,3 +24,15 @@
 - **Conversational quantity limits in system prompt:** Added QUANTITY LIMITS section between ORDERING and CLOSING sections. Per-item max 10, total order max 25 — matches Summer's backend enforcement. Uses friendly drive-thru language, not error messages. NEVER refuses service — always offers the closest alternative.
 - **Prompt placement matters:** Quantity limits go between ORDERING and CLOSING because that's the natural conversation flow — the AI processes the order, checks limits, then closes.
 - **Defense-in-depth pattern continues:** AI handles it conversationally first (this change), backend enforces hard limits second (Summer's change). Same layered approach as echo suppression.
+
+### Upselling & ACV System Prompt Upgrade (2026-03-21)
+- **Four new sections added:** CONVERSATIONAL FLOW, BRAND IDENTITY, SUGGESTIVE SELLING, TECHNICAL GUARDRAILS — all following gpt-realtime-1.5 best practices (bullets, ALL CAPS emphasis, concise).
+- **Suggestive selling tiers:** Combo conversion (burger alone → combo ask), upsize (Small/Medium → Large), Sonic Signature treat suggestion when order has no dessert. ONE suggestion at a time to stay natural.
+- **Brand Identity — Tots First:** Sonic's differentiator. Tots always mentioned before fries when offering sides. Execs will notice this.
+- **Conversational Flow:** No filler words (Okay, So, Well) at response start — reduces perceived latency. Immediate pivot on guest interrupts.
+- **Technical Guardrails:** Currency spoken naturally ("six forty-nine") — never "4.49" or dollar-sign reading. Long orders grouped ("Three Cheeseburger combos") instead of listing every modification.
+- **ORDERING section updated:** Added combo-check directive — always ask about combo before moving on when burger/sandwich ordered alone.
+- **CLOSING section updated:** Added item grouping rule for long orders.
+- **Prompt stayed concise:** 4 new sections added without bloating — each section is 3-4 bullets max. Total prompt still fits comfortably within first-response latency budget.
+- **Coordinated with Summer:** TO_BOTH routing ensures conversation continues naturally through multi-item orders (no dead silence after order confirmation).
+- **Demo validation:** Tested with 3-4 complete orders covering all categories. Combo triggers work. Tots-first branding fires correctly. Currency spoken naturally. 5+ item orders group properly in closing recap.

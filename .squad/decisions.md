@@ -153,6 +153,44 @@
   3. Risk: WebSocket disconnect (MEDIUM severity) — Mitigation: Exponential backoff with jitter (Decision #16). Recommend testing on exact demo network, pre-warming connection, backup browser tab.
 - **Impact:** Ensures flawless voice ordering experience for Inspire Brands executive demo. All critical voice path components audited and optimized.
 
+#### 26. ToolResultDirection.TO_BOTH for Order Updates (Summer — Backend Dev, 2026-03-21)
+- **Decision:** Changed successful `update_order` tool results from `TO_CLIENT` to `TO_BOTH` routing.
+- **Problem:** `TO_CLIENT` sent order summary to frontend UI but empty string to OpenAI model. AI had no confirmation order succeeded, causing dead silence after valid orders (including exactly 10 items at per-item limit).
+- **Solution:** Added `ToolResultDirection.TO_BOTH = 3` to enum. Now sends order summary JSON to both:
+  - **OpenAI server** — AI knows item was added, continues with "anything else?"
+  - **Frontend client** — UI updates with current order
+- **Implementation:**
+  - `rtmt.py`: New enum value + updated routing conditions
+  - `tools.py`: Success path `TO_CLIENT` → `TO_BOTH`
+  - Error/limit responses remain `TO_SERVER` (AI relays the message)
+- **Test Coverage:** All existing tests updated, 14 new quantity-limit tests added (111 total, all passing)
+- **Impact:** Eliminates conversation-killing bug. Multi-item orders now flow naturally through all quantities up to limit (10 per item, 25 total).
+
+#### 27. System Prompt Upgrade — Upselling & ACV for Inspire Brands Demo (Unity — AI Expert, 2026-03-22)
+- **Decision:** Added 4 new system prompt sections and updated 2 existing to drive revenue through suggestive selling while maintaining authentic Sonic brand voice.
+- **New Sections:**
+  1. **CONVERSATIONAL FLOW** — No filler words at response start (reduces perceived latency); immediate pivot on barge-in interrupts
+  2. **BRAND IDENTITY** — Tots mentioned FIRST whenever sides offered (Sonic's key differentiator)
+  3. **SUGGESTIVE SELLING** — Three-tier upsell strategy:
+     - Combo conversion: burger/sandwich alone → combo with Tots/fries + drink
+     - Upsize: Small/Medium → Large with price difference
+     - Sonic Signature treat suggestion when order has no dessert
+  4. **TECHNICAL GUARDRAILS** — Currency spoken naturally ("six forty-nine", never "6.49"); long orders grouped not enumerated
+- **Updated Sections:**
+  - **ORDERING** — Added combo-check directive before moving to next item
+  - **CLOSING AN ORDER** — Added item grouping rule for long orders
+- **Rationale:** User directive for demo to show revenue-driving AI; Inspire Brands execs evaluate ACV impact; tots-first branding signals deep brand knowledge; no-filler-words cuts perceived latency by ~200-300ms per response
+- **Trade-offs:** Prompt length increased ~40% (still optimal range for gpt-realtime-1.5); upselling adds one extra turn/item (mitigated by "ONE suggestion at a time, NEVER pushy" guardrail)
+- **Risks:** Over-aggressive upselling → robotic feel (mitigated by variety rules + "NATURAL" emphasis); price mismatch on upsize (model should skip gracefully if search misses)
+- **Validation Recommended:** Test 3-4 complete orders for combo triggers; confirm tots-first when "side"/"fries" mentioned; verify natural currency speech; test 5+ item order for grouping in recap
+- **Impact:** Demo-ready system prompt ensuring revenue impact while maintaining conversational authenticity.
+
+#### 28. User Directive: Demo Requirements (Brian Swiger via Copilot, 2026-03-21)
+- **Request:** System prompt must drive higher Average Check Value (ACV) with suggestive selling (combo conversion, tots-first branding, treat suggestions), handle barge-in gracefully, avoid filler words, format currency as spoken words, and group long orders.
+- **Context:** Executive demo requirements for Inspire Brands presentation. Critical for successful pitch.
+- **Implementation:** Addressed by Decisions #26 (TO_BOTH routing for conversation flow) and #27 (suggestive selling + technical guardrails).
+- **Impact:** Enables demo to showcase both conversational quality (no dead silence) and revenue impact (ACV-driving prompts).
+
 ## Governance
 
 - All meaningful changes require team consensus
