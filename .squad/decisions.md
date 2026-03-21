@@ -122,6 +122,37 @@
 - **Constraints:** Barge-in capability preserved (user can still interrupt with loud speech via server VAD). No permission re-prompts (mic stream kept alive, muted via gain node). Server-side VAD maintained.
 - **Impact:** Eliminates infinite self-response loop. Maintains natural conversation flow.
 
+#### 24. Echo Suppression Code Review (Rick — Reviewer, 2026-03-20)
+- **Decision:** APPROVE — Defense-in-depth echo suppression is correct and well-coordinated
+- **Architecture:** Two independent layers (frontend gain-node muting + backend gating via ai_speaking flag + 300ms cooldown + buffer clear) complement each other. If one layer fails silently, the other still works.
+- **Key Validations:**
+  - Double `input_audio_buffer.clear` (frontend on `response.created`, backend on `response.audio.done`) is idempotent — clearing an empty buffer is a no-op
+  - Per-connection state isolation correct — `ai_speaking` and `cooldown_end` are local variables, no shared mutable state
+  - 300ms cooldown appropriate for typical 50-200ms speaker-to-mic latency with headroom
+  - Early muting at `response.created` prevents echo path before first audio delta arrives
+  - Barge-in preserved — both frontend and backend reset suppression immediately on `speech_started`
+  - No race conditions — asyncio single-threaded, all state checks atomic within event loop tick
+- **Code Quality:** Summer's backend clean and well-commented; Morty's frontend integration clean; substring-marker approach (`_MARKER_*`) is faster than JSON parsing on hot path
+- **Minor Observation:** `response.created` mutes briefly for tool-call-only responses (harmless, not worth complexity to distinguish)
+- **Impact:** Eliminates phantom transcriptions from audio feedback loop. Barge-in ~300ms latency acceptable for drive-thru UX.
+
+#### 25. Demo Readiness Audit (Unity — Auditor, 2026-03-21)
+- **Decision:** System Prompt Refactor + VAD Tuning
+- **Changes Made:**
+  1. **System Prompt Format** (app.py:127-157): Dense paragraph → bulleted structure with named sections (VOICE STYLE, MENU & PRICING, ORDERING, CLOSING, BOUNDARIES). Added ALL CAPS emphasis on critical instructions (NEVER, ALWAYS, ONLY, CORRECT, FULL, TOTAL). Implemented phrase variety rules — "NEVER use the same phrase twice in a row" with examples: "Awesome choice!", "You got it!", "Great pick!", "Nice!", "Coming right up!". Added explicit grounding: "ONLY recommend items found in search results — do NOT invent menu items"
+  2. **VAD Threshold** (useRealtime.tsx:165): 0.8 → 0.7. Rationale: Multi-layered echo suppression (server-side in rtmt.py + client-side mic muting) now handles echo properly. 0.7 is more forgiving for natural speech while still rejecting ambient noise.
+  3. **Prefix Padding** (useRealtime.tsx:166): 200ms → 300ms. Rationale: 200ms risks clipping word starts (plosives like "burger", "please", "tots"). In demo context, clipped words cause AI to ask for repetition — embarrassing.
+- **Validations:**
+  - Temperature 0.6: ✅ Optimal for menu ordering (deterministic tool calling, natural variance)
+  - Max tokens 250: ✅ Sufficient for full order recap + closing phrase (tested; perf Decision #2's 150 was too aggressive)
+  - Voice "coral": ✅ Warm, friendly female — excellent Sonic carhop persona
+  - Echo suppression: ✅ Well-architected, defense-in-depth validated
+- **Demo Risk Assessment:**
+  1. Risk: AI invents menu items (HIGH severity) — Mitigation: Added explicit grounding rule. Recommend pre-demo test with 5-10 orders covering all categories.
+  2. Risk: Response truncation (MEDIUM severity) — Mitigation: max_tokens 250 + explicit "complete your full sentence" instruction. Recommend testing 4-5 item order.
+  3. Risk: WebSocket disconnect (MEDIUM severity) — Mitigation: Exponential backoff with jitter (Decision #16). Recommend testing on exact demo network, pre-warming connection, backup browser tab.
+- **Impact:** Ensures flawless voice ordering experience for Inspire Brands executive demo. All critical voice path components audited and optimized.
+
 ## Governance
 
 - All meaningful changes require team consensus
