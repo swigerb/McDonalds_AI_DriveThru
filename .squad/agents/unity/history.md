@@ -41,3 +41,8 @@
 - **[SYSTEM HINT] pattern:** Summer's backend embeds `[SYSTEM HINT: ...]` in tool results to guide the AI (e.g., prompting for missing combo sides/drinks, upsell opportunities). Added a 2-bullet TOOL HINTS section right after ORDERING so the AI knows to act on these hints immediately and conversationally — and NEVER read them aloud.
 - **Placement rationale:** After ORDERING, before SUGGESTIVE SELLING. Tool results come back during ordering flow, so the AI encounters hints in that context. Keeps the instruction close to where it's actionable.
 - **Coordination with Summer:** This is the AI-side complement to Summer's backend `[SYSTEM HINT]` injection in tool results. Defense-in-depth: backend decides *when* to hint, system prompt tells the AI *how* to act on it.
+
+### Demo Polish Guardrails (2026-03-21T20-23)
+- **Suggestive Sell Follow-Through:** Added rule to TECHNICAL GUARDRAILS: "If the guest says 'Yes' or 'Sure' to a suggestive sell (like a combo), IMMEDIATELY ask for the missing details (e.g., 'Awesome, tots or fries with that?')."
+- **Why:** Ensures demo conversations flow naturally without pauses after customer agreement. Complements Summer's grouped readback (natural voice summaries) and backend combo hints.
+- **Coordination:** Part of 3-sprint demo polish (temperature, static files, grouped readback) coordinated by Brian for Inspire Brands executive presentation.

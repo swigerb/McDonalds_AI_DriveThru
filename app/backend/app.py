@@ -122,7 +122,7 @@ async def create_app() -> web.Application:
     )
     if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
         rtmt.api_version = api_version
-    rtmt.temperature = 0.6
+    rtmt.temperature = 0.5
     rtmt.max_tokens = 250  # Allow enough tokens for complete closing phrases
     rtmt.system_message = (
         "You are a Sonic Drive-In carhop — upbeat, friendly, and FAST.\n\n"
@@ -165,7 +165,8 @@ async def create_app() -> web.Application:
         "- COMBO CONVERSION: Burger or sandwich without sides/drink → 'Want to make that a combo with Tots or fries and a drink?'\n"
         "- UPSIZE: Small or Medium ordered → occasionally ask 'Want to go Large for just [price difference]?'\n"
         "- SONIC SIGNATURE: Order nearly done with no treat → 'How about a classic Sonic Shake or a Blast to round it out?'\n"
-        "- Keep it NATURAL — ONE suggestion at a time, NEVER pushy\n\n"
+        "- Keep it NATURAL — ONE suggestion at a time, NEVER pushy\n"
+        "- If the guest says 'Yes' or 'Sure' to a suggestive sell (like a combo), IMMEDIATELY ask for the missing details (e.g., 'Awesome, tots or fries with that?')\n\n"
 
         "QUANTITY LIMITS:\n"
         "- MAX 10 of any single item — if more requested: 'Wow, that's a big order! Our drive-thru can do up to 10 of any item. Want me to set you up with 10?'\n"

@@ -377,6 +377,31 @@ Added TOOL HINTS section to system prompt in `app/backend/app.py` to guide AI co
 - Hint pattern ready for immediate use in combo completion flow, upsell prompts, and other dynamic guidance
 - All hints are suppressed while combos incomplete — focus on completion first
 
+## Demo Polish Sprint (2026-03-21T20:23-20:28)
+
+**Author:** Brian Swiger (via Copilot), coordinated across Summer and Unity
+
+### 1. Lower RTMiddleTier Temperature from 0.6 → 0.5
+- **Author:** Summer (Backend Dev)
+- **Why:** Reduces creative wandering in voice responses, tighter carhop persona. Improves Time to First Token (TTFT) — lower temperature means model commits to high-probability tokens faster.
+- **Change:** `rtmt.temperature` in `app/backend/app.py` line 125
+- **Verification:** Static file serving order verified — `_index_handler` (explicit `GET /` route) registered before `add_static('/')`. In aiohttp, explicit routes take priority, so no conflict.
+
+### 2. Suggestive Sell Follow-Through Guardrail
+- **Author:** Unity (AI / Realtime Expert)
+- **What:** Added rule to TECHNICAL GUARDRAILS: "If the guest says 'Yes' or 'Sure' to a suggestive sell (like a combo), IMMEDIATELY ask for the missing details (e.g., 'Awesome, tots or fries with that?')."
+- **Why:** Ensures demo conversations flow naturally without pauses after customer agreement. Complements existing combo detection and upsell hints.
+- **File:** System prompt in `app/backend/app.py`
+
+### 3. Grouped Readback Integration
+- **Author:** Summer (Backend Dev)
+- **What:** Added `get_grouped_order_for_readback()` method to OrderState. Groups identical items for natural voice read-back (e.g., "Two Medium Cherry Limeades and one Footlong Quarter Pound Coney"). Integrated with `get_order` tool using `TO_BOTH` routing.
+- **Why:** AI was receiving raw JSON for order readback, sounding robotic. A human carhop groups duplicates — AI should too.
+- **Changes:**
+  - `order_state.py` — new grouping method
+  - `tools.py` — `get_order` changed to `TO_BOTH` with `client_text`. AI receives grouped text; frontend receives full JSON.
+- **Testing:** All 118 tests pass. Pure computation on existing data. `TO_BOTH` pattern already tested in `update_order`.
+
 ## Previous Decisions (Archived)
 
 ### Copilot Directive (2026-02-25T22-39)
@@ -386,4 +411,4 @@ Copilot CLI configuration directive for squad ceremonies and agent interactions.
 Initial system prompt design leveraging Azure OpenAI GPT-4o Realtime for voice-based ordering. Foundation for Sonic rebrand implementation.
 
 ### Repository Initialization (Squanchy, 2026-02-25)
-SonicAIDriveThru repository created with Azure Container Apps, Bicep IaC, React frontend (Vite, Tailwind, shadcn/ui), Python backend (aiohttp, WebSockets, Azure OpenAI Realtime).
+SonicAIDriveThru repository created with Azure Container Apps, Bicep IaC, React frontend (Vite, Tailwind, shadcn/ui), Python backend (aiohttp, WebSockets, Azure OpenAI Realtime, Azure AI Search).

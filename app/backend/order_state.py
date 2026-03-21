@@ -134,6 +134,35 @@ class OrderState:
             "prompt_hint": f"Ask the guest for {', and '.join(missing)} to finish their combo." if missing else ""
         }
 
+    def get_grouped_order_for_readback(self, session_id: str) -> str:
+        """
+        Groups items with the same display name for a natural voice read-back.
+        Example: 'Two Medium Cherry Limeades and one Footlong Quarter Pound Coney.'
+        """
+        session = self.sessions[session_id]
+        items = session["order_state"]
+        if not items:
+            return "Your order is currently empty."
+
+        # Aggregate quantities by display name
+        counts = {}
+        for oi in items:
+            counts[oi.display] = counts.get(oi.display, 0) + oi.quantity
+
+        # Build the natural language string
+        parts = []
+        for display, qty in counts.items():
+            prefix = f"{qty} " if qty > 1 else "one "
+            parts.append(f"{prefix}{display}")
+
+        if len(parts) > 1:
+            summary_str = ", ".join(parts[:-1]) + f", and {parts[-1]}"
+        else:
+            summary_str = parts[0]
+
+        total = session["order_summary"].finalTotal
+        return f"I have {summary_str}. Your total is {total:.2f}. "
+
     def get_order_summary_json(self, session_id: str) -> str:
         """Return cached JSON string — avoids repeated Pydantic serialization."""
         return self.sessions[session_id]["order_summary_json"]

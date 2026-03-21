@@ -453,7 +453,9 @@ async def get_order(_args: Any, session_id: str) -> ToolResult:
     """Retrieve the current order summary."""
 
     logger.info("Retrieving order summary for session %s", session_id)
-    return ToolResult(order_state_singleton.get_order_summary_json(session_id), ToolResultDirection.TO_SERVER)
+    readback = order_state_singleton.get_grouped_order_for_readback(session_id)
+    json_summary = order_state_singleton.get_order_summary_json(session_id)
+    return ToolResult(readback, ToolResultDirection.TO_BOTH, client_text=json_summary)
 
 
 def attach_tools_rtmt(
