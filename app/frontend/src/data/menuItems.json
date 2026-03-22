@@ -7,151 +7,141 @@
                     "name": "SuperSONIC® Double Cheeseburger",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 6.99
+                            "size": "Standard",
+                            "price": 6.59
                         }
                     ],
-                    "description": "Two 100% pure beef patties with melty American cheese",
-                    "longDescription": "Two quarter-pound 100% pure beef patties topped with crinkle-cut pickles, diced onions, fresh shredded lettuce, tomatoes, and mayonnaise on a toasted brioche bun.",
+                    "description": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
+                    "longDescription": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "890 cal",
-                    "popularity": "Fan Favorite",
-                    "image": "menu_images/supersonic_burger"
-                },
-                {
-                    "name": "Classic SONIC Cheeseburger",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 5.49
-                        }
-                    ],
-                    "description": "Quarter-pound beef patty with American cheese on a toasted bun",
-                    "longDescription": "A quarter-pound, 100% pure beef patty topped with American cheese, crinkle-cut pickles, diced onions, ketchup, and mustard.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "630 cal",
-                    "popularity": "Classic Choice",
-                    "image": "menu_images/classic_burger"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/80a2642d-472c-4280-ec09-e2920b673a00/download"
                 },
                 {
                     "name": "SuperSONIC® Bacon Double Cheeseburger",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 7.49
+                            "size": "Standard",
+                            "price": 7.39
                         }
                     ],
-                    "description": "Two beef patties with bacon, American cheese, and mayo on a toasted bun",
-                    "longDescription": "Two quarter-pound 100% pure beef patties topped with crispy bacon, melty American cheese, crinkle-cut pickles, diced onions, fresh shredded lettuce, tomatoes, and mayonnaise on a toasted brioche bun.",
+                    "description": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crispy bacon, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
+                    "longDescription": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crispy bacon, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "1030 cal",
-                    "popularity": "Signature Item",
-                    "image": "menu_images/supersonic_bacon_burger"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/b76d0535-73c9-476c-f982-83633b166300/download"
                 },
                 {
-                    "name": "Quarter Pound Double Cheeseburger",
+                    "name": "SONIC® Cheeseburger",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 5.99
+                            "size": "Standard",
+                            "price": 5.29
                         }
                     ],
-                    "description": "Two seasoned beef patties stacked with melty American cheese",
-                    "longDescription": "Two seasoned quarter-pound beef patties with American cheese, crinkle-cut pickles, diced onions, ketchup, and mustard on a toasted bun.",
+                    "description": "A 100% pure seasoned beef patty layered with melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
+                    "longDescription": "A 100% pure seasoned beef patty layered with melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "740 cal",
-                    "popularity": "Great Value",
-                    "image": "menu_images/qp_double_cheeseburger"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/b585c466-6c41-4b18-90dc-d8f2e9e91b00/download"
                 },
                 {
-                    "name": "SONIC Cheeseburger",
+                    "name": "All-American SONIC Smasher™",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 4.99
+                            "size": "Standard",
+                            "price": 5.79
                         }
                     ],
-                    "description": "Classic beef patty topped with melty cheese and fresh toppings",
-                    "longDescription": "A 100% pure beef patty topped with American cheese, crinkle-cut pickles, onions, ketchup, and mustard on a toasted bun.",
+                    "description": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
+                    "longDescription": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "560 cal",
-                    "popularity": "Everyday Favorite",
-                    "image": "menu_images/sonic_cheeseburger"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/8fac6668-f28c-4f25-10bb-3b30afce7300/download"
+                },
+                {
+                    "name": "All-American Bacon SONIC Smasher™",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 6.79
+                        }
+                    ],
+                    "description": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crispy bacon, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
+                    "longDescription": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crispy bacon, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d4d721cf-c38e-498e-9c04-2845e2440800/download"
+                },
+                {
+                    "name": "Jr Double Cheeseburger",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 3.49
+                        }
+                    ],
+                    "description": "Our Jr Double Cheeseburger starts with two juicy, 100% pure beef patties, seasoned and layered with a slice of melty American cheese, pickles, ketchup, and mustard, all on a golden, toasted bun.",
+                    "longDescription": "Our Jr Double Cheeseburger starts with two juicy, 100% pure beef patties, seasoned and layered with a slice of melty American cheese, pickles, ketchup, and mustard, all on a golden, toasted bun.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/69546e16-cd1f-46ff-009b-28a3212d7400/download"
+                },
+                {
+                    "name": "Double SONIC Smasher™",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 6.59
+                        }
+                    ],
+                    "description": "The Double SONIC® Smasher has two patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with two slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
+                    "longDescription": "The Double SONIC® Smasher has two patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with two slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/7cfda31c-49a7-4e74-5c78-bc9daf98b200/download"
                 },
                 {
                     "name": "Crispy Chicken Sandwich",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 5.49
+                            "size": "Standard",
+                            "price": 5.59
                         }
                     ],
-                    "description": "Crispy breaded chicken breast with lettuce and mayo",
-                    "longDescription": "A juicy, crispy breaded chicken breast fillet topped with fresh lettuce and creamy mayo, served on a toasted brioche bun.",
+                    "description": "A crispy chicken fillet with pickles, lettuce, and mayonnaise on a brioche bun.",
+                    "longDescription": "A crispy chicken fillet with pickles, lettuce, and mayonnaise on a brioche bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "550 cal",
-                    "popularity": "Guest Favorite",
-                    "image": "menu_images/crispy_chicken_sandwich"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d87a5a68-81f6-43b6-26d8-def986a6a800/download"
                 },
                 {
-                    "name": "Grilled Chicken Sandwich",
+                    "name": "Triple SONIC Smasher™",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 5.99
+                            "size": "Standard",
+                            "price": 7.59
                         }
                     ],
-                    "description": "Seasoned grilled chicken breast with lettuce and tomato",
-                    "longDescription": "A tender, seasoned grilled chicken breast topped with fresh lettuce, ripe tomato, and light mayo on a toasted brioche bun.",
+                    "description": "The Triple SONIC® Smasher has three patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with three slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
+                    "longDescription": "The Triple SONIC® Smasher has three patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with three slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "430 cal",
-                    "popularity": "Lighter Option",
-                    "image": "menu_images/grilled_chicken_sandwich"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d560ca02-54d3-4308-b94a-419781bc6e00/download"
                 },
                 {
-                    "name": "Jr. Double Cheeseburger",
+                    "name": "Fish Sandwich",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.49
+                            "size": "Standard",
+                            "price": 4.99
                         }
                     ],
-                    "description": "Two junior beef patties with American cheese on a toasted bun",
-                    "longDescription": "Two junior-size 100% pure beef patties topped with American cheese, pickles, onions, ketchup, and mustard on a warm toasted bun.",
+                    "description": "Our Fish Sandwich features a 100% Wild Caught Alaska Pollock Fillet, creamy tartar sauce and lettuce on a golden, toasted bun.",
+                    "longDescription": "Our Fish Sandwich features a 100% Wild Caught Alaska Pollock Fillet, creamy tartar sauce and lettuce on a golden, toasted bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "440 cal",
-                    "popularity": "Value Pick",
-                    "image": "menu_images/jr_double_cheeseburger"
-                },
-                {
-                    "name": "SuperSONIC® Bacon Cheeseburger",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 6.49
-                        }
-                    ],
-                    "description": "Beef patty loaded with crispy bacon and melty cheese",
-                    "longDescription": "A quarter-pound 100% pure beef patty topped with crispy bacon, American cheese, lettuce, tomato, pickles, onions, and mayo on a toasted brioche bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "780 cal",
-                    "popularity": "Signature Item",
-                    "image": "menu_images/supersonic_bacon_cheeseburger"
-                },
-                {
-                    "name": "Jr. Burger",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 2.49
-                        }
-                    ],
-                    "description": "A junior-size beef patty with classic toppings",
-                    "longDescription": "A junior-size 100% pure beef patty with pickles, onions, ketchup, and mustard on a warm toasted bun. Perfect for a quick bite.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "310 cal",
-                    "popularity": "Budget Friendly",
-                    "image": "menu_images/jr_burger"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/577738fb-6903-4e77-a27b-5be724522600/download"
                 }
             ]
         },
@@ -159,154 +149,192 @@
             "category": "Hot Dogs & Tots",
             "items": [
                 {
-                    "name": "All-American Hot Dog",
+                    "name": "All-American Dog",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.49
+                            "size": "Standard",
+                            "price": 3.19
                         }
                     ],
-                    "description": "Classic beef hot dog with ketchup, mustard, and relish",
-                    "longDescription": "A premium beef hot dog served in a soft, warm bakery bun with ketchup, yellow mustard, and sweet relish.",
+                    "description": "SONIC's All-American Dog is topped with ketchup, yellow mustard, relish, diced onions and served in a soft, warm bakery bun.",
+                    "longDescription": "SONIC's All-American Dog is topped with ketchup, yellow mustard, relish, diced onions and served in a soft, warm bakery bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "350 cal",
-                    "popularity": "Drive-In Classic",
-                    "image": "menu_images/hot_dog"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/52ef56d9-a7bd-470c-0dd8-db4461a8c000/download"
                 },
                 {
                     "name": "Chili Cheese Coney",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.99
+                            "size": "Standard",
+                            "price": 3.19
                         }
                     ],
-                    "description": "Beef hot dog smothered in chili and melty cheddar cheese",
-                    "longDescription": "A premium beef hot dog topped with warm Sonic chili and melted shredded cheddar cheese, served in a soft bakery bun.",
+                    "description": "SONIC's Chili Cheese Coney is a hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
+                    "longDescription": "SONIC's Chili Cheese Coney is a hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "430 cal",
-                    "popularity": "Carhop Favorite",
-                    "image": "menu_images/chili_coney"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d409fb36-21c4-4060-bc91-57c516556d00/download"
                 },
                 {
                     "name": "Footlong Quarter Pound Coney",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 4.99
+                            "size": "Standard",
+                            "price": 5.29
                         }
                     ],
-                    "description": "Footlong beef hot dog with chili, cheese, onions, and mustard",
-                    "longDescription": "A full footlong quarter-pound premium beef hot dog topped with warm Sonic chili, melted shredded cheddar cheese, diced onions, and yellow mustard.",
+                    "description": "SONIC's Footlong Quarter Pound Coney is a grilled hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
+                    "longDescription": "SONIC's Footlong Quarter Pound Coney is a grilled hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "680 cal",
-                    "popularity": "Coney Classic",
-                    "image": "menu_images/footlong_coney"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/42df8449-0a4f-4795-7f50-978cf6ea4c00/download"
                 },
                 {
-                    "name": "Large Tots",
+                    "name": "Tots",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.29
+                            "size": "Small",
+                            "price": 2.19
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 2.79
+                        },
+                        {
+                            "size": "Large",
+                            "price": 3.49
                         }
                     ],
-                    "description": "Golden crispy tots seasoned to perfection",
-                    "longDescription": "Crispy on the outside, fluffy on the inside. Sonic's signature tots are a drive-in essential, perfect as a side or snack.",
+                    "description": "Crispy tots fried to a golden brown and lightly seasoned with salt.",
+                    "longDescription": "Crispy tots fried to a golden brown and lightly seasoned with salt.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "490 cal",
-                    "popularity": "Iconic Side",
-                    "image": "menu_images/tots"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/aa7ee5c3-b016-4c20-302f-fe60897f4d00/download"
                 },
                 {
-                    "name": "Large Fries",
+                    "name": "Groovy Fries",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.29
-                        }
-                    ],
-                    "description": "Golden natural-cut fries salted to crispy perfection",
-                    "longDescription": "Natural-cut, skin-on fries cooked to golden perfection and lightly salted. A classic drive-in side that pairs with everything.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "430 cal",
-                    "popularity": "Classic Side",
-                    "image": "menu_images/large_fries"
-                },
-                {
-                    "name": "Mozzarella Sticks",
-                    "sizes": [
+                            "size": "Small",
+                            "price": 2.19
+                        },
                         {
-                            "size": "standard",
-                            "price": 3.99
-                        }
-                    ],
-                    "description": "Crispy breaded mozzarella with marinara dipping sauce",
-                    "longDescription": "Golden-fried mozzarella sticks with a crispy breading and gooey melted cheese inside, served with zesty marinara dipping sauce.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "410 cal",
-                    "popularity": "Snack Favorite",
-                    "image": "menu_images/mozz_sticks"
-                },
-                {
-                    "name": "Chili Cheese Tots",
-                    "sizes": [
+                            "size": "Medium",
+                            "price": 2.79
+                        },
                         {
-                            "size": "standard",
-                            "price": 4.49
+                            "size": "Large",
+                            "price": 3.49
                         }
                     ],
-                    "description": "Crispy tots loaded with warm chili and melted cheese",
-                    "longDescription": "Sonic's signature tots loaded with warm chili and melted shredded cheddar for a hearty snack or side.",
+                    "description": "Fried thin and golden brown with grooves designed for dipping! They’re served hot, crispy, and perfectly salted. Add a side of our new Groovy Sauce for dipping!​",
+                    "longDescription": "Fried thin and golden brown with grooves designed for dipping! They’re served hot, crispy, and perfectly salted. Add a side of our new Groovy Sauce for dipping!​",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "580 cal",
-                    "popularity": "Loaded Favorite",
-                    "image": "menu_images/chili_cheese_tots"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/42a7a54d-9872-41bd-58d3-c9370872fc00/download"
                 },
                 {
                     "name": "Corn Dog",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 2.49
-                        }
-                    ],
-                    "description": "Hand-dipped corn dog battered and fried golden",
-                    "longDescription": "A premium beef hot dog hand-dipped in sweet corn batter and fried to golden perfection. A Sonic Drive-In staple.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "320 cal",
-                    "popularity": "Drive-In Staple",
-                    "image": "menu_images/corn_dog"
-                },
-                {
-                    "name": "Jr. Hot Dog",
-                    "sizes": [
-                        {
-                            "size": "standard",
+                            "size": "Standard",
                             "price": 1.99
                         }
                     ],
-                    "description": "Junior-size beef hot dog on a warm bakery bun",
-                    "longDescription": "A junior-size premium beef hot dog served on a warm bakery bun with ketchup and mustard. Great for a quick snack.",
+                    "description": "A delicious dog wrapped in sweet corn batter fried to a crispy golden-brown. Don't forget the ketchup or mustard.",
+                    "longDescription": "A delicious dog wrapped in sweet corn batter fried to a crispy golden-brown. Don't forget the ketchup or mustard.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "230 cal",
-                    "popularity": "Value Pick",
-                    "image": "menu_images/jr_hot_dog"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/5503aa71-5d13-4e85-1a00-68c900e4a200/download"
+                },
+                {
+                    "name": "Chili Cheese Tots",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 2.99
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.79
+                        },
+                        {
+                            "size": "Large",
+                            "price": 4.49
+                        }
+                    ],
+                    "description": "Crispy, golden tots smothered with warm chili and melty cheddar cheese.",
+                    "longDescription": "Crispy, golden tots smothered with warm chili and melty cheddar cheese.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/f364e808-ead7-4c3f-d35b-bff91685df00/download"
+                },
+                {
+                    "name": "Mozzarella Sticks",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 3.89
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 4.89
+                        },
+                        {
+                            "size": "Large",
+                            "price": 5.89
+                        }
+                    ],
+                    "description": "Crispy on the outside, gooey on the inside! Our Mozzarella Sticks are made with melty, real mozzarella cheese breaded and perfectly fried.  Add a sauce of your choice for dipping!",
+                    "longDescription": "Crispy on the outside, gooey on the inside! Our Mozzarella Sticks are made with melty, real mozzarella cheese breaded and perfectly fried.  Add a sauce of your choice for dipping!",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/1787761a-f1ea-4c35-af88-248431d64200/download"
+                },
+                {
+                    "name": "Onion Rings",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 3.19
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.89
+                        },
+                        {
+                            "size": "Large",
+                            "price": 4.59
+                        }
+                    ],
+                    "description": "Crispy and golden Onion Rings",
+                    "longDescription": "Crispy and golden Onion Rings",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/a031310e-acc2-46e3-7427-64ce37731200/download"
                 },
                 {
                     "name": "Ched 'R' Peppers",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.49
+                            "size": "Small",
+                            "price": 3.99
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 5.19
+                        },
+                        {
+                            "size": "Large",
+                            "price": 6.39
                         }
                     ],
-                    "description": "Cheddar-stuffed jalapeño peppers breaded and fried crispy",
-                    "longDescription": "Breaded jalapeño peppers stuffed with warm, melty cheddar cheese and fried to a golden crisp. Served with ranch dipping sauce.",
+                    "description": "Fried until crispy, these breaded jalapeno peppers are filled with melty cheddar cheese and add a sauce of your choice for dipping!",
+                    "longDescription": "Fried until crispy, these breaded jalapeno peppers are filled with melty cheddar cheese and add a sauce of your choice for dipping!",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "380 cal",
-                    "popularity": "Snack Hit",
-                    "image": "menu_images/ched_r_peppers"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/443765db-e418-4abb-a45c-390f5fdeb400/download"
                 }
             ]
         },
@@ -317,293 +345,301 @@
                     "name": "Cherry Limeade",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 1.59
                         },
                         {
-                            "size": "small",
+                            "size": "Small",
                             "price": 2.49
                         },
                         {
-                            "size": "medium",
+                            "size": "Medium",
                             "price": 2.89
                         },
                         {
-                            "size": "large",
+                            "size": "Large",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
+                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Sonic's iconic cherry limeade with real cherry and lime",
-                    "longDescription": "The original Sonic signature drink blending sweet cherry flavor with tangy limeade over Sonic's famous nugget ice.",
+                    "description": "Our iconic Cherry Limeade infuses fresh-squeezed lime and sweet cherry flavor and is poured over SONIC's famous ice!",
+                    "longDescription": "Our iconic Cherry Limeade infuses fresh-squeezed lime and sweet cherry flavor and is poured over SONIC's famous ice!",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Legendary",
-                    "image": "menu_images/cherry_limeade"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/e01edf42-3739-445b-7f95-d29937a5b400/download"
                 },
                 {
                     "name": "Ocean Water®",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 1.59
                         },
                         {
-                            "size": "small",
+                            "size": "Small",
                             "price": 2.49
                         },
                         {
-                            "size": "medium",
+                            "size": "Medium",
                             "price": 2.89
                         },
                         {
-                            "size": "large",
+                            "size": "Large",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
+                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Sprite with a splash of blue coconut flavor",
-                    "longDescription": "A tropical twist on classic Sprite, blended with blue coconut flavor for an island-inspired refresher served over nugget ice.",
+                    "description": "Our signature Ocean Water is sweet and refreshing with the hint of Blue Coconut flavor, served over SONIC's famous ice.",
+                    "longDescription": "Our signature Ocean Water is sweet and refreshing with the hint of Blue Coconut flavor, served over SONIC's famous ice.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Summer Hit",
-                    "image": "menu_images/ocean_water"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/8fb45110-623f-4725-8792-838041357200/download"
                 },
                 {
                     "name": "Blue Raspberry Slush",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 1.39
                         },
                         {
-                            "size": "small",
+                            "size": "Small",
                             "price": 2.19
                         },
                         {
-                            "size": "medium",
+                            "size": "Medium",
                             "price": 2.79
                         },
                         {
-                            "size": "large",
+                            "size": "Large",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
+                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Sweet blue raspberry flavored frozen slush",
-                    "longDescription": "A bold, sweet blue raspberry frozen slush made with Sonic's famous nugget ice for the perfect icy refreshment.",
+                    "description": "Sweet and tangy blue raspberry icy slush",
+                    "longDescription": "Sweet and tangy blue raspberry icy slush",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Guest Favorite",
-                    "image": "menu_images/blue_raspberry"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/7e4699da-8080-4d7e-c4c4-dca771bba600/download"
                 },
                 {
                     "name": "Strawberry Slush",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
+                            "price": 1.89
+                        },
+                        {
+                            "size": "Small",
+                            "price": 2.69
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.29
+                        },
+                        {
+                            "size": "Large",
+                            "price": 3.89
+                        },
+                        {
+                            "size": "RT 44",
+                            "price": 4.29
+                        }
+                    ],
+                    "description": "Strawberry icy slush with real strawberries",
+                    "longDescription": "Strawberry icy slush with real strawberries",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/1d366d9e-f62c-4410-0aa9-941e85570c00/download"
+                },
+                {
+                    "name": "Cherry Slush",
+                    "sizes": [
+                        {
+                            "size": "Mini",
                             "price": 1.39
                         },
                         {
-                            "size": "small",
+                            "size": "Small",
                             "price": 2.19
                         },
                         {
-                            "size": "medium",
+                            "size": "Medium",
                             "price": 2.79
                         },
                         {
-                            "size": "large",
+                            "size": "Large",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
+                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Sweet strawberry flavored frozen slush",
-                    "longDescription": "A refreshing strawberry frozen slush made with Sonic's famous nugget ice for the perfect fruity icy treat.",
+                    "description": "Sweet cherry icy slush",
+                    "longDescription": "Sweet cherry icy slush",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Guest Favorite",
-                    "image": "menu_images/strawberry_slush"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/770a6220-62a2-4674-feb9-75fd3c522f00/download"
                 },
                 {
-                    "name": "Lemon Berry Slush",
+                    "name": "All Natural Lemonade",
                     "sizes": [
                         {
-                            "size": "mini",
-                            "price": 1.39
+                            "size": "Mini",
+                            "price": 1.79
                         },
                         {
-                            "size": "small",
-                            "price": 2.19
+                            "size": "Small",
+                            "price": 2.69
                         },
                         {
-                            "size": "medium",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "large",
+                            "size": "Medium",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
-                            "price": 3.79
+                            "size": "Large",
+                            "price": 3.59
+                        },
+                        {
+                            "size": "RT 44",
+                            "price": 3.99
                         }
                     ],
-                    "description": "Tangy lemon and sweet berry blended into an icy slush",
-                    "longDescription": "A refreshing blend of tangy lemon and sweet berry flavors frozen into an icy slush over Sonic's famous nugget ice.",
+                    "description": "All natural Lemonade, made with real fruit lemons.",
+                    "longDescription": "All natural Lemonade, made with real fruit lemons.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Seasonal Hit",
-                    "image": "menu_images/lemon_berry_slush"
-                },
-                {
-                    "name": "Diet Cherry Limeade",
-                    "sizes": [
-                        {
-                            "size": "mini",
-                            "price": 1.59
-                        },
-                        {
-                            "size": "small",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "medium",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "rt 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "The classic cherry limeade made with diet limeade",
-                    "longDescription": "All the flavor of Sonic's legendary Cherry Limeade made with diet limeade for a lighter, guilt-free refreshment.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "Lighter Choice",
-                    "image": "menu_images/diet_cherry_limeade"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/ef218444-03fd-45cf-2088-a4547b1fbf00/download"
                 },
                 {
                     "name": "Grape Slush",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 1.39
                         },
                         {
-                            "size": "small",
+                            "size": "Small",
                             "price": 2.19
                         },
                         {
-                            "size": "medium",
+                            "size": "Medium",
                             "price": 2.79
                         },
                         {
-                            "size": "large",
+                            "size": "Large",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
+                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Bold grape flavor blended into an icy frozen slush",
-                    "longDescription": "A sweet and bold grape frozen slush made with Sonic's famous nugget ice for a classic fruity treat.",
+                    "description": "The sweet flavor of Grape in an icy Slush",
+                    "longDescription": "The sweet flavor of Grape in an icy Slush",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Classic Flavor",
-                    "image": "menu_images/grape_slush"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/dc0d4973-f818-48e3-2a58-0fa3ca49d800/download"
                 },
                 {
                     "name": "Cranberry Limeade",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 1.59
                         },
                         {
-                            "size": "small",
+                            "size": "Small",
                             "price": 2.49
                         },
                         {
-                            "size": "medium",
+                            "size": "Medium",
                             "price": 2.89
                         },
                         {
-                            "size": "large",
+                            "size": "Large",
                             "price": 3.39
                         },
                         {
-                            "size": "rt 44",
+                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Tart cranberry and tangy lime over Sonic's famous nugget ice",
-                    "longDescription": "A refreshing blend of tart cranberry and tangy limeade served over Sonic's famous nugget ice for a fruity, icy drink.",
+                    "description": "Limeade made with real lime and cranberry flavoring.",
+                    "longDescription": "Limeade made with real lime and cranberry flavoring.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Seasonal Favorite",
-                    "image": "menu_images/cranberry_limeade"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/1cfc9dee-9fb2-43c3-1b48-05edd3dbaa00/download"
                 },
                 {
                     "name": "Sweet Iced Tea",
                     "sizes": [
                         {
-                            "size": "small",
-                            "price": 1.99
+                            "size": "Mini",
+                            "price": 1.19
                         },
                         {
-                            "size": "medium",
-                            "price": 2.39
+                            "size": "Small",
+                            "price": 2.19
                         },
                         {
-                            "size": "large",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "rt 44",
-                            "price": 3.29
-                        }
-                    ],
-                    "description": "Fresh-brewed sweet iced tea served over nugget ice",
-                    "longDescription": "Fresh-brewed, sweetened iced tea served ice-cold over Sonic's famous nugget ice. A Southern classic done right.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "All-Day Refresher",
-                    "image": "menu_images/sweet_iced_tea"
-                },
-                {
-                    "name": "Lemonade",
-                    "sizes": [
-                        {
-                            "size": "small",
+                            "size": "Medium",
                             "price": 2.49
                         },
                         {
-                            "size": "medium",
+                            "size": "Large",
                             "price": 2.99
                         },
                         {
-                            "size": "large",
+                            "size": "RT 44",
                             "price": 3.49
-                        },
-                        {
-                            "size": "rt 44",
-                            "price": 3.99
                         }
                     ],
-                    "description": "Classic real lemonade served over Sonic's famous nugget ice",
-                    "longDescription": "Classic real lemonade made from a sweet and tart recipe, served over Sonic's famous nugget ice for the ultimate refresher.",
+                    "description": "Freshly brewed sweet tea served over SONIC's famous ice.",
+                    "longDescription": "Freshly brewed sweet tea served over SONIC's famous ice.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Summertime Classic",
-                    "image": "menu_images/lemonade"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/335ba53d-3e4d-4018-da92-2a482f8a1500/download"
+                },
+                {
+                    "name": "Strawberry Limeade",
+                    "sizes": [
+                        {
+                            "size": "Mini",
+                            "price": 1.59
+                        },
+                        {
+                            "size": "Small",
+                            "price": 2.49
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 2.89
+                        },
+                        {
+                            "size": "Large",
+                            "price": 3.39
+                        },
+                        {
+                            "size": "RT 44",
+                            "price": 3.79
+                        }
+                    ],
+                    "description": "Strawberry limeade made with lime and real strawberry.",
+                    "longDescription": "Strawberry limeade made with lime and real strawberry.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/39a9cdfd-4b29-4d75-de8b-c12767a56e00/download"
                 }
             ]
         },
@@ -611,236 +647,232 @@
             "category": "Shakes & Ice Cream",
             "items": [
                 {
-                    "name": "Vanilla Shake",
+                    "name": "Vanilla Classic Shake",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 3.39
                         },
                         {
-                            "size": "small",
-                            "price": 4.49
+                            "size": "Small",
+                            "price": 4.19
                         },
                         {
-                            "size": "medium",
-                            "price": 5.29
+                            "size": "Medium",
+                            "price": 4.69
                         },
                         {
-                            "size": "large",
-                            "price": 5.99
+                            "size": "Large",
+                            "price": 5.69
                         }
                     ],
-                    "description": "Creamy hand-mixed vanilla shake with whipped topping",
-                    "longDescription": "A timeless classic made with real ice cream, hand-mixed to thick, creamy perfection and finished with whipped topping and a cherry.",
+                    "description": "Our Vanilla Shake is made with creamy vanilla soft serve and finished with whipped topping and a cherry.",
+                    "longDescription": "Our Vanilla Shake is made with creamy vanilla soft serve and finished with whipped topping and a cherry.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Always On Menu",
-                    "image": "menu_images/vanilla_shake"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/b6ebeb24-53c7-4f63-7ecc-23fecf83c400/download"
                 },
                 {
-                    "name": "Chocolate Shake",
+                    "name": "Chocolate Classic Shake",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 3.39
                         },
                         {
-                            "size": "small",
-                            "price": 4.49
+                            "size": "Small",
+                            "price": 4.19
                         },
                         {
-                            "size": "medium",
-                            "price": 5.29
+                            "size": "Medium",
+                            "price": 4.69
                         },
                         {
-                            "size": "large",
-                            "price": 5.99
+                            "size": "Large",
+                            "price": 5.69
                         }
                     ],
-                    "description": "Rich chocolate shake hand-mixed with real ice cream",
-                    "longDescription": "A rich, indulgent chocolate shake made with real ice cream and hand-mixed to creamy perfection, topped with whipped cream and a cherry.",
+                    "description": "Our Chocolate Shake is made with creamy vanilla soft serve, rich chocolate sauce, and finished with whipped topping and a cherry.",
+                    "longDescription": "Our Chocolate Shake is made with creamy vanilla soft serve, rich chocolate sauce, and finished with whipped topping and a cherry.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Classic Favorite",
-                    "image": "menu_images/chocolate_shake"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/4e7576bc-a0fd-433c-b430-0f2b16d19200/download"
                 },
                 {
-                    "name": "Strawberry Shake",
+                    "name": "Strawberry Classic Shake",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
                             "price": 3.39
                         },
                         {
-                            "size": "small",
-                            "price": 4.49
+                            "size": "Small",
+                            "price": 4.19
                         },
                         {
-                            "size": "medium",
-                            "price": 5.29
+                            "size": "Medium",
+                            "price": 4.69
                         },
                         {
-                            "size": "large",
-                            "price": 5.99
+                            "size": "Large",
+                            "price": 5.69
                         }
                     ],
-                    "description": "Sweet strawberry shake blended with real ice cream",
-                    "longDescription": "A sweet, fruity strawberry shake made with real ice cream and blended until smooth, topped with whipped cream and a cherry.",
+                    "description": "Our Strawberry Shake is made with creamy vanilla soft serve, real strawberries, and finished with whipped topping and a cherry.",
+                    "longDescription": "Our Strawberry Shake is made with creamy vanilla soft serve, real strawberries, and finished with whipped topping and a cherry.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Fan Favorite",
-                    "image": "menu_images/strawberry_shake"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/15ddec4e-4d3f-4493-77f0-4c6c87f9ec00/download"
                 },
                 {
-                    "name": "Peanut Butter Shake",
+                    "name": "Peanut Butter Classic Shake",
                     "sizes": [
                         {
-                            "size": "mini",
+                            "size": "Mini",
+                            "price": 3.39
+                        },
+                        {
+                            "size": "Small",
+                            "price": 4.19
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 4.69
+                        },
+                        {
+                            "size": "Large",
+                            "price": 5.69
+                        }
+                    ],
+                    "description": "Our Peanut Butter Shake is made with sweet vanilla soft serve, creamy peanut butter and finished with whipped topping and a cherry.",
+                    "longDescription": "Our Peanut Butter Shake is made with sweet vanilla soft serve, creamy peanut butter and finished with whipped topping and a cherry.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/47745a83-d60d-4d45-8431-e989881be100/download"
+                },
+                {
+                    "name": "SONIC Blast® made with REESE’S",
+                    "sizes": [
+                        {
+                            "size": "Mini",
+                            "price": 3.99
+                        },
+                        {
+                            "size": "Small",
+                            "price": 4.89
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 5.89
+                        }
+                    ],
+                    "description": "REESE’S Peanut Butter Cups swirled with SONIC’s creamy vanilla soft serve & topped with more REESE’S Peanut Butter Cups",
+                    "longDescription": "REESE’S Peanut Butter Cups swirled with SONIC’s creamy vanilla soft serve & topped with more REESE’S Peanut Butter Cups",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/66d19fca-7e7e-4a6d-2a1e-ea8c33cc7200/download"
+                },
+                {
+                    "name": "SONIC Blast® made with OREO® Cookie Pieces",
+                    "sizes": [
+                        {
+                            "size": "Mini",
+                            "price": 3.99
+                        },
+                        {
+                            "size": "Small",
+                            "price": 4.89
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 5.89
+                        }
+                    ],
+                    "description": "OREO® Cookie pieces swirled with SONIC’s creamy vanilla soft serve & topped with more Oreo® Cookie pieces",
+                    "longDescription": "OREO® Cookie pieces swirled with SONIC’s creamy vanilla soft serve & topped with more Oreo® Cookie pieces",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/ce235294-a6bd-4f9b-f3e5-8235aa8e2000/download"
+                },
+                {
+                    "name": "OREO® Cheesecake Master Shake®",
+                    "sizes": [
+                        {
+                            "size": "Mini",
                             "price": 3.89
                         },
                         {
-                            "size": "small",
-                            "price": 4.99
+                            "size": "Small",
+                            "price": 4.59
                         },
                         {
-                            "size": "medium",
-                            "price": 5.69
+                            "size": "Medium",
+                            "price": 5.39
                         },
                         {
-                            "size": "large",
-                            "price": 6.49
+                            "size": "Large",
+                            "price": 6.59
                         }
                     ],
-                    "description": "Creamy peanut butter blended with real ice cream",
-                    "longDescription": "A rich, nutty shake made with real peanut butter and hand-mixed with real ice cream for the ultimate peanut butter indulgence.",
+                    "description": "Creamy vanilla soft serve mixed with the rich flavor of cheesecake, graham cracker crumbs and OREO® Cookie Pieces into a thick and creamy shake, finished with whipped topping, more graham cracker crumbs and a cherry.",
+                    "longDescription": "Creamy vanilla soft serve mixed with the rich flavor of cheesecake, graham cracker crumbs and OREO® Cookie Pieces into a thick and creamy shake, finished with whipped topping, more graham cracker crumbs and a cherry.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Indulgent Choice",
-                    "image": "menu_images/peanut_butter_shake"
-                },
-                {
-                    "name": "Oreo® Cheesecake Shake",
-                    "sizes": [
-                        {
-                            "size": "mini",
-                            "price": 4.29
-                        },
-                        {
-                            "size": "small",
-                            "price": 5.49
-                        },
-                        {
-                            "size": "medium",
-                            "price": 6.29
-                        },
-                        {
-                            "size": "large",
-                            "price": 6.99
-                        }
-                    ],
-                    "description": "Oreo cookies and cheesecake blended into a creamy shake",
-                    "longDescription": "Creamy cheesecake flavor blended with Oreo cookie pieces and real ice cream for a decadent, indulgent shake experience.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "Premium Pick",
-                    "image": "menu_images/oreo_cheesecake_shake"
-                },
-                {
-                    "name": "REESE'S® Overload Blast",
-                    "sizes": [
-                        {
-                            "size": "mini",
-                            "price": 4.29
-                        },
-                        {
-                            "size": "small",
-                            "price": 5.49
-                        },
-                        {
-                            "size": "medium",
-                            "price": 6.29
-                        },
-                        {
-                            "size": "large",
-                            "price": 6.99
-                        }
-                    ],
-                    "description": "Real ice cream loaded with REESE'S peanut butter cups",
-                    "longDescription": "Sonic's signature Blast made with real ice cream hand-mixed with REESE'S Peanut Butter Cup pieces, peanut butter, and chocolate sauce.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "Top Seller",
-                    "image": "menu_images/reeses_blast"
-                },
-                {
-                    "name": "Oreo® Blast",
-                    "sizes": [
-                        {
-                            "size": "mini",
-                            "price": 3.89
-                        },
-                        {
-                            "size": "small",
-                            "price": 4.99
-                        },
-                        {
-                            "size": "medium",
-                            "price": 5.69
-                        },
-                        {
-                            "size": "large",
-                            "price": 6.49
-                        }
-                    ],
-                    "description": "Real ice cream blended with crushed Oreo cookie pieces",
-                    "longDescription": "Sonic's signature Blast made with real ice cream and hand-mixed with crushed Oreo cookie pieces for a cookies-and-cream dream.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "Fan Favorite",
-                    "image": "menu_images/oreo_blast"
-                },
-                {
-                    "name": "Vanilla Cone",
-                    "sizes": [
-                        {
-                            "size": "small",
-                            "price": 1.99
-                        },
-                        {
-                            "size": "medium",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "large",
-                            "price": 2.99
-                        }
-                    ],
-                    "description": "Creamy soft-serve vanilla ice cream in a waffle cone",
-                    "longDescription": "Smooth, creamy soft-serve vanilla ice cream swirled into a classic waffle cone. Simple, sweet perfection.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "Classic Treat",
-                    "image": "menu_images/vanilla_cone"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d2c03630-fb1f-4577-c4a3-c1bdfb43c600/download"
                 },
                 {
                     "name": "Hot Fudge Sundae",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.49
+                            "size": "Standard",
+                            "price": 3.19
                         }
                     ],
-                    "description": "Vanilla ice cream drizzled with warm hot fudge",
-                    "longDescription": "Creamy vanilla soft-serve ice cream topped with warm, rich hot fudge sauce for the ultimate sundae treat.",
+                    "description": "Our Hot Fudge Sundaes start with creamy, vanilla soft serve swirled together with hot fudge, and finished with whipped topping and a cherry.",
+                    "longDescription": "Our Hot Fudge Sundaes start with creamy, vanilla soft serve swirled together with hot fudge, and finished with whipped topping and a cherry.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Dessert Classic",
-                    "image": "menu_images/hot_fudge_sundae"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/a7d39de2-8f7b-431d-c776-7df84dcfee00/download"
                 },
                 {
-                    "name": "Banana Split",
+                    "name": "Banana Classic Shake",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 5.99
+                            "size": "Mini",
+                            "price": 3.39
+                        },
+                        {
+                            "size": "Small",
+                            "price": 4.19
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 4.69
+                        },
+                        {
+                            "size": "Large",
+                            "price": 5.69
                         }
                     ],
-                    "description": "Classic banana split with ice cream, toppings, and whipped cream",
-                    "longDescription": "A fresh banana split down the middle and loaded with vanilla ice cream, strawberry, chocolate, and pineapple toppings, finished with whipped cream and a cherry.",
+                    "description": "Our Banana Shake is made with creamy vanilla soft serve, bananas and finished with whipped topping and a cherry.",
+                    "longDescription": "Our Banana Shake is made with creamy vanilla soft serve, bananas and finished with whipped topping and a cherry.",
                     "origin": "Sonic Drive-In Menu",
-                    "popularity": "Shareable Treat",
-                    "image": "menu_images/banana_split"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/8b707628-27df-43c1-abdc-a164487c7b00/download"
+                },
+                {
+                    "name": "Caramel Sundae",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 3.19
+                        }
+                    ],
+                    "description": "Caramel Sundaes start with creamy, vanilla soft serve swirled together with caramel and finished with whipped topping and a cherry.",
+                    "longDescription": "Caramel Sundaes start with creamy, vanilla soft serve swirled together with caramel and finished with whipped topping and a cherry.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/03487758-7de6-42fe-1c22-cfc7f645ec00/download"
                 }
             ]
         },
@@ -848,154 +880,184 @@
             "category": "Extras & Sides",
             "items": [
                 {
-                    "name": "Onion Rings",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 3.49
-                        }
-                    ],
-                    "description": "Crispy hand-battered onion rings fried golden",
-                    "longDescription": "Hand-battered thick-cut onion rings fried to a crispy golden perfection. A classic drive-in side.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "440 cal",
-                    "popularity": "Classic Side",
-                    "image": "menu_images/onion_rings"
-                },
-                {
-                    "name": "Medium Tots",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 2.49
-                        }
-                    ],
-                    "description": "Golden crispy tots seasoned and perfectly bite-sized",
-                    "longDescription": "A medium portion of Sonic's signature crispy tots, golden on the outside and fluffy inside. The perfect shareable side.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "330 cal",
-                    "popularity": "Iconic Side",
-                    "image": "menu_images/medium_tots"
-                },
-                {
-                    "name": "Medium Fries",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 2.49
-                        }
-                    ],
-                    "description": "Natural-cut fries salted and fried to golden perfection",
-                    "longDescription": "A medium portion of natural-cut, skin-on fries cooked to golden perfection and lightly salted. Pairs with any entrée.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "290 cal",
-                    "popularity": "Classic Side",
-                    "image": "menu_images/medium_fries"
-                },
-                {
-                    "name": "Pickle Fries",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 3.99
-                        }
-                    ],
-                    "description": "Crispy battered dill pickle spears fried to perfection",
-                    "longDescription": "Tangy dill pickle spears coated in a crispy batter and fried golden. Served with ranch for dipping.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "360 cal",
-                    "popularity": "Craveable Snack",
-                    "image": "menu_images/pickle_fries"
-                },
-                {
-                    "name": "Chili Cheese Fries",
-                    "sizes": [
-                        {
-                            "size": "standard",
-                            "price": 4.49
-                        }
-                    ],
-                    "description": "Natural-cut fries loaded with chili and melted cheese",
-                    "longDescription": "Golden natural-cut fries smothered in warm Sonic chili and melted shredded cheddar cheese for a loaded, hearty side.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "520 cal",
-                    "popularity": "Loaded Favorite",
-                    "image": "menu_images/chili_cheese_fries"
-                },
-                {
                     "name": "Cheese Tots",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 3.49
-                        }
-                    ],
-                    "description": "Crispy tots topped with warm melted shredded cheddar",
-                    "longDescription": "Sonic's signature crispy tots topped with a generous layer of warm, melted shredded cheddar cheese.",
-                    "origin": "Sonic Drive-In Menu",
-                    "calories": "450 cal",
-                    "popularity": "Cheesy Upgrade",
-                    "image": "menu_images/cheese_tots"
-                },
-                {
-                    "name": "Jalapeño Poppers",
-                    "sizes": [
+                            "size": "Small",
+                            "price": 2.69
+                        },
                         {
-                            "size": "standard",
+                            "size": "Medium",
+                            "price": 3.39
+                        },
+                        {
+                            "size": "Large",
                             "price": 3.99
                         }
                     ],
-                    "description": "Cream cheese-stuffed jalapeños breaded and fried crispy",
-                    "longDescription": "Spicy jalapeño peppers stuffed with smooth cream cheese, breaded, and fried to a crispy golden finish. Served with ranch.",
+                    "description": "Crispy tots fried to a golden brown and topped with melted cheese",
+                    "longDescription": "Crispy tots fried to a golden brown and topped with melted cheese",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "390 cal",
-                    "popularity": "Spicy Pick",
-                    "image": "menu_images/jalapeno_poppers"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/4a4ca662-fc5f-4314-aafc-a587d8132400/download"
                 },
                 {
-                    "name": "Mini Corn Dogs",
+                    "name": "Cheese Groovy Fries",
                     "sizes": [
                         {
-                            "size": "standard",
+                            "size": "Small",
+                            "price": 2.69
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.39
+                        },
+                        {
+                            "size": "Large",
+                            "price": 3.99
+                        }
+                    ],
+                    "description": "Fried thin and golden brown topped with melted cheese.",
+                    "longDescription": "Fried thin and golden brown topped with melted cheese.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/0b4f01f0-d0ac-47ad-aaed-c02b45946500/download"
+                },
+                {
+                    "name": "Chili Cheese Groovy Fries",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 2.99
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.79
+                        },
+                        {
+                            "size": "Large",
+                            "price": 4.49
+                        }
+                    ],
+                    "description": "Fried thin and golden brown smothered in warm chili and topped with cheddar cheese.",
+                    "longDescription": "Fried thin and golden brown smothered in warm chili and topped with cheddar cheese.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/2d01a611-ee8b-471e-6e51-da9fd3c32500/download"
+                },
+                {
+                    "name": "Premium Chicken Bites",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 3.89
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 5.69
+                        },
+                        {
+                            "size": "Large",
+                            "price": 6.89
+                        }
+                    ],
+                    "description": "",
+                    "longDescription": "",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/3a37bc8e-8f5a-4d58-e771-4183f78aef00/download"
+                },
+                {
+                    "name": "FRITOS® Chili Cheese Wrap",
+                    "sizes": [
+                        {
+                            "size": "Standard",
                             "price": 2.99
                         }
                     ],
-                    "description": "Bite-sized corn dogs battered and fried to golden perfection",
-                    "longDescription": "Fun, bite-sized mini corn dogs hand-dipped in sweet corn batter and fried golden. Perfect for snacking or sharing.",
+                    "description": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 10” flour tortilla.",
+                    "longDescription": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 10” flour tortilla.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "340 cal",
-                    "popularity": "Shareable Snack",
-                    "image": "menu_images/mini_corn_dogs"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/031342cc-de80-4c40-7552-06f41b5cb200/download"
                 },
                 {
-                    "name": "Boneless Wings (6pc)",
+                    "name": "Soft Pretzel Twist",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 5.99
+                            "size": "Standard",
+                            "price": 1.99
                         }
                     ],
-                    "description": "Crispy boneless chicken wings tossed in your choice of sauce",
-                    "longDescription": "Six crispy, all-white-meat boneless chicken wings tossed in your choice of sauce. Available in Buffalo, BBQ, or Asian Sweet Chili.",
+                    "description": "A tasty twist on a classic. Enjoy a warm butter-flavored soft pretzel topped with salt. Enjoy it by itself, or pair it with one of SONIC's great dipping sauce options.",
+                    "longDescription": "A tasty twist on a classic. Enjoy a warm butter-flavored soft pretzel topped with salt. Enjoy it by itself, or pair it with one of SONIC's great dipping sauce options.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "480 cal",
-                    "popularity": "Wing Lovers",
-                    "image": "menu_images/boneless_wings"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/842cf05e-892e-47af-898b-5eb1020e3e00/download"
                 },
                 {
-                    "name": "Pretzel Twist",
+                    "name": "Fritos Chili Cheese Pie",
                     "sizes": [
                         {
-                            "size": "standard",
-                            "price": 2.99
+                            "size": "Small",
+                            "price": 2.89
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.49
+                        },
+                        {
+                            "size": "Large",
+                            "price": 4.29
                         }
                     ],
-                    "description": "Warm soft pretzel twist with a side of cheese sauce",
-                    "longDescription": "A warm, soft-baked pretzel twist sprinkled with coarse salt and served with a creamy cheese dipping sauce.",
+                    "description": "Crunchy FRITOS® topped with signature chili and melted cheddar cheese.",
+                    "longDescription": "Crunchy FRITOS® topped with signature chili and melted cheddar cheese.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "310 cal",
-                    "popularity": "Snack Time",
-                    "image": "menu_images/pretzel_twist"
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/727ef87b-b324-47ca-236a-1456a61a5300/download"
+                },
+                {
+                    "name": "Crispy Tenders - 3 Piece",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.19
+                        }
+                    ],
+                    "description": "Three 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
+                    "longDescription": "Three 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/ca91d6bc-71d0-4d80-4d6a-d3c9831fe600/download"
+                },
+                {
+                    "name": "Crispy Tenders - 5 Piece",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 6.19
+                        }
+                    ],
+                    "description": "Five 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
+                    "longDescription": "Five 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/2b39ce5d-ca8e-447e-8c17-abd07085a000/download"
+                },
+                {
+                    "name": "FRITOS® Chili Cheese Jr. Wrap",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 1.89
+                        }
+                    ],
+                    "description": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 8” flour tortilla.",
+                    "longDescription": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 8” flour tortilla.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "",
+                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/3cdb690a-82b0-4599-4213-13821c7aef00/download"
                 }
             ]
         }
