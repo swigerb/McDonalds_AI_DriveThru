@@ -88,7 +88,7 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 - **8% sales tax**: Hardcoded tax rate applied to all orders, displayed on the carhop ticket.
 
 ### Search & Performance Optimization
-- **Azure AI Search for menu RAG**: 172 items indexed from production Sonic POS data (`sonic-menu-items.json`) with semantic hybrid search (text-embedding-3-large, 3072 dimensions).
+- **Azure AI Search for menu RAG**: 172 items indexed from sample Sonic menu data (`sonic-menu-items.json`) with semantic hybrid search (text-embedding-3-large, 3072 dimensions).
 - **TTL search cache**: 60-second, 128-entry cache for Azure AI Search results eliminates redundant queries.
 - **Human-readable sizes**: "Small ($2.49), Medium ($3.29)" instead of raw JSON in tool results.
 - **Gzip compression**: 60–70% reduction on HTTP responses for mobile-first experience.
@@ -104,7 +104,7 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 - **Live synchronization**: Function calls update the shared cart so drive-in screens, mobile devices, and carhop tablets stay aligned without race conditions.
 
 ### UI Features
-- **50 menu items**: 10 items per category across 5 collapsible categories (Burgers & Sandwiches, Hot Dogs & Tots, Slushes & Drinks, Shakes & Ice Cream, Extras & Sides) — all expanded by default. Menu synced with production Azure AI Search index.
+- **50 menu items**: 10 items per category across 5 collapsible categories (Burgers & Sandwiches, Hot Dogs & Tots, Slushes & Drinks, Shakes & Ice Cream, Extras & Sides) — all expanded by default. Menu synced with the Azure AI Search demo index.
 - **Collapsible session token panel**: Shows round-trip token history with per-turn identifiers for debugging and QA.
 - **Settings panel**: Verbose Logging toggle, Log to File toggle (sub-option of Verbose Logging), and Show Session Tokens toggle.
 - **Dark mode support**: Full dark/light theme switching.
@@ -138,13 +138,13 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 **Frontend:**
 - React, TypeScript, Vite, Tailwind CSS, shadcn/ui
 - WebSocket client for real-time audio and order updates
-- 50 production menu items from `menuItems.json` (synced with Azure AI Search index)
+- 50 demo menu items from `menuItems.json` (synced with Azure AI Search index)
 
 **Backend:**
 - Python 3.11+ with aiohttp, WebSockets
 - WebSocket middle tier (`rtmt.py`) — browser ↔ Azure OpenAI Realtime API
 - Azure OpenAI GPT-4o Realtime API (gpt-realtime-1.5)
-- Production menu data from `sonic-menu-items.json` (Sonic POS export, 172 items)
+- Demo menu data from `sonic-menu-items.json` (sample Sonic menu export, 172 items)
 
 **AI & Search:**
 - Azure AI Search with semantic hybrid search (text-embedding-3-large, 3072 dimensions) for menu grounding
@@ -305,7 +305,7 @@ docker run -p 8000:8000 --env-file ./app/backend/.env sonic-drive-in-app:latest
 
 ## Deploying to Azure
 
-To deploy the app to a production environment in Azure:
+To deploy the demo app to Azure:
 
 1. Make sure you have an `.env` file set up in the `app/backend/` directory. You can copy the sample file:
 
