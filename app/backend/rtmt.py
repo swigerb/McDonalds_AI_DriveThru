@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+import os
 import re
+import time
 from enum import Enum
 from typing import Any
 
@@ -13,6 +15,23 @@ from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from order_state import SessionIdentifiers, order_state_singleton
 
 logger = logging.getLogger("sonic-drive-in")
+
+# ── Verbose diagnostic logger ──
+# Separate logger so verbose output can be toggled without affecting production logs.
+# Enabled globally via VERBOSE_LOGGING=true env var, or per-session via WebSocket message.
+vlogger = logging.getLogger("sonic-verbose")
+_VERBOSE_GLOBAL = os.environ.get("VERBOSE_LOGGING", "").lower() in ("true", "1", "yes")
+if _VERBOSE_GLOBAL:
+    vlogger.setLevel(logging.DEBUG)
+    if not vlogger.handlers:
+        _handler = logging.StreamHandler()
+        _handler.setFormatter(logging.Formatter("%(message)s"))
+        vlogger.addHandler(_handler)
+else:
+    vlogger.setLevel(logging.WARNING)  # silent until per-session toggle
+
+# Max characters of tool result text to log (prevents terminal flooding)
+_VERBOSE_RESULT_TRUNCATE = 500
 
 __all__ = ["RTMiddleTier", "RTToolCall", "Tool", "ToolResult", "ToolResultDirection"]
 
@@ -63,6 +82,7 @@ _MARKER_SPEECH_STARTED = '"input_audio_buffer.speech_started"'
 _MARKER_SESSION_UPDATE = '"session.update"'
 _MARKER_SESSION_UPDATED = '"session.updated"'
 _MARKER_RESPONSE_CANCEL = '"response.cancel"'
+_MARKER_VERBOSE_LOGGING = '"extension.set_verbose_logging"'
 
 # Connection tuning constants
 _WS_HEARTBEAT_SEC = 15.0
@@ -81,6 +101,13 @@ _GREETING_MSG = json.dumps({
         ]
     }
 })
+
+
+def _vlog(verbose: bool, msg: str, *args: Any) -> None:
+    """Log to sonic-verbose at DEBUG level if this session has verbose enabled."""
+    if verbose or _VERBOSE_GLOBAL:
+        vlogger.debug(msg, *args)
+
 
 class ToolResultDirection(Enum):
     TO_SERVER = 1
@@ -172,13 +199,33 @@ class RTMiddleTier:
             }
         )
 
-    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall]) -> str | None:
+    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall], verbose: bool = False) -> str | None:
         data = msg.data
 
         # FAST PATH: extract type via regex without full JSON parse.
         # Audio deltas are ~95% of server messages — avoid json.loads entirely.
         m = _TYPE_RE.search(data)
         if m is not None and m.group(1) in _PASSTHROUGH_SERVER_TYPES:
+            # Verbose: log passthrough types (skip audio delta data to avoid flooding)
+            if verbose or _VERBOSE_GLOBAL:
+                pt = m.group(1)
+                if pt == "response.audio.delta":
+                    _vlog(verbose, "─── [Server → Client] response.audio.delta (audio data) ───")
+                elif pt == "response.audio_transcript.delta":
+                    # Extract transcript snippet from raw JSON
+                    td_match = re.search(r'"delta"\s*:\s*"([^"]{0,120})', data)
+                    snippet = td_match.group(1) if td_match else ""
+                    _vlog(verbose, '─── [AI → Client] response.audio_transcript.delta ───\n"%s"', snippet)
+                elif pt == "response.audio_transcript.done":
+                    td_match = re.search(r'"transcript"\s*:\s*"([^"]{0,200})', data)
+                    snippet = td_match.group(1) if td_match else ""
+                    _vlog(verbose, '─── [AI → Client] response.audio_transcript.done ───\n"%s"', snippet)
+                elif pt == "input_audio_buffer.speech_started":
+                    _vlog(verbose, "─── [Server] input_audio_buffer.speech_started ───")
+                elif pt == "input_audio_buffer.speech_stopped":
+                    _vlog(verbose, "─── [Server] input_audio_buffer.speech_stopped ───")
+                else:
+                    _vlog(verbose, "─── [Server → Client] %s ───", pt)
             return data
 
         message = json.loads(data)
@@ -187,14 +234,17 @@ class RTMiddleTier:
         updated_message = data
         session_id = self._session_map.get(client_ws)
         if message is not None:
+            _vlog(verbose, "─── [Server → Client] %s ───", msg_type)
             match msg_type:
                 case "error":
                     # Surface OpenAI errors (e.g. rejected session.update, malformed tool schemas)
                     # so they don't silently vanish into the client.
                     logger.error("OpenAI Realtime API error: %s", json.dumps(message, default=str)[:1000])
+                    _vlog(verbose, "  ⚠ ERROR: %s", json.dumps(message, default=str)[:500])
 
                 case "session.created":
                     session = message["session"]
+                    _vlog(verbose, "  Session ID: %s", session.get("id", "?"))
                     # Hide the instructions, tools and max tokens from clients, if we ever allow client-side 
                     # tools, this will need updating
                     session["instructions"] = ""
@@ -218,6 +268,7 @@ class RTMiddleTier:
                         if call_id and call_id not in tools_pending:
                             logger.info("Tool call received: name=%s, call_id=%s", item.get("name"), call_id)
                             tools_pending[call_id] = RTToolCall(call_id, "")
+                        _vlog(verbose, "  Tool call registered: %s (call_id=%s)", item.get("name"), item.get("call_id"))
                         updated_message = None
 
                 case "conversation.item.created":
@@ -226,14 +277,19 @@ class RTMiddleTier:
                         # Always overwrite — may upgrade fallback from output_item.added
                         # with the correct previous_item_id
                         tools_pending[item["call_id"]] = RTToolCall(item["call_id"], message["previous_item_id"])
+                        _vlog(verbose, "  Tool pending confirmed: call_id=%s, prev=%s", item["call_id"], message["previous_item_id"])
                         updated_message = None
                     elif "item" in message and message["item"]["type"] == "function_call_output":
                         updated_message = None
+                    elif "item" in message and message["item"].get("role") == "assistant":
+                        # Log AI conversation items (non-tool)
+                        _vlog(verbose, "  AI conversation item created")
 
                 case "response.function_call_arguments.delta":
                     updated_message = None
                 
                 case "response.function_call_arguments.done":
+                    _vlog(verbose, "  Tool args complete: %s", message.get("arguments", "")[:200])
                     updated_message = None
 
                 case "response.output_item.done":
@@ -251,11 +307,29 @@ class RTMiddleTier:
                             else:
                                 args = json.loads(item["arguments"])
                                 logger.info("Executing tool '%s' with args %s (session=%s)", item["name"], args, session_id)
+                                t0 = time.monotonic()
                                 if item["name"] in ("update_order", "get_order", "reset_order"):
                                     result = await tool.target(args, session_id)
                                 else:
                                     result = await tool.target(args)
+                                elapsed_ms = (time.monotonic() - t0) * 1000
                                 logger.info("Tool '%s' result direction=%s", item["name"], result.destination)
+
+                                # ── Verbose: full tool call lifecycle ──
+                                result_text = result.to_text()[:_VERBOSE_RESULT_TRUNCATE]
+                                _vlog(verbose,
+                                      "\n═══ [TOOL CALL] %s ═══\n"
+                                      "Args: %s\n"
+                                      "Result: %s\n"
+                                      "Direction: %s\n"
+                                      "Time: %.1fms\n"
+                                      "═══════════════════════════",
+                                      item["name"],
+                                      json.dumps(args, indent=2),
+                                      result_text,
+                                      result.destination.name,
+                                      elapsed_ms)
+
                                 await server_ws.send_json({
                                     "type": "conversation.item.create",
                                     "item": {
@@ -286,6 +360,8 @@ class RTMiddleTier:
                         else:
                             out_types = [o.get("type", "?") for o in output]
                             logger.info("Response completed with NO tool calls (output types: %s)", out_types)
+                        _vlog(verbose, "  Response done — output types: %s",
+                              [o.get("type", "?") for o in output])
                         filtered = [o for o in output if o.get("type") != "function_call"]
                         if len(filtered) != len(output):
                             message["response"]["output"] = filtered
@@ -296,7 +372,7 @@ class RTMiddleTier:
 
         return updated_message
 
-    async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse) -> str | None:
+    async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse, verbose: bool = False) -> str | None:
         data = msg.data
 
         # FAST PATH: input_audio_buffer.append is the most frequent client message
@@ -306,9 +382,11 @@ class RTMiddleTier:
             return data
 
         message = json.loads(data)
+        msg_type = message.get("type", "")
         updated_message = data
         if message is not None:
-            match message["type"]:
+            _vlog(verbose, "─── [Client → Server] %s ───", msg_type)
+            match msg_type:
                 case "session.update":
                     session = message["session"]
                     if self.system_message is not None:
@@ -329,6 +407,8 @@ class RTMiddleTier:
                         len(session["tools"]), tool_names, session["tool_choice"],
                         session.get("max_response_output_tokens"),
                     )
+                    _vlog(verbose, "  Injected %d tools: %s, tool_choice=%s",
+                          len(session["tools"]), tool_names, session["tool_choice"])
                     updated_message = json.dumps(message)
 
         return updated_message
@@ -336,6 +416,10 @@ class RTMiddleTier:
     async def _forward_messages(self, ws: web.WebSocketResponse):
         # Per-connection tool tracking — prevents cross-connection interference
         tools_pending: dict[str, RTToolCall] = {}
+
+        # Per-connection verbose logging toggle (set by frontend extension message)
+        verbose = _VERBOSE_GLOBAL
+        audio_frame_count = 0  # Counter for verbose audio frame logging
 
         # Echo suppression state — shared between client→server and server→client tasks.
         # Safe without locks: single-threaded asyncio event loop guarantees no concurrent mutation.
@@ -368,17 +452,23 @@ class RTMiddleTier:
                 session_id = self._session_map.get(ws)
                 greeting_sent = session_id in self._sent_greeting
 
+                _vlog(verbose, "\n╔══════════════════════════════════════╗\n"
+                               "║  SESSION CONNECT — %s  ║\n"
+                               "╚══════════════════════════════════════╝", session_id or "?")
+
                 async def send_greeting_once(trigger: str = "unknown"):
                     nonlocal greeting_sent, ai_speaking, greeting_in_progress
                     if greeting_sent:
                         return
                     logger.info("Greeting firing via trigger=%s (session=%s)", trigger, session_id)
+                    _vlog(verbose, "─── [Lifecycle] Greeting trigger=%s ───", trigger)
                     # Pre-set echo suppression: the AI will start speaking as soon as
                     # OpenAI processes response.create.  Without this, there's a gap
                     # between response.create and the first response.audio.delta where
                     # mic audio could leak through and cause an echo loop.
                     ai_speaking = True
                     greeting_in_progress = True
+                    _vlog(verbose, "  Echo suppression: ai_speaking=True (pre-set for greeting)")
                     # Flush any stale audio that arrived before session was configured
                     await target_ws.send_str(_INPUT_AUDIO_CLEAR_MSG)
                     await target_ws.send_str(_GREETING_MSG)
@@ -388,9 +478,33 @@ class RTMiddleTier:
                         self._sent_greeting.add(session_id)
 
                 async def from_client_to_server():
-                    nonlocal ai_speaking, cooldown_end
+                    nonlocal ai_speaking, cooldown_end, verbose, audio_frame_count
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
+                            # Intercept extension messages — don't forward to OpenAI
+                            if _MARKER_VERBOSE_LOGGING in msg.data:
+                                try:
+                                    ext_msg = json.loads(msg.data)
+                                    if ext_msg.get("type") == "extension.set_verbose_logging":
+                                        verbose = bool(ext_msg.get("enabled", False))
+                                        if verbose and not _VERBOSE_GLOBAL:
+                                            # Enable the verbose logger for this session
+                                            vlogger.setLevel(logging.DEBUG)
+                                            if not vlogger.handlers:
+                                                _h = logging.StreamHandler()
+                                                _h.setFormatter(logging.Formatter("%(message)s"))
+                                                vlogger.addHandler(_h)
+                                        logger.info("Verbose logging %s for session %s",
+                                                    "ENABLED" if verbose else "DISABLED", session_id)
+                                        _vlog(verbose,
+                                              "\n╔══════════════════════════════════════╗\n"
+                                              "║  VERBOSE LOGGING: %-8s           ║\n"
+                                              "╚══════════════════════════════════════╝",
+                                              "ENABLED" if verbose else "DISABLED")
+                                        continue  # Don't forward to OpenAI
+                                except (json.JSONDecodeError, KeyError):
+                                    pass
+
                             # Echo suppression: drop mic audio while AI is speaking or cooling down.
                             # The AI's speaker output leaks into the mic and gets transcribed as
                             # phantom user input ("Peace.", "Thank you so much."), creating a
@@ -398,14 +512,18 @@ class RTMiddleTier:
                             if _MARKER_AUDIO_APPEND in msg.data:
                                 if ai_speaking or loop.time() < cooldown_end:
                                     continue
+                                audio_frame_count += 1
+                                if (verbose or _VERBOSE_GLOBAL) and audio_frame_count % 50 == 0:
+                                    _vlog(verbose, "─── [Client → Server] Audio frame #%d ───", audio_frame_count)
                             # Barge-in: client sent response.cancel — user wants to speak.
                             # Disable echo suppression so their audio can flow through.
                             if _MARKER_RESPONSE_CANCEL in msg.data:
                                 logger.info("Client sent response.cancel — disabling echo suppression for barge-in")
+                                _vlog(verbose, "─── [Client] response.cancel — barge-in, echo suppression OFF ───")
                                 ai_speaking = False
                                 cooldown_end = 0.0
                             # Forward client message to OpenAI.
-                            new_msg = await self._process_message_to_server(msg, ws)
+                            new_msg = await self._process_message_to_server(msg, ws, verbose)
                             if new_msg is not None:
                                 await target_ws.send_str(new_msg)
                             # Fallback greeting trigger: fire after forwarding session.update
@@ -425,6 +543,7 @@ class RTMiddleTier:
                     # Means it is gracefully closed by the client then time to close the target_ws
                     if target_ws and not target_ws.closed:
                         logger.info("Closing OpenAI's realtime socket connection.")
+                        _vlog(verbose, "─── [Lifecycle] Disconnect — closing OpenAI socket ───")
                         await target_ws.close()
                         
                 async def from_server_to_client():
@@ -438,6 +557,7 @@ class RTMiddleTier:
                             if _MARKER_AUDIO_DELTA in data:
                                 if not ai_speaking:
                                     logger.debug("Echo suppression: AI speaking — suppressing user audio")
+                                    _vlog(verbose, "─── [Echo] ai_speaking=True — suppressing user audio ───")
                                 ai_speaking = True
                             elif _MARKER_AUDIO_DONE in data:
                                 ai_speaking = False
@@ -451,6 +571,7 @@ class RTMiddleTier:
                                     actual_cooldown = _ECHO_COOLDOWN_SEC
                                 cooldown_end = loop.time() + actual_cooldown
                                 logger.debug("Echo suppression: AI audio done — cooldown %.1fs", actual_cooldown)
+                                _vlog(verbose, "─── [Echo] ai_speaking=False — cooldown %.1fs ───", actual_cooldown)
                                 # Flush any echoed audio that leaked into OpenAI's buffer
                                 await target_ws.send_str(_INPUT_AUDIO_CLEAR_MSG)
                                 # Schedule a SECOND flush after cooldown expires to catch
@@ -465,9 +586,11 @@ class RTMiddleTier:
                                 # this is almost certainly echo, not a real barge-in.
                                 if greeting_in_progress:
                                     logger.debug("Echo suppression: ignoring speech_started during greeting")
+                                    _vlog(verbose, "─── [Echo] speech_started IGNORED (greeting in progress) ───")
                                 else:
                                     if ai_speaking:
                                         logger.debug("Echo suppression: barge-in detected — resuming user audio")
+                                        _vlog(verbose, "─── [Echo] Barge-in — ai_speaking=False, cooldown reset ───")
                                     ai_speaking = False
                                     cooldown_end = 0.0
 
@@ -477,9 +600,20 @@ class RTMiddleTier:
                             # model completion (response.create).
                             if _MARKER_SESSION_UPDATED in data and not greeting_sent:
                                 logger.info("session.updated received — tools are configured, sending greeting")
+                                _vlog(verbose, "─── [Lifecycle] session.updated — sending greeting ───")
                                 await send_greeting_once(trigger="session.updated")
 
-                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending)
+                            # Verbose: log conversation transcription events
+                            if (verbose or _VERBOSE_GLOBAL):
+                                if '"conversation.item.input_audio_transcription.completed"' in data:
+                                    try:
+                                        _tr_msg = json.loads(data)
+                                        _tr_text = _tr_msg.get("transcript", "")[:200]
+                                        _vlog(verbose, '\n─── [User] transcription.completed ───\n"%s"', _tr_text)
+                                    except (json.JSONDecodeError, KeyError):
+                                        pass
+
+                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending, verbose)
                             if new_msg is not None:
                                 await ws.send_str(new_msg)
                         elif msg.type == aiohttp.WSMsgType.ERROR:
@@ -496,6 +630,9 @@ class RTMiddleTier:
                 except Exception:
                     logger.exception("Unexpected error in WebSocket forwarding")
                 finally:
+                    _vlog(verbose, "\n╔══════════════════════════════════════╗\n"
+                                   "║  SESSION DISCONNECT — %s  ║\n"
+                                   "╚══════════════════════════════════════╝", session_id or "?")
                     if session_id is not None:
                         order_state_singleton.delete_session(session_id)
                     # Clean up the session map when the connection is closed

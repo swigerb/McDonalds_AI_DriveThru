@@ -13,9 +13,11 @@ interface SettingsProps {
     isMobile: boolean;
     showSessionTokens: boolean;
     onShowSessionTokensChange: (checked: boolean) => void;
+    verboseLogging: boolean;
+    onVerboseLoggingChange: (checked: boolean) => void;
 }
 
-export default function Settings({ isMobile, showSessionTokens, onShowSessionTokensChange }: SettingsProps) {
+export default function Settings({ isMobile, showSessionTokens, onShowSessionTokensChange, verboseLogging, onVerboseLoggingChange }: SettingsProps) {
     const [isDarkMode, setIsDarkMode] = useState(() => {
         return localStorage.getItem("isDarkMode") === "true";
     });
@@ -45,6 +47,10 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
 
     const handleSessionTokensChange = (checked: boolean) => {
         onShowSessionTokensChange(checked);
+    };
+
+    const handleVerboseLoggingChange = (checked: boolean) => {
+        onVerboseLoggingChange(checked);
     };
 
     const SettingsContent = () => (
@@ -112,6 +118,25 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                         aria-label="Toggle session token visibility"
                     />
                     <span className="text-xs text-gray-500 dark:text-gray-400">{showSessionTokens ? "Visible" : "Hidden"}</span>
+                </div>
+            </div>
+            <div className="flex items-start justify-between">
+                <div className="flex-1 space-y-0.5">
+                    <Label htmlFor="verbose-logging" className="text-gray-900 dark:text-gray-100">
+                        Verbose Logging
+                    </Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Show detailed conversation traces, tool calls, and system messages in the terminal
+                    </p>
+                </div>
+                <div className="ml-4 flex flex-col items-end">
+                    <Switch
+                        id="verbose-logging"
+                        checked={verboseLogging}
+                        onCheckedChange={handleVerboseLoggingChange}
+                        aria-label="Toggle verbose logging"
+                    />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{verboseLogging ? "Verbose" : "Normal"}</span>
                 </div>
             </div>
         </div>

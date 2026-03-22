@@ -199,5 +199,9 @@ export default function useRealTime({
         sendJsonMessage({ type: "response.cancel" });
     };
 
-    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse };
+    const sendVerboseLogging = (enabled: boolean) => {
+        sendJsonMessage({ type: "extension.set_verbose_logging", enabled });
+    };
+
+    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging };
 }

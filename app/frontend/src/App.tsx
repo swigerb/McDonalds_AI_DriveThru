@@ -93,10 +93,17 @@ function SonicApp() {
         const stored = localStorage.getItem("showSessionTokens");
         return stored === null ? true : stored === "true";
     });
+    const [verboseLogging, setVerboseLogging] = useState<boolean>(() => {
+        return localStorage.getItem("verboseLogging") === "true";
+    });
 
     useEffect(() => {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
     }, [showSessionTokens]);
+
+    useEffect(() => {
+        localStorage.setItem("verboseLogging", verboseLogging.toString());
+    }, [verboseLogging]);
 
     const handleSessionIdentifiers = useCallback((message: ExtensionSessionMetadata | ExtensionRoundTripToken) => {
         setSessionIdentifiers({
@@ -274,6 +281,9 @@ function SonicApp() {
                 await startAudioRecording();
             } else {
                 realtime.startSession();
+                if (verboseLogging) {
+                    realtime.sendVerboseLogging(true);
+                }
 
                 // Safety: if we never receive the greeting completion, start the mic after a short timeout.
                 window.setTimeout(() => {
@@ -334,6 +344,11 @@ function SonicApp() {
                                 isMobile={isMobile}
                                 showSessionTokens={showSessionTokens}
                                 onShowSessionTokensChange={setShowSessionTokens}
+                                verboseLogging={verboseLogging}
+                                onVerboseLoggingChange={(checked: boolean) => {
+                                    setVerboseLogging(checked);
+                                    realtime.sendVerboseLogging(checked);
+                                }}
                             />
                         </Suspense>
                         {authEnabled && (
