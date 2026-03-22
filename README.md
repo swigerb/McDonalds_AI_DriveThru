@@ -26,6 +26,8 @@ Beyond the drive-in experience, this sample demonstrates how Microsoft’s Respo
     - [Observability & Diagnostics](#observability--diagnostics)
     - [Real-Time Transcription + Translation](#real-time-transcription--translation)
     - [Audio Output + Accessibility](#audio-output--accessibility)
+  - [Agentic Architecture Flow](#agentic-architecture-flow)
+    - [How It All Works — End-to-End Flow](#how-it-all-works--end-to-end-flow)
     - [Architecture Diagram](#architecture-diagram)
     - [Technical Stack](#technical-stack)
   - [Getting Started](#getting-started)
@@ -120,6 +122,78 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 
 ### Audio Output + Accessibility
 - **Browser audio playback**: Mirrors what a guest would hear at a Sonic stall, supporting screenless or low-vision ordering.
+
+## Agentic Architecture Flow
+
+![Sonic AI Carhop Agentic Architecture Flow](docs/Sonic_AI_Carhop_Agentic_Architecture_Flow.png)
+
+### How It All Works — End-to-End Flow
+
+Imagine a guest pulling up to a Sonic Drive-In stall. They tap the mic button on their phone (or press the drive-in intercom), and from that moment, an entire agentic pipeline fires in real-time. Here's what happens behind the scenes — every step, every decision, every millisecond matters.
+
+---
+
+**1. The Guest Speaks**
+
+> *"I'll take a SuperSONIC Double — plain, cheese only — Medium Tots, and a Large Diet Coke. Actually, can I add a Vanilla Shake but… put some pickles in it?"*
+
+The browser's **WebAudio API** captures raw audio from the microphone. An `AnalyserNode` monitors the RMS energy of the raw stream in real-time — this is how the system knows the guest is actually speaking versus picking up ambient drive-in noise or echo from the AI's own response.
+
+**2. Frontend → Middleware (WebSocket)**
+
+The **React/TypeScript frontend** encodes the captured audio to base64 and streams it over a persistent WebSocket connection to the Python backend. This isn't a request-response cycle — it's a continuous, low-latency stream. The guest's words arrive at the server as fast as they're spoken.
+
+**3. RTMiddleTier — The Agentic Logic Layer**
+
+This is where the intelligence lives. The `RTMiddleTier` (`rtmt.py`) acts as a WebSocket bridge between the browser and Azure OpenAI, but it's far more than a passthrough — it's the orchestration brain:
+
+- **Echo suppression** kicks in immediately: a 1.5-second cooldown window and delayed buffer flush prevent the AI from hearing its own voice bouncing back through the guest's speakers. After the initial greeting, an extended 3.0-second cooldown ensures stability.
+- **Barge-in detection** monitors the raw audio stream. If the guest interrupts mid-sentence ("Actually, change that to—"), the system fires `response.cancel` to stop the AI mid-word and lets the guest take the floor. Natural conversation, not robotic turn-taking.
+- **Session management** handles the greeting trigger and registers all four tool-calling functions with the Azure OpenAI Realtime API.
+
+**4. Azure OpenAI Realtime API (GPT-4o)**
+
+The audio hits **Azure OpenAI's GPT-4o Realtime API** (`gpt-realtime-1.5`), which processes the guest's speech and decides what to do. It doesn't just transcribe — it *understands intent* and generates both a spoken response and structured **tool calls** as JSON function calls (the "Citation Payloads" shown in the diagram). This is the agentic core: the model autonomously decides which tools to invoke based on the conversation context.
+
+**5. Tool Execution — The Agentic Toolkit**
+
+When the model makes a tool call, the middleware executes it deterministically. Four tools drive the entire ordering flow:
+
+| Tool | What It Does |
+|------|-------------|
+| `search` | Queries **Azure AI Search** across 172 demo menu items using semantic + vector hybrid search (text-embedding-3-large, 3072 dimensions). Returns human-readable sizes and prices — "Medium ($3.29), Large ($4.19)" — not raw JSON. Results come back with a 60-second TTL cache so repeat lookups are instant. |
+| `update_order` | Adds or removes items through the **Stateful Order Manager**. Validates combo integrity (are the side and drink present?), applies customizations, enforces quantity limits (max 10 per item, 25 total), and normalizes branding ("RT 44" → "Route 44"). |
+| `get_order` | Retrieves the current order as a grouped readback optimized for voice — "Two Medium Cherry Limeades and one Coney" instead of listing each item individually. Returns both a voice-friendly summary for the AI and full JSON for the carhop ticket UI. |
+| `reset_order` | Clears the entire order and resets the session so the guest can start fresh. |
+
+**6. Order State — The Business Logic Brain**
+
+The **Stateful Order Manager** (`order_state.py`) is where deterministic business rules live — no LLM guesswork allowed:
+
+- **Combo pivot absorption**: When a guest orders a SuperSONIC Double Combo, any standalone side or drink already on the ticket gets absorbed into the combo automatically. No awkward "Did you want that as part of the combo?" back-and-forth.
+- **Deterministic guardrails**: The `[SYSTEM HINT]` pattern injects combo requirements directly into tool results — "Missing: Drink" — so the AI knows exactly what to ask for next without relying on memory.
+- **Promotions engine**: The system checks the clock. If it's **Happy Hour** (2–4 PM Eastern), drinks and slushes get 50% off automatically. The AI gets genuinely excited about the deal.
+- **IoT kitchen telemetry**: Machine status flags are checked in real-time. Shake machine down? Every shake, blast, and sundae comes back flagged `[OOS]` with a friendly redirect — *"Our shake machine is taking a quick nap, so I can't do pickles in a shake anyway — but would you like a refreshing Slush instead?"*
+- **Validation guardrails**: Impossible customizations are caught deterministically. Pickles in a shake? That's a hard no — rejected with warmth and humor, not a stack trace.
+- **Tax calculation**: 8% sales tax applied to all demo orders, displayed on the carhop ticket.
+
+**7. The Response Flows Back**
+
+The response takes three parallel paths back to the guest:
+
+- **Audio** → streams through the WebSocket back to the frontend → plays through the guest's speakers (with echo suppression engaged to prevent feedback loops). The AI's **Coral voice** — warm, friendly, unmistakably Sonic — delivers the response.
+- **Tool results** → the frontend parses JSON payloads and updates the **Carhop Ticket** in real-time: line items, customizations, combo groupings, subtotals, tax, and the running total. The POS Ticket view shows exactly what would print at the stall.
+- **Transcript** → the guest's words and the AI's response appear in the **Guest Conversation** panel with real-time transcription (and translation, if the guest is speaking Spanish, Mandarin, or another supported language).
+
+**8. The Guest Hears and Sees**
+
+The guest hears the AI carhop respond naturally — *"You got it! A plain SuperSONIC Double and those specific Tots and Coke. Our shake machine is taking a quick nap, so I can't do pickles, but would you like a refreshing Slush instead?"* — while simultaneously watching their **carhop ticket update in real-time** on screen. Every item, every mod, every price, every total — all in sync, all instant.
+
+The entire round trip — guest speech → AI understanding → tool execution → business logic → voice response + UI update — happens in **under two seconds**. That's the power of an agentic architecture where deterministic Python guardrails and Azure OpenAI work in concert, not in conflict.
+
+---
+
+> **Note:** This demo uses sample Sonic Drive-In menu data (172 items) for demonstration purposes. All prices, promotions, and machine statuses are simulated to showcase the agentic architecture capabilities.
 
 ### Architecture Diagram
 
