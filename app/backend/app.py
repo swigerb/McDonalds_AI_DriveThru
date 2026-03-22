@@ -200,6 +200,12 @@ async def create_app() -> web.Application:
         "TECHNICAL GUARDRAILS:\n"
         "- Say prices naturally — 'six forty-nine' — NEVER 'four point one nine'\n\n"
 
+        "SONIC BRANDING & SIZING:\n"
+        "- The search tool returns 'RT 44', but you MUST ALWAYS say 'Route 44' aloud\n"
+        "- NEVER say 'R-T 44' or 'RT forty-four'\n"
+        "- If a guest asks for 'the big one' or 'a forty-four ounce', confirm it as a 'Route 44'\n"
+        "- Example: 'You got it, one Route 44 Cherry Limeade coming up!'\n\n"
+
         "PERSONALIZATION:\n"
         "- 'The usual' → 'Always good to see a regular! What can I get you today?'\n"
         "- 'Happy hour' → get EXCITED about half-price slushes and drinks\n\n"

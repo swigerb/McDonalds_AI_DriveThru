@@ -80,3 +80,11 @@
 - **Key insight:** The 250-token limit was originally set as "demo-safe" (Decision #2 suggested 150, audit bumped to 250). But as the system prompt grew and ordering flows became more complex (combo hints, suggestive selling), 250 became insufficient. Token limits must be re-evaluated whenever prompt complexity increases.
 - **All 8 app tests pass after changes.**
 
+### Sonic Branding & Sizing Directive (2026-07-22)
+- **New section added:** SONIC BRANDING & SIZING — placed directly after TECHNICAL GUARDRAILS in the system prompt.
+- **Problem:** Azure AI Search returns "RT 44" for the largest drink size, but the AI was reading it literally as "R-T 44" or "RT forty-four" instead of the brand-correct "Route 44."
+- **Fix:** Four-bullet directive instructs the AI to ALWAYS say "Route 44" aloud, NEVER say "R-T 44" or "RT forty-four," confirm colloquial requests ("the big one," "a forty-four ounce") as "Route 44," with an explicit example.
+- **Placement rationale:** After TECHNICAL GUARDRAILS (speech formatting rules) — natural fit since this is a speech-output formatting concern. Before lower-priority sections (PERSONALIZATION, HAPPY HOUR, etc.).
+- **Coordination:** Backend-only change. Summer handling order_state.py separately. No frontend rebuild needed.
+- **118 existing tests pass (1 pre-existing async test failure unrelated).**
+
