@@ -34,19 +34,19 @@
                     "image": "menu_images/classic_burger"
                 },
                 {
-                    "name": "Grilled Chicken Sandwich",
+                    "name": "SuperSONIC® Bacon Double Cheeseburger",
                     "sizes": [
                         {
                             "size": "standard",
-                            "price": 5.99
+                            "price": 7.49
                         }
                     ],
-                    "description": "Seasoned grilled chicken breast with lettuce, tomato, and mayo",
-                    "longDescription": "Juicy seasoned grilled chicken breast served with fresh lettuce, ripe tomatoes, and creamy mayo on a toasted brioche bun.",
+                    "description": "Two beef patties with bacon, American cheese, and mayo on a toasted bun",
+                    "longDescription": "Two quarter-pound 100% pure beef patties topped with crispy bacon, melty American cheese, crinkle-cut pickles, diced onions, fresh shredded lettuce, tomatoes, and mayonnaise on a toasted brioche bun.",
                     "origin": "Sonic Drive-In Menu",
-                    "calories": "460 cal",
-                    "popularity": "Lighter Option",
-                    "image": "menu_images/grilled_chicken"
+                    "calories": "1030 cal",
+                    "popularity": "Signature Item",
+                    "image": "menu_images/supersonic_bacon_burger"
                 }
             ]
         },
@@ -82,6 +82,21 @@
                     "calories": "430 cal",
                     "popularity": "Carhop Favorite",
                     "image": "menu_images/chili_coney"
+                },
+                {
+                    "name": "Footlong Quarter Pound Coney",
+                    "sizes": [
+                        {
+                            "size": "standard",
+                            "price": 4.99
+                        }
+                    ],
+                    "description": "Footlong beef hot dog with chili, cheese, onions, and mustard",
+                    "longDescription": "A full footlong quarter-pound premium beef hot dog topped with warm Sonic chili, melted shredded cheddar cheese, diced onions, and yellow mustard.",
+                    "origin": "Sonic Drive-In Menu",
+                    "calories": "680 cal",
+                    "popularity": "Coney Classic",
+                    "image": "menu_images/footlong_coney"
                 },
                 {
                     "name": "Large Tots",
@@ -162,6 +177,36 @@
                     "origin": "Sonic Drive-In Menu",
                     "popularity": "Guest Favorite",
                     "image": "menu_images/blue_raspberry"
+                },
+                {
+                    "name": "Strawberry Slush",
+                    "sizes": [
+                        {
+                            "size": "mini",
+                            "price": 1.39
+                        },
+                        {
+                            "size": "small",
+                            "price": 2.19
+                        },
+                        {
+                            "size": "medium",
+                            "price": 2.79
+                        },
+                        {
+                            "size": "large",
+                            "price": 3.39
+                        },
+                        {
+                            "size": "rt 44",
+                            "price": 3.79
+                        }
+                    ],
+                    "description": "Sweet strawberry flavored frozen slush",
+                    "longDescription": "A refreshing strawberry frozen slush made with Sonic's famous nugget ice for the perfect fruity icy treat.",
+                    "origin": "Sonic Drive-In Menu",
+                    "popularity": "Guest Favorite",
+                    "image": "menu_images/strawberry_slush"
                 },
                 {
                     "name": "Ocean Water®",
@@ -289,6 +334,19 @@
                     "longDescription": "Golden-fried mozzarella sticks with a crispy breading and gooey melted cheese inside, served with zesty marinara dipping sauce.",
                     "availability": "Always",
                     "image": "menu_images/mozz_sticks"
+                },
+                {
+                    "name": "Onion Rings",
+                    "sizes": [
+                        {
+                            "size": "standard",
+                            "price": 3.49
+                        }
+                    ],
+                    "description": "Crispy hand-battered onion rings",
+                    "longDescription": "Hand-battered thick-cut onion rings fried to a crispy golden perfection. A classic drive-in side.",
+                    "availability": "Always",
+                    "image": "menu_images/onion_rings"
                 },
                 {
                     "name": "Chili Cheese Tots",
