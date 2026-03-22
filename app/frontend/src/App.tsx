@@ -563,7 +563,7 @@ function HeroHighlightCard({ title, detail, tone }: { title: string; detail: str
 
 const SessionTokenBanner = memo(function SessionTokenBanner({ identifiers }: { identifiers: SessionIdentifiersState }) {
     const truncatedSession = formatToken(identifiers.sessionToken);
-    const truncatedRoundTrip = formatToken(identifiers.roundTripToken, 6);
+    const truncatedRoundTrip = formatToken(identifiers.roundTripToken);
 
     return (
         <div className="flex flex-wrap gap-2 rounded-3xl border border-white/40 bg-white/90 p-3 font-mono text-xs text-primary shadow-sm">
@@ -581,14 +581,8 @@ const SessionTokenBanner = memo(function SessionTokenBanner({ identifiers }: { i
     );
 });
 
-function formatToken(token: string, prefix: number = 8, suffix: number = 4): string {
-    if (!token) {
-        return "";
-    }
-    if (token.length <= prefix + suffix + 3) {
-        return token;
-    }
-    return `${token.slice(0, prefix)}…${token.slice(-suffix)}`;
+function formatToken(token: string): string {
+    return token || "";
 }
 
 function SlushArt() {

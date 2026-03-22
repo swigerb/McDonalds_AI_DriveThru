@@ -307,9 +307,9 @@ class RTMiddleTier:
                                        "Token: %s\n"
                                        "Round Trip: #%d (token: %s)\n"
                                        "───────────────────────",
-                              identifiers.session_token[:12] + "..." if len(identifiers.session_token) > 12 else identifiers.session_token,
+                              identifiers.session_token,
                               identifiers.round_trip_index,
-                              identifiers.round_trip_token[:12] + "..." if len(identifiers.round_trip_token) > 12 else identifiers.round_trip_token)
+                              identifiers.round_trip_token)
 
                 case "response.output_item.added":
                     if "item" in message and message["item"]["type"] == "function_call":
@@ -427,7 +427,7 @@ class RTMiddleTier:
                                        "Token: %s\n"
                                        "────────────────────────",
                               identifiers.round_trip_index,
-                              identifiers.round_trip_token[:12] + "..." if len(identifiers.round_trip_token) > 12 else identifiers.round_trip_token)
+                              identifiers.round_trip_token)
 
         return updated_message
 
