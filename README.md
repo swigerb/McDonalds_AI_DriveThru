@@ -21,10 +21,11 @@ Beyond the drive-in experience, this sample demonstrates how Microsoft’s Respo
     - [Smart Order Intelligence](#smart-order-intelligence)
     - [Search & Performance Optimization](#search--performance-optimization)
     - [Retrieval-Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
+    - [Real-Time Order Display](#real-time-order-display)
+    - [UI Features](#ui-features)
+    - [Observability & Diagnostics](#observability--diagnostics)
     - [Real-Time Transcription + Translation](#real-time-transcription--translation)
-    - [Live Order Synchronization](#live-order-synchronization)
     - [Audio Output + Accessibility](#audio-output--accessibility)
-    - [Session & Analytics](#session--analytics)
     - [Architecture Diagram](#architecture-diagram)
     - [Technical Stack](#technical-stack)
   - [Getting Started](#getting-started)
@@ -56,47 +57,69 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 ## Features
 
 ### Core AI & Voice Experience
-- **Sonic-specific conversational AI**: GPT-4o Realtime 1.5 with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition) and **Coral voice**—a warm, friendly female voice that embodies the Sonic carhop persona.
-- **Natural turn-taking**: VAD tuning (threshold 0.7, prefix padding 300ms, silence duration 500ms) for seamless back-and-forth conversations.
-- **Spoken currency**: "Four dollars and nineteen cents" instead of "$4.19"—more natural, more Sonic.
-- **Temperature 0.5**: Tight, focused responses optimized for fast Time to First Token.
+- **Azure OpenAI GPT-4o Realtime API**: Voice-to-voice ordering powered by gpt-realtime-1.5 with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition).
+- **Sonic carhop personality**: Upbeat, friendly, branded — **Coral voice** (warm, friendly female) embodies the Sonic carhop persona. Phrase variety rules prevent bot-like repetition ("Awesome choice!", "You got it!", "Great pick!", "Coming right up!").
+- **Natural turn-taking**: Server VAD tuning (threshold 0.7, prefix padding 300ms, silence duration 500ms) for seamless back-and-forth conversations.
+- **Spoken currency**: "Four dollars and nineteen cents" instead of "$4.19" — more natural, more Sonic.
+- **Temperature 0.6**: Optimized balance of deterministic tool calling and natural conversational variance (Azure OpenAI Realtime API minimum).
+- **Active listening**: Conversational acknowledgments confirm each guest request ("No tartar sauce, you got it!").
+- **Anti-self-talk**: AI NEVER speaks unless the guest has spoken first — imperative greeting prompt prevents startup meta-commentary.
 
 ### Audio Intelligence & Stability
-- **Echo suppression (defense-in-depth)**: Server-side audio gating in rtmt.py (ai_speaking flag + 300ms cooldown + input_audio_buffer.clear) plus frontend mic muting at response.created.
-- **Barge-in support**: Users can interrupt the AI naturally; speech_started event overrides suppression for natural conversation flow.
+- **Echo suppression (defense-in-depth)**: Server-side audio gating in rtmt.py (`ai_speaking` flag + 1.5s cooldown + delayed `input_audio_buffer.clear`) plus frontend mic muting via gain node at `response.created`. Extended 3.0s cooldown after greeting audio.
+- **Barge-in detection**: `AnalyserNode` on the raw mic stream monitors RMS energy in real-time. When the guest interrupts, `response.cancel` stops the AI mid-sentence and `speech_started` overrides echo suppression — natural conversation flow preserved.
+- **Anti-feedback loop**: Multi-layered approach — VAD threshold 0.7, silence duration 500ms, auto gain control disabled, recorder worklet isolation via gain node, mic muting during AI playback.
 
 ### Smart Order Intelligence
-- **Combo conversion**: AI asks "Want to make that a combo with fries or tots and a drink?" for solo burgers and sandwiches, driving average check value.
-- **Tots-first branding**: Sonic's famous tots always mentioned before fries in upsell suggestions.
-- **Sonic Signature treats**: AI proactively suggests shakes and blasts to round out orders based on what's already in the cart.
-- **Combo validation**: `get_combo_requirements()` deterministically tracks missing sides and drinks, sending [SYSTEM HINT] to the AI to guide conversation without relying on LLM memory.
-- **Grouped readback**: "Two Medium Cherry Limeades and one Coney" instead of listing every item individually—faster, more natural.
-- **Delta summaries**: Natural voice deltas for the AI to speak, full JSON for screen display.
+- **Tool-calling orchestration**: Four tools drive the ordering flow — `search` (menu lookup), `update_order` (add/remove items), `get_order` (retrieve current order), `reset_order` (clear the ticket).
+- **Combo validation with SYSTEM HINT**: `get_combo_requirements()` deterministically tracks missing sides and drinks, injecting `[SYSTEM HINT]` into tool results to guide the AI without relying on LLM memory.
+- **Combo pivot absorption**: When a combo is added, standalone sides and drinks already on the ticket are automatically absorbed into the combo — no duplicate asks. Multi-quantity items are decremented rather than fully removed.
+- **Combo conversion & upselling**: AI asks "Want to make that a combo with tots and a drink?" for solo burgers/sandwiches. Tots-first branding (Sonic's famous tots always mentioned before fries). Sonic Signature treat suggestions when the order has no dessert.
+- **Item customizations**: Guests can request modifications like "no lettuce", "extra ketchup", or "plain." Mods are parsed, displayed on the carhop ticket, and read back naturally ("with no lettuce, extra ketchup").
+- **Invalid mod rejection**: Nonsensical modifications are caught and redirected with friendly carhop humor — mustard on a shake, cheese on a slush, or whipped cream on a burger get a warm redirect ("That's a new one! Want to try a different topping?").
 - **Quantity limits**: Max 10 per item, 25 total with friendly carhop-style responses ("Whoa, that's a lot of tots!").
-- **Price validation**: Rejects $0 items with retry messages.
-- **Route 44 size support**: Sonic's iconic 44-ounce size handled correctly.
+- **Happy Hour dynamic pricing**: Drinks and slushes are 50% off from 2:00–4:00 PM local time. Original prices preserved; discounts applied at summary level. AI gets excited about the deal in context.
+- **OOS machine status**: Ice cream machine down → shake/blast/sundae items flagged `[OOS]` in search results with alternative suggestions. Non-blocking — items still returned, just flagged. Module-level toggle for demo use.
+- **Route 44 branding**: "RT 44", "rt44", and "44" all normalize to "Route 44" in the order. System prompt instructs the AI to verbalize "Route 44" — never "R-T forty-four."
+- **Mandatory total re-read**: After any order change, the AI re-reads the complete order total so the guest always knows where they stand.
+- **Grouped readback**: "Two Medium Cherry Limeades and one Coney" instead of listing every item individually — faster, more natural.
+- **Delta summaries**: Natural voice deltas for the AI to speak, full JSON for screen display (`TO_BOTH` routing).
+- **Price validation**: Rejects $0 items with friendly retry messages — catches model hallucination when it skips search.
+- **8% sales tax**: Hardcoded tax rate applied to all orders, displayed on the carhop ticket.
 
 ### Search & Performance Optimization
+- **Azure AI Search for menu RAG**: 172 items indexed from production Sonic POS data (`sonic-menu-items.json`) with semantic hybrid search (text-embedding-3-large, 3072 dimensions).
 - **TTL search cache**: 60-second, 128-entry cache for Azure AI Search results eliminates redundant queries.
 - **Human-readable sizes**: "Small ($2.49), Medium ($3.29)" instead of raw JSON in tool results.
 - **Gzip compression**: 60–70% reduction on HTTP responses for mobile-first experience.
-- **Strategic vendor chunking**: Optimized frontend bundle splitting in Vite.
+- **Strategic vendor chunking**: Optimized frontend bundle splitting in Vite with explicit groups (react-vendor, ui-vendor, i18n, motion).
+- **Lazy-loaded Settings**: `React.lazy()` + `Suspense` for the Settings panel — faster initial page load.
 
 ### Retrieval-Augmented Generation (RAG)
-- **Grounded recommendations**: Azure OpenAI tool-calling plus semantic hybrid search keep menu suggestions grounded with pricing, nutrition, and add-on guidance—zero hallucinated items.
+- **Grounded recommendations**: Azure OpenAI tool-calling plus semantic hybrid search keep menu suggestions grounded with pricing, sizes, and add-on guidance — zero hallucinated items. Explicit grounding rule: "ONLY recommend items found in search results."
 - **[SYSTEM HINT] pattern**: Deterministic Python logic drives conversation direction, not LLM memory. Tools return both voice-friendly text for the AI and JSON metadata for the frontend.
+
+### Real-Time Order Display
+- **"Your Sonic Order" carhop ticket**: Live-updating order panel shows every item, customization, size, quantity, subtotal, tax, and total as the guest speaks — the real-time equivalent of a drive-in carhop ticket.
+- **Live synchronization**: Function calls update the shared cart so drive-in screens, mobile devices, and carhop tablets stay aligned without race conditions.
+
+### UI Features
+- **50 menu items**: 10 items per category across 5 collapsible categories (Burgers & Sandwiches, Hot Dogs & Tots, Slushes & Drinks, Shakes & Ice Cream, Extras & Sides) — all expanded by default. Menu synced with production Azure AI Search index.
+- **Collapsible session token panel**: Shows round-trip token history with per-turn identifiers for debugging and QA.
+- **Settings panel**: Verbose Logging toggle, Log to File toggle (sub-option of Verbose Logging), and Show Session Tokens toggle.
+- **Dark mode support**: Full dark/light theme switching.
+- **Responsive design**: Optimized for desktop and mobile viewports.
+
+### Observability & Diagnostics
+- **Verbose logging** (`sonic-verbose` logger): Dedicated diagnostic logger separate from the main application logger. Logs every message type, full tool call lifecycle (args, result, direction, execution time), echo suppression state changes, transcriptions, and session lifecycle events. Audio data never logged.
+- **File logging**: Timestamped log files written to `app/backend/logs/` (e.g., `verbose-2026-03-22T01-38.log`). UTF-8, line-buffered. Per-session file handlers toggled via UI or `VERBOSE_LOG_FILE` env var.
+- **Session token tracking**: Every realtime conversation emits session tokens plus per-turn identifiers so transcripts map back to telemetry, QA findings, or Azure logs.
 
 ### Real-Time Transcription + Translation
 - **Multilingual ordering**: Guests receive accurate transcripts in their language of choice with instant pivots between English, Spanish, Mandarin, French, and more.
 
-### Live Order Synchronization
-- **Function calls**: Update the shared cart so drive-in screens, mobile devices, and carhop tablets stay aligned without race conditions.
-
 ### Audio Output + Accessibility
 - **Browser audio playback**: Mirrors what a guest would hear at a Sonic stall, supporting screenless or low-vision ordering.
-
-### Session & Analytics
-- **Durable session tokens**: Every realtime conversation emits a session token plus per-turn identifiers so transcripts can map back to telemetry, QA findings, or Azure logs.
 
 ### Architecture Diagram
 
@@ -115,20 +138,24 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 **Frontend:**
 - React, TypeScript, Vite, Tailwind CSS, shadcn/ui
 - WebSocket client for real-time audio and order updates
+- 50 production menu items from `menuItems.json` (synced with Azure AI Search index)
 
 **Backend:**
 - Python 3.11+ with aiohttp, WebSockets
-- Azure OpenAI GPT-4o Realtime API (1.5 model)
-- Azure Speech SDK for voice synthesis
+- WebSocket middle tier (`rtmt.py`) — browser ↔ Azure OpenAI Realtime API
+- Azure OpenAI GPT-4o Realtime API (gpt-realtime-1.5)
+- Production menu data from `sonic-menu-items.json` (Sonic POS export, 172 items)
 
 **AI & Search:**
-- Azure AI Search for semantic hybrid search with menu grounding
-- Function calling for tool-driven order intelligence
+- Azure AI Search with semantic hybrid search (text-embedding-3-large, 3072 dimensions) for menu grounding
+- Four tool-calling functions: `search`, `update_order`, `get_order`, `reset_order`
 
 **Infrastructure:**
 - Bicep IaC for reproducible deployments
-- Azure Container Apps for serverless, scale-to-zero hosting
-- Docker for consistent local and cloud environments
+- Azure Container Apps with auto-scaling (20 concurrent requests/replica, max 5 replicas)
+- Gunicorn with 2 async workers, 120s timeout, 65s keep-alive
+- Docker with layer caching for fast rebuilds
+- Health probes: startup (50s), liveness (30s), readiness (10s)
 - Azure Developer CLI (`azd`) for one-command provisioning
 
 This repository includes infrastructure as code and a `Dockerfile` to deploy the app to Azure Container Apps, but it can also be run locally as long as Azure AI Search and Azure OpenAI services are configured.
