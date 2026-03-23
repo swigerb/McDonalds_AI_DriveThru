@@ -5,6 +5,7 @@
             "items": [
                 {
                     "name": "Big Mac®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -21,6 +22,7 @@
                 },
                 {
                     "name": "Quarter Pounder® with Cheese",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -37,6 +39,7 @@
                 },
                 {
                     "name": "Double Quarter Pounder® with Cheese",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -53,6 +56,7 @@
                 },
                 {
                     "name": "Bacon Quarter Pounder® with Cheese",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -69,6 +73,7 @@
                 },
                 {
                     "name": "McDouble®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -85,6 +90,7 @@
                 },
                 {
                     "name": "Cheeseburger",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -101,6 +107,7 @@
                 },
                 {
                     "name": "Double Cheeseburger",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -117,6 +124,7 @@
                 },
                 {
                     "name": "Hamburger",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -133,6 +141,7 @@
                 },
                 {
                     "name": "McCrispy®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -149,6 +158,7 @@
                 },
                 {
                     "name": "Filet-O-Fish®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -169,31 +179,16 @@
             "category": "Chicken & McNuggets®",
             "items": [
                 {
-                    "name": "Chicken McNuggets®",
+                    "name": "10 Piece Chicken McNuggets®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
-                            "size": "4 Piece",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "6 Piece",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "10 Piece",
+                            "size": "Standard",
                             "price": 4.89
-                        },
-                        {
-                            "size": "20 Piece",
-                            "price": 6.89
-                        },
-                        {
-                            "size": "40 Piece",
-                            "price": 12.39
                         }
                     ],
-                    "description": "Tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce.",
-                    "longDescription": "Tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce including BBQ, Sweet 'N Sour, Honey Mustard, Spicy Buffalo, or Ranch.",
+                    "description": "Ten tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce.",
+                    "longDescription": "Ten tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce including BBQ, Sweet 'N Sour, Honey Mustard, Spicy Buffalo, or Ranch.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pc_832x472",
@@ -202,6 +197,7 @@
                 },
                 {
                     "name": "McChicken®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -218,6 +214,7 @@
                 },
                 {
                     "name": "Spicy McCrispy®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -234,6 +231,7 @@
                 },
                 {
                     "name": "Deluxe McCrispy®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -250,6 +248,7 @@
                 },
                 {
                     "name": "Spicy Deluxe McCrispy®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -266,6 +265,7 @@
                 },
                 {
                     "name": "Hot 'N Spicy McChicken®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -281,7 +281,93 @@
                     "allergens": "Wheat, Soy"
                 },
                 {
+                    "name": "4 Piece Chicken McNuggets®",
+                    "menuPeriod": "lunch",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 3.79
+                        }
+                    ],
+                    "description": "Four tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. A great snack-size portion served with your choice of dipping sauce.",
+                    "longDescription": "Four tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. A great snack-size portion served with your choice of dipping sauce including BBQ, Sweet 'N Sour, Honey Mustard, Spicy Buffalo, or Ranch.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "",
+                    "calories": 170,
+                    "allergens": "Wheat, Soy"
+                },
+                {
+                    "name": "6 Piece Chicken McNuggets®",
+                    "menuPeriod": "lunch",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.29
+                        }
+                    ],
+                    "description": "Six tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. The perfect individual portion served with your choice of dipping sauce.",
+                    "longDescription": "Six tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. The perfect individual portion served with your choice of dipping sauce including BBQ, Sweet 'N Sour, Honey Mustard, Spicy Buffalo, or Ranch.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "",
+                    "calories": 250,
+                    "allergens": "Wheat, Soy"
+                },
+                {
+                    "name": "20 Piece Chicken McNuggets®",
+                    "menuPeriod": "lunch",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 9.99
+                        }
+                    ],
+                    "description": "Twenty tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. A shareable box perfect for splitting with friends or family.",
+                    "longDescription": "Twenty tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. A shareable box perfect for splitting with friends or family. Served with your choice of dipping sauces.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "",
+                    "calories": 830,
+                    "allergens": "Wheat, Soy"
+                },
+                {
+                    "name": "40 Piece Chicken McNuggets®",
+                    "menuPeriod": "lunch",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 14.99
+                        }
+                    ],
+                    "description": "Forty tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. The ultimate party-size box for gatherings and game days.",
+                    "longDescription": "Forty tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. The ultimate party-size box for gatherings and game days. Served with your choice of dipping sauces.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "",
+                    "calories": 1660,
+                    "allergens": "Wheat, Soy"
+                },
+                {
+                    "name": "McCrispy®",
+                    "menuPeriod": "lunch",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.99
+                        }
+                    ],
+                    "description": "Crispy, juicy, tender perfection. A Southern-style fried chicken fillet on a toasted, buttery potato roll with crinkle-cut pickles. Simple, bold, and unforgettable.",
+                    "longDescription": "Crispy, juicy, tender perfection. A Southern-style fried chicken fillet on a toasted, buttery potato roll with crinkle-cut pickles. Simple, bold, and unforgettable. Also available Spicy and Deluxe.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "",
+                    "calories": 470,
+                    "allergens": "Wheat, Milk, Soy"
+                },
+                {
                     "name": "10 Piece McNuggets® Meal",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -299,6 +385,7 @@
                 },
                 {
                     "name": "Big Mac® Meal",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -316,6 +403,7 @@
                 },
                 {
                     "name": "Quarter Pounder® with Cheese Meal",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -333,6 +421,7 @@
                 },
                 {
                     "name": "McCrispy® Meal",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -350,6 +439,7 @@
                 },
                 {
                     "name": "Quarter Pounder® with Cheese Deluxe Meal",
+                    "menuPeriod": "lunch",
                     "mealNumber": 3,
                     "sizes": [
                         {
@@ -367,6 +457,7 @@
                 },
                 {
                     "name": "Bacon Quarter Pounder® with Cheese Meal",
+                    "menuPeriod": "lunch",
                     "mealNumber": 4,
                     "sizes": [
                         {
@@ -384,6 +475,7 @@
                 },
                 {
                     "name": "Double Quarter Pounder® with Cheese Meal",
+                    "menuPeriod": "lunch",
                     "mealNumber": 5,
                     "sizes": [
                         {
@@ -401,6 +493,7 @@
                 },
                 {
                     "name": "Filet-O-Fish® Meal",
+                    "menuPeriod": "lunch",
                     "mealNumber": 8,
                     "sizes": [
                         {
@@ -418,6 +511,7 @@
                 },
                 {
                     "name": "2 Cheeseburger Meal",
+                    "menuPeriod": "lunch",
                     "mealNumber": 9,
                     "sizes": [
                         {
@@ -435,6 +529,7 @@
                 },
                 {
                     "name": "McChicken® Meal",
+                    "menuPeriod": "lunch",
                     "mealNumber": 10,
                     "sizes": [
                         {
@@ -457,6 +552,7 @@
             "items": [
                 {
                     "name": "Egg McMuffin®",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -473,6 +569,7 @@
                 },
                 {
                     "name": "Sausage McMuffin® with Egg",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -489,6 +586,7 @@
                 },
                 {
                     "name": "Sausage McMuffin®",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -505,6 +603,7 @@
                 },
                 {
                     "name": "Bacon, Egg & Cheese Biscuit",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -521,6 +620,7 @@
                 },
                 {
                     "name": "Sausage, Egg & Cheese McGriddles®",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -537,6 +637,7 @@
                 },
                 {
                     "name": "Bacon, Egg & Cheese McGriddles®",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -553,6 +654,7 @@
                 },
                 {
                     "name": "Hotcakes",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -569,6 +671,7 @@
                 },
                 {
                     "name": "Hotcakes & Sausage",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -585,6 +688,7 @@
                 },
                 {
                     "name": "Sausage Burrito",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -601,6 +705,7 @@
                 },
                 {
                     "name": "Hash Browns",
+                    "menuPeriod": "breakfast",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -617,6 +722,7 @@
                 },
                 {
                     "name": "Egg McMuffin® Meal",
+                    "menuPeriod": "breakfast",
                     "mealNumber": 1,
                     "sizes": [
                         {
@@ -634,6 +740,7 @@
                 },
                 {
                     "name": "Sausage McMuffin® with Egg Meal",
+                    "menuPeriod": "breakfast",
                     "mealNumber": 2,
                     "sizes": [
                         {
@@ -651,6 +758,7 @@
                 },
                 {
                     "name": "Sausage Biscuit Meal",
+                    "menuPeriod": "breakfast",
                     "mealNumber": 3,
                     "sizes": [
                         {
@@ -668,6 +776,7 @@
                 },
                 {
                     "name": "Bacon, Egg & Cheese Biscuit Meal",
+                    "menuPeriod": "breakfast",
                     "mealNumber": 4,
                     "sizes": [
                         {
@@ -685,6 +794,7 @@
                 },
                 {
                     "name": "Sausage, Egg & Cheese McGriddles® Meal",
+                    "menuPeriod": "breakfast",
                     "mealNumber": 5,
                     "sizes": [
                         {
@@ -707,6 +817,7 @@
             "items": [
                 {
                     "name": "World Famous Fries®",
+                    "menuPeriod": "lunch",
                     "sizes": [
                         {
                             "size": "Small",
@@ -731,6 +842,7 @@
                 },
                 {
                     "name": "Apple Slices",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -747,6 +859,7 @@
                 },
                 {
                     "name": "Coca-Cola®",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -771,6 +884,7 @@
                 },
                 {
                     "name": "Sprite®",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -795,6 +909,7 @@
                 },
                 {
                     "name": "Hi-C® Orange Lavaburst",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -819,6 +934,7 @@
                 },
                 {
                     "name": "Sweet Iced Tea",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -843,6 +959,7 @@
                 },
                 {
                     "name": "Premium Roast Coffee",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -867,6 +984,7 @@
                 },
                 {
                     "name": "Caramel Frappé",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -891,6 +1009,7 @@
                 },
                 {
                     "name": "Mocha Frappé",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -915,6 +1034,7 @@
                 },
                 {
                     "name": "Minute Maid® Orange Juice",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -944,6 +1064,7 @@
             "items": [
                 {
                     "name": "McFlurry® with OREO® Cookies",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Regular",
@@ -960,6 +1081,7 @@
                 },
                 {
                     "name": "McFlurry® with M&M's® Candies",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Regular",
@@ -976,6 +1098,7 @@
                 },
                 {
                     "name": "Chocolate Shake",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -1000,6 +1123,7 @@
                 },
                 {
                     "name": "Vanilla Shake",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -1024,6 +1148,7 @@
                 },
                 {
                     "name": "Strawberry Shake",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Small",
@@ -1048,6 +1173,7 @@
                 },
                 {
                     "name": "Vanilla Cone",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -1064,6 +1190,7 @@
                 },
                 {
                     "name": "Hot Fudge Sundae",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -1080,6 +1207,7 @@
                 },
                 {
                     "name": "Hot Caramel Sundae",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -1096,6 +1224,7 @@
                 },
                 {
                     "name": "Baked Apple Pie",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -1112,6 +1241,7 @@
                 },
                 {
                     "name": "Chocolate Chip Cookie",
+                    "menuPeriod": "allDay",
                     "sizes": [
                         {
                             "size": "Standard",
