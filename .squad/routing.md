@@ -6,29 +6,29 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| Architecture, system design, trade-offs | Rick 🏗️ | API design, component boundaries, performance strategy |
-| React, TypeScript, UI, Tailwind, audio UI | Morty ⚛️ | Components, styling, WebSocket audio client, responsive layout |
-| Python backend, Azure OpenAI, AI Search, WebSockets | Summer 🔧 | API endpoints, rtmt.py, tool calling, order state, speech SDK |
-| Tests, quality, edge cases | Birdperson 🧪 | pytest, integration tests, test fixtures, coverage |
-| Bicep, Docker, azd, CI/CD, Azure resources | Squanchy ⚙️ | Infrastructure, deployment, container config, dev containers |
-| OpenAI Realtime API, system prompts, VAD, voice AI | Unity 🤖 | gpt-realtime-1.5, session config, audio pipeline architecture, demo readiness |
-| Code review | Rick 🏗️ | Review PRs, check quality, suggest improvements |
-| Testing strategy | Birdperson 🧪 | Write tests, find edge cases, verify fixes |
-| Scope & priorities | Rick 🏗️ | What to build next, trade-offs, decisions |
-| Jupyter notebooks, data ingestion | Summer 🔧 | Menu ingestion scripts, search index setup |
+| Architecture, system design, trade-offs | Ronald 🏗️ | API design, component boundaries, performance strategy |
+| React, TypeScript, UI, Tailwind, audio UI | Birdie ⚛️ | Components, styling, WebSocket audio client, responsive layout |
+| Python backend, Azure OpenAI, AI Search, WebSockets | Grimace 🔧 | API endpoints, rtmt.py, tool calling, order state, speech SDK |
+| Tests, quality, edge cases | Hamburglar 🧪 | pytest, integration tests, test fixtures, coverage |
+| Bicep, Docker, azd, CI/CD, Azure resources | Mayor McCheese ⚙️ | Infrastructure, deployment, container config, dev containers |
+| OpenAI Realtime API, system prompts, VAD, voice AI | Mac Tonight 🤖 | gpt-realtime-1.5, session config, audio pipeline architecture, demo readiness |
+| Code review | Ronald 🏗️ | Review PRs, check quality, suggest improvements |
+| Testing strategy | Hamburglar 🧪 | Write tests, find edge cases, verify fixes |
+| Scope & priorities | Ronald 🏗️ | What to build next, trade-offs, decisions |
+| Jupyter notebooks, data ingestion | Grimace 🔧 | Menu ingestion scripts, search index setup |
 | Session logging | Scribe 📋 | Automatic — never needs routing |
 
 ## Issue Routing
 
 | Label | Action | Who |
 |-------|--------|-----|
-| `squad` | Triage: analyze issue, assign `squad:{member}` label | Rick 🏗️ |
-| `squad:rick` | Architecture review, design decisions | Rick 🏗️ |
-| `squad:morty` | Frontend implementation | Morty ⚛️ |
-| `squad:summer` | Backend implementation | Summer 🔧 |
-| `squad:birdperson` | Test writing, QA | Birdperson 🧪 |
-| `squad:squanchy` | Infrastructure, deployment | Squanchy ⚙️ |
-| `squad:unity` | AI/Realtime API, voice quality | Unity 🤖 |
+| `squad` | Triage: analyze issue, assign `squad:{member}` label | Ronald 🏗️ |
+| `squad:ronald` | Architecture review, design decisions | Ronald 🏗️ |
+| `squad:birdie` | Frontend implementation | Birdie ⚛️ |
+| `squad:grimace` | Backend implementation | Grimace 🔧 |
+| `squad:hamburglar` | Test writing, QA | Hamburglar 🧪 |
+| `squad:mayor-mccheese` | Infrastructure, deployment | Mayor McCheese ⚙️ |
+| `squad:mac-tonight` | AI/Realtime API, voice quality | Mac Tonight 🤖 |
 
 ### How Issue Assignment Works
 

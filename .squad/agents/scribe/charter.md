@@ -4,7 +4,7 @@ Documentation specialist maintaining history, decisions, and technical records.
 
 ## Project Context
 
-**Project:** SonicAIDriveThru
+**Project:** McDonalds_AI_DriveThru
 
 
 ## Responsibilities

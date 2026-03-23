@@ -1,6 +1,6 @@
 # Squad Team
 
-> Dunkin Voice Chat Assistant — AI-powered drive-thru ordering experience
+> McDonald's AI Drive-Thru 🍔 — AI-powered voice ordering experience
 
 ## Coordinator
 
@@ -12,20 +12,20 @@
 
 | Name | Role | Charter | Status |
 |------|------|---------|--------|
-| Rick | Lead | `.squad/agents/rick/charter.md` | 🏗️ Active |
-| Morty | Frontend Dev | `.squad/agents/morty/charter.md` | ⚛️ Active |
-| Summer | Backend Dev | `.squad/agents/summer/charter.md` | 🔧 Active |
-| Birdperson | Tester | `.squad/agents/birdperson/charter.md` | 🧪 Active |
-| Squanchy | DevOps | `.squad/agents/squanchy/charter.md` | ⚙️ Active |
-| Unity | AI / Realtime Expert | `.squad/agents/unity/charter.md` | 🤖 Active |
+| Ronald | Lead | `.squad/agents/ronald/charter.md` | 🏗️ Active |
+| Birdie | Frontend Dev | `.squad/agents/birdie/charter.md` | ⚛️ Active |
+| Grimace | Backend Dev | `.squad/agents/grimace/charter.md` | 🔧 Active |
+| Hamburglar | Tester | `.squad/agents/hamburglar/charter.md` | 🧪 Active |
+| Mayor McCheese | DevOps | `.squad/agents/mayor-mccheese/charter.md` | ⚙️ Active |
+| Mac Tonight | AI / Realtime Expert | `.squad/agents/mac-tonight/charter.md` | 🤖 Active |
 | Scribe | Session Logger | `.squad/agents/scribe/charter.md` | 📋 Active |
 | Ralph | Work Monitor | — | 🔄 Monitor |
 
 ## Project Context
 
 - **Owner:** Brian Swiger
-- **Project:** Dunkin Voice Chat Assistant — an Inspire Brands–themed, voice-driven ordering experience showcasing Azure OpenAI GPT-4o Realtime, Azure AI Search, and Azure Container Apps. Emulates a Dunkin crew member who can search the menu, hold multilingual conversations, and keep orders in sync across devices.
-- **Repo:** https://github.com/swigerb/SonicAIDriveThru
+- **Project:** McDonald's AI Drive-Thru — a McDonald's-themed, voice-driven ordering experience showcasing Azure OpenAI GPT-4o Realtime, Azure AI Search, and Azure Container Apps. Emulates a McDonald's crew member who can search the menu, hold multilingual conversations, and keep orders in sync across devices.
+- **Repo:** https://github.com/swigerb/McDonalds_AI_DriveThru
 - **Stack:**
   - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui
   - **Backend:** Python (aiohttp, WebSockets), Azure OpenAI GPT-4o Realtime API, Azure AI Search, Azure Speech SDK
@@ -39,4 +39,4 @@
   - `app/frontend/src/` — React frontend with Vite
   - `infra/main.bicep` — Azure infrastructure definitions
   - `azure.yaml` — azd deployment configuration
-- **Created:** 2026-03-19
+- **Created:** 2026-03-23
