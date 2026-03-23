@@ -591,3 +591,49 @@ Initial system prompt design leveraging Azure OpenAI GPT-4o Realtime for voice-b
 
 ### Repository Initialization (Squanchy, 2026-02-25)
 SonicAIDriveThru repository created with Azure Container Apps, Bicep IaC, React frontend (Vite, Tailwind, shadcn/ui), Python backend (aiohttp, WebSockets, Azure OpenAI Realtime, Azure AI Search).
+
+## Menu Period Tagging (2026-03-23)
+
+**Author:** Grimace (Backend Dev)
+
+**Decision:** Added `menuPeriod` field to all items in menuItems.json
+
+**Values:** "breakfast" (Breakfast category), "lunch" (Burgers, Chicken), "allDay" (Sides, Drinks, Sweets)
+
+**Rationale:** Enables frontend Breakfast/Lunch toggle to filter Extra Value Meals and menu categories
+
+**Impact:** Frontend can now filter menu items by time of day; eliminates duplicate meal numbers in Extra Value Meals
+
+## Breakfast/Lunch Menu Mode Toggle (2026-03-23)
+
+**Author:** Birdie (Frontend Dev)
+
+**Decision:** Added MenuModeContext with localStorage persistence, Settings segmented toggle, and menu-panel.tsx filtering
+
+**Default:** "lunch" mode (McDonald's serves lunch most of the day)
+
+**Filtering:** Items filtered by menuPeriod field — "breakfast", "lunch", or "allDay". Missing field treated as allDay.
+
+**Impact:** Extra Value Meals section now shows only relevant meals per mode (breakfast #1-5 OR lunch #1-10), fixing duplicate numbering issue
+
+## Multi-Layer Echo Self-Talk Fix (2026-03-22)
+
+**Author:** Summer (Backend Dev)
+
+**Status:** Implemented
+
+### Problem
+AI generates 4+ unsolicited patience responses after speaking because:
+1. Echo cooldown (0.5s) was too short — speakers still resonating when mic reopens
+2. No buffer flush after cooldown window — echo audio accumulated during cooldown triggered VAD
+3. System prompt instruction caused model to actively fill silence
+
+### Changes
+- `_ECHO_COOLDOWN_SEC`: 0.5 → 1.5 in rtmt.py
+- Delayed second buffer flush catching accumulated echo audio
+- Removed patience instruction; replaced with "NEVER speak unless guest has spoken first"
+- max_tokens stays at 4096 for tool call budget
+
+### Trade-offs
+- 1.5s cooldown adds slight delay before user can speak after AI finishes
+- Removing patience instruction means AI won't proactively comfort hesitant users (correct for demo)
