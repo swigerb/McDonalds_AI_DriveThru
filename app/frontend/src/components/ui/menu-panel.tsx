@@ -37,6 +37,15 @@ const categoryIcons: Record<string, string> = {
     "McNuggets® & Tenders": "🍗",
 };
 
+function getCategoryDisplay(category: string, menuMode: "breakfast" | "lunch"): { displayName: string; icon: string } {
+    if (category === "Fries, Sides & Drinks") {
+        return menuMode === "breakfast"
+            ? { displayName: "Sides & Drinks", icon: "☕" }
+            : { displayName: "Fries, Sides & Drinks", icon: "🍟" };
+    }
+    return { displayName: category, icon: categoryIcons[category] ?? "🍽️" };
+}
+
 const allCategories = menuItemsData.menuItems as MenuCategory[];
 
 function isItemVisible(item: MenuItem, menuMode: "breakfast" | "lunch"): boolean {
@@ -96,6 +105,7 @@ export default memo(function MenuPanel() {
             {menuItems.map(category => {
                 const isOpen = expanded.has(category.category);
                 const isValueMeals = category.category === "Extra Value Meals";
+                const { displayName, icon } = getCategoryDisplay(category.category, menuMode);
                 return (
                     <div
                         key={category.category}
@@ -113,12 +123,12 @@ export default memo(function MenuPanel() {
                         >
                             <div className="flex items-center gap-2 sm:gap-3">
                                 <span className="text-2xl" aria-hidden>
-                                    {categoryIcons[category.category] ?? "🍽️"}
+                                    {icon}
                                 </span>
                                 <h3 className={`break-keep text-left font-semibold uppercase tracking-wide ${
                                     isValueMeals ? "text-[#DB0007] dark:text-[#FFBC0D]" : "text-primary dark:text-primary"
                                 }`}>
-                                    {category.category}
+                                    {displayName}
                                 </h3>
                             </div>
                             <div className="flex items-center gap-2">
