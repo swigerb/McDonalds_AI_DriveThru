@@ -343,7 +343,7 @@ function McDonaldsApp() {
             <div className="mx-auto max-w-7xl space-y-6">
                 <div className="flex flex-col gap-3 text-sm font-semibold text-primary md:flex-row md:items-center md:justify-between">
                     <a
-                        href="https://github.com/swigerb/SonicAIDriveThru"
+                        href="https://github.com/swigerb/McDonalds_AI_DriveThru"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-primary transition hover:text-accent"

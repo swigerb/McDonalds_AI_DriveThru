@@ -19,8 +19,8 @@
 From the root directory, execute the following commands:
 
 ```bash
-docker build -t sonic-drive-in-app -f ./app/Dockerfile ./app
-docker run -p 8000:8000 --env-file ./app/backend/.env sonic-drive-in-app:latest
+docker build -t mcdonalds-drive-thru-app -f ./app/Dockerfile ./app
+docker run -p 8000:8000 --env-file ./app/backend/.env mcdonalds-drive-thru-app:latest
 ```
 
 ## Deploy the Application
@@ -32,5 +32,5 @@ After testing locally, deploy the application with:
     --env-file ./app/backend/.env \
     --dockerfile ./app/Dockerfile \
     --context ./app \
-    sonic-drive-in-assistant
+    mcdonalds-drive-thru-assistant
 ```

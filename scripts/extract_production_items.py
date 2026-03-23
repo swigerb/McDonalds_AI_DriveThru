@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Extract production menu items from sonic-menu-items.json using the SAME
-logic as sonic_menu_ingestion_search.ipynb.  Outputs a formatted report of
+"""Extract production menu items from the POS data JSON using the SAME
+logic as the menu ingestion search notebook.  Outputs a formatted report of
 every item in the Azure AI Search index grouped by category, then performs
 a gap analysis against the UI's menuItems.json."""
 
@@ -12,12 +12,13 @@ from collections import Counter
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 
-POS_DATA_PATH = os.path.join(
-    REPO_ROOT, "app", "frontend", "src", "data", "sonic-menu-items.json"
+_DATA_DIR = os.path.join(REPO_ROOT, "app", "frontend", "src", "data")
+_POS_CANDIDATES = ["mcdonalds-menu-items.json", "sonic-menu-items.json"]
+POS_DATA_PATH = next(
+    (os.path.join(_DATA_DIR, f) for f in _POS_CANDIDATES if os.path.exists(os.path.join(_DATA_DIR, f))),
+    os.path.join(_DATA_DIR, _POS_CANDIDATES[0]),
 )
-UI_MENU_PATH = os.path.join(
-    REPO_ROOT, "app", "frontend", "src", "data", "menuItems.json"
-)
+UI_MENU_PATH = os.path.join(REPO_ROOT, "app", "frontend", "src", "data", "menuItems.json")
 
 
 # ── helpers (identical to the notebook) ──────────────────────────────────
@@ -172,7 +173,7 @@ def main():
     # ── Production report ────────────────────────────────────────────
     print("=" * 70)
     print("  PRODUCTION ITEMS IN AZURE AI SEARCH INDEX")
-    print("  (Extracted using same logic as sonic_menu_ingestion_search.ipynb)")
+    print("  (Extracted using same logic as the menu ingestion search notebook)")
     print("=" * 70)
 
     by_category: dict[str, list] = {}
