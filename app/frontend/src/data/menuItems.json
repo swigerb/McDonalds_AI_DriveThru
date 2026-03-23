@@ -4,443 +4,652 @@
             "category": "Burgers & Sandwiches",
             "items": [
                 {
-                    "name": "SuperSONIC® Double Cheeseburger",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 6.59
-                        }
-                    ],
-                    "description": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
-                    "longDescription": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/80a2642d-472c-4280-ec09-e2920b673a00/download"
-                },
-                {
-                    "name": "SuperSONIC® Bacon Double Cheeseburger",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 7.39
-                        }
-                    ],
-                    "description": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crispy bacon, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
-                    "longDescription": "Two 100% pure seasoned beef patties layered with two slices of melty American cheese, crispy bacon, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/b76d0535-73c9-476c-f982-83633b166300/download"
-                },
-                {
-                    "name": "SONIC® Cheeseburger",
+                    "name": "Big Mac®",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 5.29
                         }
                     ],
-                    "description": "A 100% pure seasoned beef patty layered with melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
-                    "longDescription": "A 100% pure seasoned beef patty layered with melty American cheese, crinkle cut pickles, ketchup, onions, creamy mayo, lettuce, and tomatoes on a golden, toasted bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/b585c466-6c41-4b18-90dc-d8f2e9e91b00/download"
+                    "description": "Mouthwatering perfection starts with two 100% pure all beef patties and Big Mac® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese.",
+                    "longDescription": "Mouthwatering perfection starts with two 100% pure all beef patties and Big Mac® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions — on a sesame seed bun.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMac_832x472"
                 },
                 {
-                    "name": "All-American SONIC Smasher™",
+                    "name": "Quarter Pounder® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 5.79
                         }
                     ],
-                    "description": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
-                    "longDescription": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/8fac6668-f28c-4f25-10bb-3b30afce7300/download"
+                    "description": "A quarter pound of 100% fresh beef, hot off the grill and seasoned with just a pinch of salt and pepper. Topped with two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun.",
+                    "longDescription": "A quarter pound of 100% fresh beef, hot off the grill and seasoned with just a pinch of salt and pepper. Topped with two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun. Weight before cooking: 4 oz.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QuarterPounderCheese_832x472"
                 },
                 {
-                    "name": "All-American Bacon SONIC Smasher™",
+                    "name": "Double Quarter Pounder® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 6.79
+                            "price": 7.79
                         }
                     ],
-                    "description": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crispy bacon, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
-                    "longDescription": "Two patties made with Angus beef, seasoned, smashed and seared, crispy on the edges, and juicy in the middle. Layered with two slices of melty American cheese, crispy bacon, crinkle-cut pickles, ketchup, onions, creamy mayo, lettuce, and tomato, served on a pillowy soft potato bun. ",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "Two quarter pound 100% fresh beef patties, hot off the grill and seasoned with just a pinch of salt and pepper. Topped with two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun.",
+                    "longDescription": "Two quarter pound 100% fresh beef patties, hot off the grill and seasoned with just a pinch of salt and pepper. Topped with two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun. A double dose of deliciousness.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d4d721cf-c38e-498e-9c04-2845e2440800/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DoubleQuarterPounderCheese_832x472"
                 },
                 {
-                    "name": "Jr Double Cheeseburger",
+                    "name": "Bacon Quarter Pounder® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 3.49
+                            "price": 6.89
                         }
                     ],
-                    "description": "Our Jr Double Cheeseburger starts with two juicy, 100% pure beef patties, seasoned and layered with a slice of melty American cheese, pickles, ketchup, and mustard, all on a golden, toasted bun.",
-                    "longDescription": "Our Jr Double Cheeseburger starts with two juicy, 100% pure beef patties, seasoned and layered with a slice of melty American cheese, pickles, ketchup, and mustard, all on a golden, toasted bun.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "A quarter pound of 100% fresh beef, topped with thick-cut Applewood smoked bacon, two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun.",
+                    "longDescription": "A quarter pound of 100% fresh beef, topped with thick-cut Applewood smoked bacon, two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun. The perfect combination of beef and bacon.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/69546e16-cd1f-46ff-009b-28a3212d7400/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconQPC_832x472"
                 },
                 {
-                    "name": "Double SONIC Smasher™",
+                    "name": "McDouble®",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 6.59
+                            "price": 2.59
                         }
                     ],
-                    "description": "The Double SONIC® Smasher has two patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with two slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
-                    "longDescription": "The Double SONIC® Smasher has two patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with two slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/7cfda31c-49a7-4e74-5c78-bc9daf98b200/download"
+                    "description": "A classic double burger featuring two 100% pure beef patties seasoned with just a pinch of salt and pepper, topped with tangy pickles, chopped onions, ketchup, mustard, and a slice of melty American cheese on a toasted bun.",
+                    "longDescription": "A classic double burger featuring two 100% pure beef patties seasoned with just a pinch of salt and pepper, topped with tangy pickles, chopped onions, ketchup, mustard, and a slice of melty American cheese on a toasted bun. Big flavor at a great value.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Value Pick",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McDouble_832x472"
                 },
                 {
-                    "name": "Crispy Chicken Sandwich",
+                    "name": "Cheeseburger",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 5.59
+                            "price": 2.09
                         }
                     ],
-                    "description": "A crispy chicken fillet with pickles, lettuce, and mayonnaise on a brioche bun.",
-                    "longDescription": "A crispy chicken fillet with pickles, lettuce, and mayonnaise on a brioche bun.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "A simple, satisfying classic. A 100% pure beef patty seasoned with just a pinch of salt and pepper, topped with a slice of melty American cheese, tangy pickles, chopped onions, ketchup, and mustard on a toasted bun.",
+                    "longDescription": "A simple, satisfying classic. A 100% pure beef patty seasoned with just a pinch of salt and pepper, topped with a slice of melty American cheese, tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. The McDonald's cheeseburger that started it all.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d87a5a68-81f6-43b6-26d8-def986a6a800/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Cheeseburger_832x472"
                 },
                 {
-                    "name": "Triple SONIC Smasher™",
+                    "name": "Double Cheeseburger",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 7.59
+                            "price": 2.99
                         }
                     ],
-                    "description": "The Triple SONIC® Smasher has three patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with three slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
-                    "longDescription": "The Triple SONIC® Smasher has three patties made with Angus beef, seasoned patties smashed and seared, crispy on the edges and juicy in the middle. It’s then layered with three slices of melty American cheese, a creamy, tangy Smasher sauce, crinkle-cut pickles, diced onions, and served on a pillowy soft potato bun.\n",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "Two 100% pure beef patties with two slices of melty American cheese, tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. Double the beef, double the cheese, double the deliciousness.",
+                    "longDescription": "Two 100% pure beef patties with two slices of melty American cheese, tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. Double the beef, double the cheese, double the deliciousness.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d560ca02-54d3-4308-b94a-419781bc6e00/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DoubleCheese_832x472"
                 },
                 {
-                    "name": "Fish Sandwich",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 4.99
-                        }
-                    ],
-                    "description": "Our Fish Sandwich features a 100% Wild Caught Alaska Pollock Fillet, creamy tartar sauce and lettuce on a golden, toasted bun.",
-                    "longDescription": "Our Fish Sandwich features a 100% Wild Caught Alaska Pollock Fillet, creamy tartar sauce and lettuce on a golden, toasted bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/577738fb-6903-4e77-a27b-5be724522600/download"
-                }
-            ]
-        },
-        {
-            "category": "Hot Dogs & Tots",
-            "items": [
-                {
-                    "name": "All-American Dog",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 3.19
-                        }
-                    ],
-                    "description": "SONIC's All-American Dog is topped with ketchup, yellow mustard, relish, diced onions and served in a soft, warm bakery bun.",
-                    "longDescription": "SONIC's All-American Dog is topped with ketchup, yellow mustard, relish, diced onions and served in a soft, warm bakery bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/52ef56d9-a7bd-470c-0dd8-db4461a8c000/download"
-                },
-                {
-                    "name": "Chili Cheese Coney",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 3.19
-                        }
-                    ],
-                    "description": "SONIC's Chili Cheese Coney is a hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
-                    "longDescription": "SONIC's Chili Cheese Coney is a hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d409fb36-21c4-4060-bc91-57c516556d00/download"
-                },
-                {
-                    "name": "Footlong Quarter Pound Coney",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 5.29
-                        }
-                    ],
-                    "description": "SONIC's Footlong Quarter Pound Coney is a grilled hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
-                    "longDescription": "SONIC's Footlong Quarter Pound Coney is a grilled hot dog topped with warm chili and melty cheddar cheese served in a soft, warm bakery bun.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/42df8449-0a4f-4795-7f50-978cf6ea4c00/download"
-                },
-                {
-                    "name": "Tots",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.49
-                        }
-                    ],
-                    "description": "Crispy tots fried to a golden brown and lightly seasoned with salt.",
-                    "longDescription": "Crispy tots fried to a golden brown and lightly seasoned with salt.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/aa7ee5c3-b016-4c20-302f-fe60897f4d00/download"
-                },
-                {
-                    "name": "Groovy Fries",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.49
-                        }
-                    ],
-                    "description": "Fried thin and golden brown with grooves designed for dipping! They’re served hot, crispy, and perfectly salted. Add a side of our new Groovy Sauce for dipping!​",
-                    "longDescription": "Fried thin and golden brown with grooves designed for dipping! They’re served hot, crispy, and perfectly salted. Add a side of our new Groovy Sauce for dipping!​",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/42a7a54d-9872-41bd-58d3-c9370872fc00/download"
-                },
-                {
-                    "name": "Corn Dog",
+                    "name": "Hamburger",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 1.99
                         }
                     ],
-                    "description": "A delicious dog wrapped in sweet corn batter fried to a crispy golden-brown. Don't forget the ketchup or mustard.",
-                    "longDescription": "A delicious dog wrapped in sweet corn batter fried to a crispy golden-brown. Don't forget the ketchup or mustard.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "The original McDonald's burger. A 100% pure beef patty seasoned with just a pinch of salt and pepper, topped with tangy pickles, chopped onions, ketchup, and mustard on a toasted bun.",
+                    "longDescription": "The original McDonald's burger. A 100% pure beef patty seasoned with just a pinch of salt and pepper, topped with tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. Simple, classic, and delicious since 1955.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/5503aa71-5d13-4e85-1a00-68c900e4a200/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Hamburger_832x472"
                 },
                 {
-                    "name": "Chili Cheese Tots",
+                    "name": "McCrispy®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.79
+                        }
+                    ],
+                    "description": "Crispy, juicy, tender perfection. A Southern-style fried chicken fillet on a toasted, buttery potato roll with crinkle-cut pickles. Simple, bold, and unforgettable.",
+                    "longDescription": "Crispy, juicy, tender perfection. A Southern-style fried chicken fillet on a toasted, buttery potato roll with crinkle-cut pickles. Simple, bold, and unforgettable. Also available Spicy and Deluxe.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispy_832x472"
+                },
+                {
+                    "name": "Filet-O-Fish®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.89
+                        }
+                    ],
+                    "description": "Dive into a wild-caught Alaskan Pollock filet, breaded and fried to golden perfection, with creamy tartar sauce and a slice of melty American cheese, all on a soft, steamed bun.",
+                    "longDescription": "Dive into a wild-caught Alaskan Pollock filet, breaded and fried to golden perfection, with creamy tartar sauce and a slice of melty American cheese, all on a soft, steamed bun. A McDonald's classic since 1962.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FiletOFish_832x472"
+                }
+            ]
+        },
+        {
+            "category": "Chicken & McNuggets®",
+            "items": [
+                {
+                    "name": "Chicken McNuggets®",
+                    "sizes": [
+                        {
+                            "size": "4 Piece",
+                            "price": 2.19
+                        },
+                        {
+                            "size": "6 Piece",
+                            "price": 2.89
+                        },
+                        {
+                            "size": "10 Piece",
+                            "price": 4.89
+                        },
+                        {
+                            "size": "20 Piece",
+                            "price": 6.89
+                        },
+                        {
+                            "size": "40 Piece",
+                            "price": 12.39
+                        }
+                    ],
+                    "description": "Tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce.",
+                    "longDescription": "Tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce including BBQ, Sweet 'N Sour, Honey Mustard, Spicy Buffalo, or Ranch.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pc_832x472"
+                },
+                {
+                    "name": "McChicken®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 3.09
+                        }
+                    ],
+                    "description": "A crispy, seasoned chicken patty topped with shredded iceberg lettuce and creamy mayonnaise on a perfectly toasted bun. A classic value favorite.",
+                    "longDescription": "A crispy, seasoned chicken patty topped with shredded iceberg lettuce and creamy mayonnaise on a perfectly toasted bun. A classic value favorite that's been a go-to for chicken lovers since 1980.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Value Pick",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McChicken_832x472"
+                },
+                {
+                    "name": "Spicy McCrispy®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.99
+                        }
+                    ],
+                    "description": "A Southern-style fried chicken fillet seasoned with a bold, spicy pepper blend, topped with crinkle-cut pickles and spicy sauce on a toasted, buttery potato roll.",
+                    "longDescription": "A Southern-style fried chicken fillet seasoned with a bold, spicy pepper blend, topped with crinkle-cut pickles and spicy sauce on a toasted, buttery potato roll. Bringing the heat to every bite.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SpicyMcCrispy_832x472"
+                },
+                {
+                    "name": "Deluxe McCrispy®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.59
+                        }
+                    ],
+                    "description": "A Southern-style fried chicken fillet topped with shredded lettuce, Roma tomatoes, and creamy mayo on a toasted, buttery potato roll. The deluxe upgrade you deserve.",
+                    "longDescription": "A Southern-style fried chicken fillet topped with shredded lettuce, Roma tomatoes, and creamy mayo on a toasted, buttery potato roll. The deluxe upgrade you deserve.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DeluxeMcCrispy_832x472"
+                },
+                {
+                    "name": "Spicy Deluxe McCrispy®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.99
+                        }
+                    ],
+                    "description": "A spicy, Southern-style fried chicken fillet topped with shredded lettuce, Roma tomatoes, and creamy mayo on a toasted, buttery potato roll. Heat meets deluxe.",
+                    "longDescription": "A spicy, Southern-style fried chicken fillet topped with shredded lettuce, Roma tomatoes, and creamy mayo on a toasted, buttery potato roll. Heat meets deluxe for the ultimate chicken sandwich experience.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SpicyDeluxeMcCrispy_832x472"
+                },
+                {
+                    "name": "Hot 'N Spicy McChicken®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 3.19
+                        }
+                    ],
+                    "description": "A crispy chicken patty seasoned with a bold, spicy blend, topped with shredded lettuce and creamy mayonnaise on a perfectly toasted bun.",
+                    "longDescription": "A crispy chicken patty seasoned with a bold, spicy blend, topped with shredded lettuce and creamy mayonnaise on a perfectly toasted bun. All the McChicken flavor with an extra kick.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotNSpicyMcChicken_832x472"
+                },
+                {
+                    "name": "10 Piece McNuggets® Meal",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 8.89
+                        }
+                    ],
+                    "description": "10 tender Chicken McNuggets® made with 100% white meat chicken, served with medium World Famous Fries® and your choice of a medium drink.",
+                    "longDescription": "10 tender Chicken McNuggets® made with 100% white meat chicken, served with medium World Famous Fries® and your choice of a medium drink. Includes your choice of dipping sauce.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pcMeal_832x472"
+                },
+                {
+                    "name": "Big Mac® Meal",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 8.99
+                        }
+                    ],
+                    "description": "The iconic Big Mac® paired with medium World Famous Fries® and your choice of a medium drink. The classic combo.",
+                    "longDescription": "The iconic Big Mac® paired with medium World Famous Fries® and your choice of a medium drink. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions on a sesame seed bun — plus fries and a drink.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMacMeal_832x472"
+                },
+                {
+                    "name": "Quarter Pounder® with Cheese Meal",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 8.59
+                        }
+                    ],
+                    "description": "A Quarter Pounder® with Cheese made with fresh beef, paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "longDescription": "A Quarter Pounder® with Cheese made with 100% fresh beef, cooked when you order, paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QPCMeal_832x472"
+                },
+                {
+                    "name": "McCrispy® Meal",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 7.99
+                        }
+                    ],
+                    "description": "The crispy, juicy McCrispy® chicken sandwich paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "longDescription": "The crispy, juicy McCrispy® chicken sandwich on a buttery potato roll with crinkle-cut pickles, paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispyMeal_832x472"
+                }
+            ]
+        },
+        {
+            "category": "Breakfast",
+            "items": [
+                {
+                    "name": "Egg McMuffin®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.19
+                        }
+                    ],
+                    "description": "A freshly cracked Grade A egg on a toasted English muffin with real butter, lean Canadian bacon, and a slice of melty American cheese. An excellent source of protein.",
+                    "longDescription": "A freshly cracked Grade A egg on a toasted English muffin with real butter, lean Canadian bacon, and a slice of melty American cheese. An excellent source of protein and the breakfast sandwich that started it all.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_EggMcMuffin_832x472"
+                },
+                {
+                    "name": "Sausage McMuffin® with Egg",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.19
+                        }
+                    ],
+                    "description": "A savory hot sausage patty, a freshly cracked egg, and a slice of melty American cheese on a toasted English muffin. A hearty, protein-packed start to your day.",
+                    "longDescription": "A savory hot sausage patty, a freshly cracked egg, and a slice of melty American cheese on a toasted English muffin. A hearty, protein-packed start to your day.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageMcMuffinEgg_832x472"
+                },
+                {
+                    "name": "Sausage McMuffin®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 2.19
+                        }
+                    ],
+                    "description": "A warm, freshly toasted English muffin topped with a savory hot sausage patty and a slice of melty American cheese. Simple and satisfying.",
+                    "longDescription": "A warm, freshly toasted English muffin topped with a savory hot sausage patty and a slice of melty American cheese. Simple, satisfying, and bursting with flavor.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageMcMuffin_832x472"
+                },
+                {
+                    "name": "Bacon, Egg & Cheese Biscuit",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.59
+                        }
+                    ],
+                    "description": "Thick-cut Applewood smoked bacon, a fluffy folded egg, and a slice of melty American cheese on a warm, buttermilk biscuit. Southern comfort in every bite.",
+                    "longDescription": "Thick-cut Applewood smoked bacon, a fluffy folded egg, and a slice of melty American cheese on a warm, buttermilk biscuit. Southern comfort in every bite. A McDonald's breakfast staple.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconEggCheeseBiscuit_832x472"
+                },
+                {
+                    "name": "Sausage, Egg & Cheese McGriddles®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.79
+                        }
+                    ],
+                    "description": "Soft, warm griddle cakes with the taste of sweet maple, filled with a savory sausage patty, fluffy egg, and melty American cheese. Sweet meets savory.",
+                    "longDescription": "Soft, warm griddle cakes with the taste of sweet maple, filled with a savory sausage patty, fluffy egg, and melty American cheese. A sweet and savory breakfast combo that's uniquely McDonald's.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageEggCheeseGriddle_832x472"
+                },
+                {
+                    "name": "Bacon, Egg & Cheese McGriddles®",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.99
+                        }
+                    ],
+                    "description": "Thick-cut Applewood smoked bacon, a fluffy folded egg, and melty American cheese between soft, warm griddle cakes with the taste of sweet maple.",
+                    "longDescription": "Thick-cut Applewood smoked bacon, a fluffy folded egg, and melty American cheese between soft, warm griddle cakes with the taste of sweet maple. Breakfast perfection.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconEggCheeseGriddle_832x472"
+                },
+                {
+                    "name": "Hotcakes",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 4.19
+                        }
+                    ],
+                    "description": "Three fluffy, golden-brown hotcakes served with real butter and sweet maple-flavored hotcake syrup. A warm, comforting breakfast classic.",
+                    "longDescription": "Three fluffy, golden-brown hotcakes served with real butter and sweet maple-flavored hotcake syrup. A warm, comforting breakfast classic. Also available with sausage.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Hotcakes_832x472"
+                },
+                {
+                    "name": "Hotcakes & Sausage",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.19
+                        }
+                    ],
+                    "description": "Three fluffy, golden-brown hotcakes with real butter and sweet maple-flavored syrup, plus a warm sausage patty on the side.",
+                    "longDescription": "Three fluffy, golden-brown hotcakes with real butter and sweet maple-flavored syrup, plus a warm sausage patty on the side. The ultimate hearty breakfast.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotcakesSausage_832x472"
+                },
+                {
+                    "name": "Sausage Burrito",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 2.59
+                        }
+                    ],
+                    "description": "A warm flour tortilla filled with fluffy scrambled egg, pork sausage, melty cheese, green chiles, and onions. Breakfast on the go.",
+                    "longDescription": "A warm flour tortilla filled with fluffy scrambled egg, pork sausage, melty cheese, green chiles, and onions. A portable breakfast favorite at a great value.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Value Pick",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageBurrito_832x472"
+                },
+                {
+                    "name": "Hash Browns",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 2.99
+                        }
+                    ],
+                    "description": "Crispy, golden hash brown patties made from freshly shredded potatoes, seasoned and fried to delicious perfection. The perfect breakfast side.",
+                    "longDescription": "Crispy, golden hash brown patties made from freshly shredded potatoes, seasoned and fried to delicious perfection. The perfect breakfast side or snack.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HashBrowns_832x472"
+                }
+            ]
+        },
+        {
+            "category": "Fries, Sides & Drinks",
+            "items": [
+                {
+                    "name": "World Famous Fries®",
                     "sizes": [
                         {
                             "size": "Small",
-                            "price": 2.99
+                            "price": 1.89
                         },
                         {
                             "size": "Medium",
-                            "price": 3.79
+                            "price": 3.59
+                        },
+                        {
+                            "size": "Large",
+                            "price": 4.19
+                        }
+                    ],
+                    "description": "Our World Famous Fries® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted.",
+                    "longDescription": "Our World Famous Fries® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted. The iconic fries that make every meal complete.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FrenchFries_832x472"
+                },
+                {
+                    "name": "Apple Slices",
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 0.89
+                        }
+                    ],
+                    "description": "Fresh, crisp apple slices. A wholesome snack or side that's a great complement to any meal.",
+                    "longDescription": "Fresh, crisp apple slices. A wholesome snack or side that's a great complement to any meal. Perfect for kids and adults alike.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_AppleSlices_832x472"
+                },
+                {
+                    "name": "Coca-Cola®",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 1.29
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 1.79
+                        },
+                        {
+                            "size": "Large",
+                            "price": 2.29
+                        }
+                    ],
+                    "description": "Ice-cold Coca-Cola® — the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal.",
+                    "longDescription": "Ice-cold Coca-Cola® — the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal. Served from our fountain, just the way you like it.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CocaCola_832x472"
+                },
+                {
+                    "name": "Sprite®",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 1.29
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 1.79
+                        },
+                        {
+                            "size": "Large",
+                            "price": 2.29
+                        }
+                    ],
+                    "description": "Crisp, refreshing Sprite® with a lemon-lime flavor that quenches your thirst and complements any meal.",
+                    "longDescription": "Crisp, refreshing Sprite® with a lemon-lime flavor that quenches your thirst and complements any meal. Served from our fountain with ice.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Sprite_832x472"
+                },
+                {
+                    "name": "Hi-C® Orange Lavaburst",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 1.29
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 1.79
+                        },
+                        {
+                            "size": "Large",
+                            "price": 2.29
+                        }
+                    ],
+                    "description": "The fan-favorite Hi-C® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip.",
+                    "longDescription": "The fan-favorite Hi-C® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip. The beloved McDonald's fountain drink that fans asked for by name.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HiCOrange_832x472"
+                },
+                {
+                    "name": "Sweet Iced Tea",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 1.19
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 1.49
+                        },
+                        {
+                            "size": "Large",
+                            "price": 1.89
+                        }
+                    ],
+                    "description": "Freshly brewed and sweetened to perfection. McDonald's Sweet Iced Tea is made from a refreshing blend of brewed orange pekoe and pekoe cut black tea.",
+                    "longDescription": "Freshly brewed and sweetened to perfection. McDonald's Sweet Iced Tea is made from a refreshing blend of brewed orange pekoe and pekoe cut black tea, served ice-cold. A Southern classic.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SweetTea_832x472"
+                },
+                {
+                    "name": "Premium Roast Coffee",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 1.49
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 1.99
+                        },
+                        {
+                            "size": "Large",
+                            "price": 2.29
+                        }
+                    ],
+                    "description": "A rich, smooth blend of 100% Arabica beans, freshly brewed every 30 minutes. The perfect cup, available hot.",
+                    "longDescription": "A rich, smooth blend of 100% Arabica beans, freshly brewed every 30 minutes. The perfect cup to start your morning or keep you going through the day.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_PremiumCoffee_832x472"
+                },
+                {
+                    "name": "Caramel Frappé",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 3.49
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.99
                         },
                         {
                             "size": "Large",
                             "price": 4.49
                         }
                     ],
-                    "description": "Crispy, golden tots smothered with warm chili and melty cheddar cheese.",
-                    "longDescription": "Crispy, golden tots smothered with warm chili and melty cheddar cheese.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle.",
+                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafé® favorite.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/f364e808-ead7-4c3f-d35b-bff91685df00/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelFrappe_832x472"
                 },
                 {
-                    "name": "Mozzarella Sticks",
+                    "name": "Mocha Frappé",
                     "sizes": [
                         {
                             "size": "Small",
-                            "price": 3.89
+                            "price": 3.49
                         },
                         {
                             "size": "Medium",
-                            "price": 4.89
-                        },
-                        {
-                            "size": "Large",
-                            "price": 5.89
-                        }
-                    ],
-                    "description": "Crispy on the outside, gooey on the inside! Our Mozzarella Sticks are made with melty, real mozzarella cheese breaded and perfectly fried.  Add a sauce of your choice for dipping!",
-                    "longDescription": "Crispy on the outside, gooey on the inside! Our Mozzarella Sticks are made with melty, real mozzarella cheese breaded and perfectly fried.  Add a sauce of your choice for dipping!",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/1787761a-f1ea-4c35-af88-248431d64200/download"
-                },
-                {
-                    "name": "Onion Rings",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 3.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 3.89
-                        },
-                        {
-                            "size": "Large",
-                            "price": 4.59
-                        }
-                    ],
-                    "description": "Crispy and golden Onion Rings",
-                    "longDescription": "Crispy and golden Onion Rings",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/a031310e-acc2-46e3-7427-64ce37731200/download"
-                },
-                {
-                    "name": "Ched 'R' Peppers",
-                    "sizes": [
-                        {
-                            "size": "Small",
                             "price": 3.99
                         },
                         {
-                            "size": "Medium",
-                            "price": 5.19
-                        },
-                        {
                             "size": "Large",
-                            "price": 6.39
+                            "price": 4.49
                         }
                     ],
-                    "description": "Fried until crispy, these breaded jalapeno peppers are filled with melty cheddar cheese and add a sauce of your choice for dipping!",
-                    "longDescription": "Fried until crispy, these breaded jalapeno peppers are filled with melty cheddar cheese and add a sauce of your choice for dipping!",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy.",
+                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafé® treat.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/443765db-e418-4abb-a45c-390f5fdeb400/download"
-                }
-            ]
-        },
-        {
-            "category": "Slushes & Drinks",
-            "items": [
-                {
-                    "name": "Cherry Limeade",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.59
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "Our iconic Cherry Limeade infuses fresh-squeezed lime and sweet cherry flavor and is poured over SONIC's famous ice!",
-                    "longDescription": "Our iconic Cherry Limeade infuses fresh-squeezed lime and sweet cherry flavor and is poured over SONIC's famous ice!",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/e01edf42-3739-445b-7f95-d29937a5b400/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_MochaFrappe_832x472"
                 },
                 {
-                    "name": "Ocean Water®",
+                    "name": "Minute Maid® Orange Juice",
                     "sizes": [
                         {
-                            "size": "Mini",
-                            "price": 1.59
-                        },
-                        {
                             "size": "Small",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "Our signature Ocean Water is sweet and refreshing with the hint of Blue Coconut flavor, served over SONIC's famous ice.",
-                    "longDescription": "Our signature Ocean Water is sweet and refreshing with the hint of Blue Coconut flavor, served over SONIC's famous ice.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/8fb45110-623f-4725-8792-838041357200/download"
-                },
-                {
-                    "name": "Blue Raspberry Slush",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.39
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "Sweet and tangy blue raspberry icy slush",
-                    "longDescription": "Sweet and tangy blue raspberry icy slush",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/7e4699da-8080-4d7e-c4c4-dca771bba600/download"
-                },
-                {
-                    "name": "Strawberry Slush",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.89
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.69
+                            "price": 2.39
                         },
                         {
                             "size": "Medium",
@@ -448,616 +657,183 @@
                         },
                         {
                             "size": "Large",
-                            "price": 3.89
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 4.29
-                        }
-                    ],
-                    "description": "Strawberry icy slush with real strawberries",
-                    "longDescription": "Strawberry icy slush with real strawberries",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/1d366d9e-f62c-4410-0aa9-941e85570c00/download"
-                },
-                {
-                    "name": "Cherry Slush",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.39
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
                             "price": 3.79
                         }
                     ],
-                    "description": "Sweet cherry icy slush",
-                    "longDescription": "Sweet cherry icy slush",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "100% orange juice, freshly squeezed goodness from Minute Maid®. A refreshing way to start your morning.",
+                    "longDescription": "100% orange juice, freshly squeezed goodness from Minute Maid®. A refreshing way to start your morning or pair with any McDonald's meal.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/770a6220-62a2-4674-feb9-75fd3c522f00/download"
-                },
-                {
-                    "name": "All Natural Lemonade",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.79
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.69
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.59
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.99
-                        }
-                    ],
-                    "description": "All natural Lemonade, made with real fruit lemons.",
-                    "longDescription": "All natural Lemonade, made with real fruit lemons.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/ef218444-03fd-45cf-2088-a4547b1fbf00/download"
-                },
-                {
-                    "name": "Grape Slush",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.39
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.79
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "The sweet flavor of Grape in an icy Slush",
-                    "longDescription": "The sweet flavor of Grape in an icy Slush",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/dc0d4973-f818-48e3-2a58-0fa3ca49d800/download"
-                },
-                {
-                    "name": "Cranberry Limeade",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.59
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "Limeade made with real lime and cranberry flavoring.",
-                    "longDescription": "Limeade made with real lime and cranberry flavoring.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/1cfc9dee-9fb2-43c3-1b48-05edd3dbaa00/download"
-                },
-                {
-                    "name": "Sweet Iced Tea",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.19
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "Large",
-                            "price": 2.99
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.49
-                        }
-                    ],
-                    "description": "Freshly brewed sweet tea served over SONIC's famous ice.",
-                    "longDescription": "Freshly brewed sweet tea served over SONIC's famous ice.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/335ba53d-3e4d-4018-da92-2a482f8a1500/download"
-                },
-                {
-                    "name": "Strawberry Limeade",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 1.59
-                        },
-                        {
-                            "size": "Small",
-                            "price": 2.49
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "RT 44",
-                            "price": 3.79
-                        }
-                    ],
-                    "description": "Strawberry limeade made with lime and real strawberry.",
-                    "longDescription": "Strawberry limeade made with lime and real strawberry.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/39a9cdfd-4b29-4d75-de8b-c12767a56e00/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_OrangeJuice_832x472"
                 }
             ]
         },
         {
-            "category": "Shakes & Ice Cream",
+            "category": "Sweets & Treats",
             "items": [
                 {
-                    "name": "Vanilla Classic Shake",
+                    "name": "McFlurry® with OREO® Cookies",
                     "sizes": [
                         {
-                            "size": "Mini",
-                            "price": 3.39
-                        },
+                            "size": "Regular",
+                            "price": 4.29
+                        }
+                    ],
+                    "description": "Creamy vanilla soft serve swirled with crunchy OREO® cookie pieces. A delicious frozen treat that's the perfect ending to any meal.",
+                    "longDescription": "Creamy vanilla soft serve swirled with crunchy OREO® cookie pieces. A delicious frozen treat that's the perfect ending to any meal. Made with our creamy vanilla soft serve.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryOreo_832x472"
+                },
+                {
+                    "name": "McFlurry® with M&M's® Candies",
+                    "sizes": [
+                        {
+                            "size": "Regular",
+                            "price": 4.29
+                        }
+                    ],
+                    "description": "Creamy vanilla soft serve blended with colorful, crunchy M&M's® chocolate candies. A sweet, crunchy, irresistible combination.",
+                    "longDescription": "Creamy vanilla soft serve blended with colorful, crunchy M&M's® chocolate candies. A sweet, crunchy, irresistible combination that's fun in every bite.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryMM_832x472"
+                },
+                {
+                    "name": "Chocolate Shake",
+                    "sizes": [
                         {
                             "size": "Small",
+                            "price": 2.99
+                        },
+                        {
+                            "size": "Medium",
+                            "price": 3.69
+                        },
+                        {
+                            "size": "Large",
                             "price": 4.19
+                        }
+                    ],
+                    "description": "Thick, creamy, and delicious — our chocolate shake is made with our creamy vanilla soft serve and chocolate syrup, topped with whipped topping.",
+                    "longDescription": "Thick, creamy, and delicious — our chocolate shake is made with our creamy vanilla soft serve and chocolate syrup, topped with whipped topping. A classic treat.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ChocolateShake_832x472"
+                },
+                {
+                    "name": "Vanilla Shake",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 2.99
                         },
                         {
                             "size": "Medium",
-                            "price": 4.69
+                            "price": 3.69
                         },
                         {
                             "size": "Large",
-                            "price": 5.69
-                        }
-                    ],
-                    "description": "Our Vanilla Shake is made with creamy vanilla soft serve and finished with whipped topping and a cherry.",
-                    "longDescription": "Our Vanilla Shake is made with creamy vanilla soft serve and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/b6ebeb24-53c7-4f63-7ecc-23fecf83c400/download"
-                },
-                {
-                    "name": "Chocolate Classic Shake",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Small",
                             "price": 4.19
+                        }
+                    ],
+                    "description": "Thick, creamy, and delicious — our vanilla shake is made with our creamy vanilla soft serve and topped with whipped topping. Simple perfection.",
+                    "longDescription": "Thick, creamy, and delicious — our vanilla shake is made with our creamy vanilla soft serve and topped with whipped topping. Simple perfection in every sip.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_VanillaShake_832x472"
+                },
+                {
+                    "name": "Strawberry Shake",
+                    "sizes": [
+                        {
+                            "size": "Small",
+                            "price": 2.99
                         },
                         {
                             "size": "Medium",
-                            "price": 4.69
+                            "price": 3.69
                         },
                         {
                             "size": "Large",
-                            "price": 5.69
-                        }
-                    ],
-                    "description": "Our Chocolate Shake is made with creamy vanilla soft serve, rich chocolate sauce, and finished with whipped topping and a cherry.",
-                    "longDescription": "Our Chocolate Shake is made with creamy vanilla soft serve, rich chocolate sauce, and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/4e7576bc-a0fd-433c-b430-0f2b16d19200/download"
-                },
-                {
-                    "name": "Strawberry Classic Shake",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Small",
                             "price": 4.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 4.69
-                        },
-                        {
-                            "size": "Large",
-                            "price": 5.69
                         }
                     ],
-                    "description": "Our Strawberry Shake is made with creamy vanilla soft serve, real strawberries, and finished with whipped topping and a cherry.",
-                    "longDescription": "Our Strawberry Shake is made with creamy vanilla soft serve, real strawberries, and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "Thick, creamy, and delicious — our strawberry shake is made with our creamy vanilla soft serve and strawberry syrup, topped with whipped topping.",
+                    "longDescription": "Thick, creamy, and delicious — our strawberry shake is made with our creamy vanilla soft serve and strawberry syrup, topped with whipped topping. Fruity and refreshing.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/15ddec4e-4d3f-4493-77f0-4c6c87f9ec00/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_StrawberryShake_832x472"
                 },
                 {
-                    "name": "Peanut Butter Classic Shake",
+                    "name": "Vanilla Cone",
                     "sizes": [
                         {
-                            "size": "Mini",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Small",
-                            "price": 4.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 4.69
-                        },
-                        {
-                            "size": "Large",
-                            "price": 5.69
+                            "size": "Standard",
+                            "price": 1.49
                         }
                     ],
-                    "description": "Our Peanut Butter Shake is made with sweet vanilla soft serve, creamy peanut butter and finished with whipped topping and a cherry.",
-                    "longDescription": "Our Peanut Butter Shake is made with sweet vanilla soft serve, creamy peanut butter and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/47745a83-d60d-4d45-8431-e989881be100/download"
-                },
-                {
-                    "name": "SONIC Blast® made with REESE’S",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 3.99
-                        },
-                        {
-                            "size": "Small",
-                            "price": 4.89
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 5.89
-                        }
-                    ],
-                    "description": "REESE’S Peanut Butter Cups swirled with SONIC’s creamy vanilla soft serve & topped with more REESE’S Peanut Butter Cups",
-                    "longDescription": "REESE’S Peanut Butter Cups swirled with SONIC’s creamy vanilla soft serve & topped with more REESE’S Peanut Butter Cups",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/66d19fca-7e7e-4a6d-2a1e-ea8c33cc7200/download"
-                },
-                {
-                    "name": "SONIC Blast® made with OREO® Cookie Pieces",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 3.99
-                        },
-                        {
-                            "size": "Small",
-                            "price": 4.89
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 5.89
-                        }
-                    ],
-                    "description": "OREO® Cookie pieces swirled with SONIC’s creamy vanilla soft serve & topped with more Oreo® Cookie pieces",
-                    "longDescription": "OREO® Cookie pieces swirled with SONIC’s creamy vanilla soft serve & topped with more Oreo® Cookie pieces",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/ce235294-a6bd-4f9b-f3e5-8235aa8e2000/download"
-                },
-                {
-                    "name": "OREO® Cheesecake Master Shake®",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 3.89
-                        },
-                        {
-                            "size": "Small",
-                            "price": 4.59
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 5.39
-                        },
-                        {
-                            "size": "Large",
-                            "price": 6.59
-                        }
-                    ],
-                    "description": "Creamy vanilla soft serve mixed with the rich flavor of cheesecake, graham cracker crumbs and OREO® Cookie Pieces into a thick and creamy shake, finished with whipped topping, more graham cracker crumbs and a cherry.",
-                    "longDescription": "Creamy vanilla soft serve mixed with the rich flavor of cheesecake, graham cracker crumbs and OREO® Cookie Pieces into a thick and creamy shake, finished with whipped topping, more graham cracker crumbs and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/d2c03630-fb1f-4577-c4a3-c1bdfb43c600/download"
+                    "description": "Creamy, smooth vanilla soft serve in a crispy cone. A sweet, simple treat at a great price.",
+                    "longDescription": "Creamy, smooth vanilla soft serve in a crispy cone. A sweet, simple treat at a great price. The perfect way to end a meal or enjoy as a snack.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Value Pick",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_VanillaCone_832x472"
                 },
                 {
                     "name": "Hot Fudge Sundae",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 3.19
+                            "price": 3.49
                         }
                     ],
-                    "description": "Our Hot Fudge Sundaes start with creamy, vanilla soft serve swirled together with hot fudge, and finished with whipped topping and a cherry.",
-                    "longDescription": "Our Hot Fudge Sundaes start with creamy, vanilla soft serve swirled together with hot fudge, and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "Creamy vanilla soft serve topped with hot, rich fudge sauce. A warm-and-cold combination that's pure indulgence.",
+                    "longDescription": "Creamy vanilla soft serve topped with hot, rich fudge sauce. A warm-and-cold combination that's pure indulgence. A McDonald's dessert classic.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/a7d39de2-8f7b-431d-c776-7df84dcfee00/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotFudgeSundae_832x472"
                 },
                 {
-                    "name": "Banana Classic Shake",
-                    "sizes": [
-                        {
-                            "size": "Mini",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Small",
-                            "price": 4.19
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 4.69
-                        },
-                        {
-                            "size": "Large",
-                            "price": 5.69
-                        }
-                    ],
-                    "description": "Our Banana Shake is made with creamy vanilla soft serve, bananas and finished with whipped topping and a cherry.",
-                    "longDescription": "Our Banana Shake is made with creamy vanilla soft serve, bananas and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/8b707628-27df-43c1-abdc-a164487c7b00/download"
-                },
-                {
-                    "name": "Caramel Sundae",
+                    "name": "Hot Caramel Sundae",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 3.19
+                            "price": 3.49
                         }
                     ],
-                    "description": "Caramel Sundaes start with creamy, vanilla soft serve swirled together with caramel and finished with whipped topping and a cherry.",
-                    "longDescription": "Caramel Sundaes start with creamy, vanilla soft serve swirled together with caramel and finished with whipped topping and a cherry.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "Creamy vanilla soft serve drizzled with warm, buttery caramel sauce. Sweet, smooth, and utterly satisfying.",
+                    "longDescription": "Creamy vanilla soft serve drizzled with warm, buttery caramel sauce. Sweet, smooth, and utterly satisfying. A dessert you'll crave again and again.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/03487758-7de6-42fe-1c22-cfc7f645ec00/download"
-                }
-            ]
-        },
-        {
-            "category": "Extras & Sides",
-            "items": [
-                {
-                    "name": "Cheese Tots",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 2.69
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.99
-                        }
-                    ],
-                    "description": "Crispy tots fried to a golden brown and topped with melted cheese",
-                    "longDescription": "Crispy tots fried to a golden brown and topped with melted cheese",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/4a4ca662-fc5f-4314-aafc-a587d8132400/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelSundae_832x472"
                 },
                 {
-                    "name": "Cheese Groovy Fries",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 2.69
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 3.39
-                        },
-                        {
-                            "size": "Large",
-                            "price": 3.99
-                        }
-                    ],
-                    "description": "Fried thin and golden brown topped with melted cheese.",
-                    "longDescription": "Fried thin and golden brown topped with melted cheese.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/0b4f01f0-d0ac-47ad-aaed-c02b45946500/download"
-                },
-                {
-                    "name": "Chili Cheese Groovy Fries",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 2.99
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 3.79
-                        },
-                        {
-                            "size": "Large",
-                            "price": 4.49
-                        }
-                    ],
-                    "description": "Fried thin and golden brown smothered in warm chili and topped with cheddar cheese.",
-                    "longDescription": "Fried thin and golden brown smothered in warm chili and topped with cheddar cheese.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/2d01a611-ee8b-471e-6e51-da9fd3c32500/download"
-                },
-                {
-                    "name": "Premium Chicken Bites",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 3.89
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 5.69
-                        },
-                        {
-                            "size": "Large",
-                            "price": 6.89
-                        }
-                    ],
-                    "description": "",
-                    "longDescription": "",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/3a37bc8e-8f5a-4d58-e771-4183f78aef00/download"
-                },
-                {
-                    "name": "FRITOS® Chili Cheese Wrap",
+                    "name": "Baked Apple Pie",
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 2.99
+                            "price": 1.59
                         }
                     ],
-                    "description": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 10” flour tortilla.",
-                    "longDescription": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 10” flour tortilla.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/031342cc-de80-4c40-7552-06f41b5cb200/download"
+                    "description": "A flaky, baked crust filled with sweet, cinnamon-spiced apples. A warm, satisfying dessert at a great value.",
+                    "longDescription": "A flaky, baked crust filled with sweet, cinnamon-spiced apples. A warm, satisfying dessert at a great value. A McDonald's classic since the early days.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Value Pick",
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ApplePie_832x472"
                 },
                 {
-                    "name": "Soft Pretzel Twist",
+                    "name": "Chocolate Chip Cookie",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 1.99
                         }
                     ],
-                    "description": "A tasty twist on a classic. Enjoy a warm butter-flavored soft pretzel topped with salt. Enjoy it by itself, or pair it with one of SONIC's great dipping sauce options.",
-                    "longDescription": "A tasty twist on a classic. Enjoy a warm butter-flavored soft pretzel topped with salt. Enjoy it by itself, or pair it with one of SONIC's great dipping sauce options.",
-                    "origin": "Sonic Drive-In Menu",
+                    "description": "A warm, soft-baked chocolate chip cookie made with semi-sweet chocolate chips. Freshly baked and delicious.",
+                    "longDescription": "A warm, soft-baked chocolate chip cookie made with semi-sweet chocolate chips. Freshly baked and delicious. The perfect grab-and-go treat.",
+                    "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/842cf05e-892e-47af-898b-5eb1020e3e00/download"
-                },
-                {
-                    "name": "Fritos Chili Cheese Pie",
-                    "sizes": [
-                        {
-                            "size": "Small",
-                            "price": 2.89
-                        },
-                        {
-                            "size": "Medium",
-                            "price": 3.49
-                        },
-                        {
-                            "size": "Large",
-                            "price": 4.29
-                        }
-                    ],
-                    "description": "Crunchy FRITOS® topped with signature chili and melted cheddar cheese.",
-                    "longDescription": "Crunchy FRITOS® topped with signature chili and melted cheddar cheese.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/727ef87b-b324-47ca-236a-1456a61a5300/download"
-                },
-                {
-                    "name": "Crispy Tenders - 3 Piece",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 5.19
-                        }
-                    ],
-                    "description": "Three 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
-                    "longDescription": "Three 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/ca91d6bc-71d0-4d80-4d6a-d3c9831fe600/download"
-                },
-                {
-                    "name": "Crispy Tenders - 5 Piece",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 6.19
-                        }
-                    ],
-                    "description": "Five 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
-                    "longDescription": "Five 100% all-white meat chicken tenders are crispy and packed with flavor. Enjoy them by themself, or pair them with SONIC's great dipping sauce options.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/2b39ce5d-ca8e-447e-8c17-abd07085a000/download"
-                },
-                {
-                    "name": "FRITOS® Chili Cheese Jr. Wrap",
-                    "sizes": [
-                        {
-                            "size": "Standard",
-                            "price": 1.89
-                        }
-                    ],
-                    "description": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 8” flour tortilla.",
-                    "longDescription": "Crunchy FRITOS®, warm chili and melted cheddar cheese in a warm, 8” flour tortilla.",
-                    "origin": "Sonic Drive-In Menu",
-                    "popularity": "",
-                    "image": "https://imagedelivery.net/cyuZzWywsYlsu7DPQZIgOg/3cdb690a-82b0-4599-4213-13821c7aef00/download"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ChocChipCookie_832x472"
                 }
             ]
         }
