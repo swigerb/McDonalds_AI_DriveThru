@@ -37,9 +37,9 @@
 
 ## Model
 
-- **Preferred:** auto
-- **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
-- **Fallback:** Standard chain — the coordinator handles fallback automatically
+- **Preferred:** claude-opus-4.6
+- **Rationale:** Mayor McCheese needs maximum reasoning depth for infrastructure decisions, Bicep IaC, and deployment reliability — always uses Claude Opus 4.6
+- **Fallback:** claude-opus-4.6 (no fallback — always Opus)
 
 ## Collaboration
 
