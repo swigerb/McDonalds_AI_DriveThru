@@ -100,6 +100,11 @@ BREAKFAST_MEAL_NUMBER_MAP = {
     "3": "Sausage Biscuit Meal",
     "4": "Bacon Egg Cheese Biscuit Meal",
     "5": "Sausage Egg Cheese McGriddles Meal",
+    "6": "Big Breakfast with Hotcakes Meal",
+    "7": "Big Breakfast Meal",
+    "8": "Hotcakes Meal",
+    "9": "Bacon Egg Cheese McGriddles Meal",
+    "10": "Sausage Biscuit with Egg Meal",
 }
 
 # Written-out number words → digit strings

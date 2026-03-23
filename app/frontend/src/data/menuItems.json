@@ -809,6 +809,96 @@
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausEggCheeseMcGriddles_832x472",
                     "calories": 830,
                     "allergens": "Wheat, Milk, Egg, Soy"
+                },
+                {
+                    "name": "Big Breakfast® with Hotcakes Meal",
+                    "menuPeriod": "breakfast",
+                    "mealNumber": 6,
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 7.99
+                        }
+                    ],
+                    "description": "Scrambled eggs, sausage patty, biscuit, hash brown, and hotcakes with butter and syrup, plus a Small Premium Roast Coffee.",
+                    "longDescription": "Big Breakfast® with Hotcakes as a breakfast Extra Value Meal featuring scrambled eggs, a sausage patty, a warm biscuit, a crispy hash brown, and three golden brown hotcakes with butter and syrup, plus a Small Premium Roast Coffee.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Best Seller",
+                    "image": "",
+                    "calories": 1340,
+                    "allergens": "Wheat, Egg, Milk, Soy"
+                },
+                {
+                    "name": "Big Breakfast® Meal",
+                    "menuPeriod": "breakfast",
+                    "mealNumber": 7,
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 6.49
+                        }
+                    ],
+                    "description": "Scrambled eggs, sausage patty, biscuit, and hash brown, plus a Small Premium Roast Coffee.",
+                    "longDescription": "Big Breakfast® as a breakfast Extra Value Meal featuring warm scrambled eggs, a sausage patty, a warm biscuit, and a crispy hash brown, plus a Small Premium Roast Coffee.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "",
+                    "calories": 760,
+                    "allergens": "Wheat, Egg, Milk, Soy"
+                },
+                {
+                    "name": "Hotcakes Meal",
+                    "menuPeriod": "breakfast",
+                    "mealNumber": 8,
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.49
+                        }
+                    ],
+                    "description": "Three golden brown hotcakes with butter and syrup, plus a Small Premium Roast Coffee.",
+                    "longDescription": "Hotcakes as a breakfast Extra Value Meal featuring three golden brown hotcakes with a side of real butter and sweet maple flavored hotcake syrup, plus a Small Premium Roast Coffee.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "",
+                    "calories": 590,
+                    "allergens": "Wheat, Egg, Milk, Soy"
+                },
+                {
+                    "name": "Bacon, Egg & Cheese McGriddles® Meal",
+                    "menuPeriod": "breakfast",
+                    "mealNumber": 9,
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 6.99
+                        }
+                    ],
+                    "description": "Bacon, egg, and cheese between maple-flavored McGriddles® cakes as a breakfast meal with Hash Browns and a Small Premium Roast Coffee.",
+                    "longDescription": "Bacon, Egg & Cheese McGriddles® as a breakfast Extra Value Meal with Hash Browns and a Small Premium Roast Coffee.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "",
+                    "calories": 780,
+                    "allergens": "Wheat, Egg, Milk, Soy"
+                },
+                {
+                    "name": "Sausage Biscuit with Egg Meal",
+                    "menuPeriod": "breakfast",
+                    "mealNumber": 10,
+                    "sizes": [
+                        {
+                            "size": "Standard",
+                            "price": 5.99
+                        }
+                    ],
+                    "description": "Sausage Biscuit with Egg as a breakfast meal with Hash Browns and a Small Premium Roast Coffee.",
+                    "longDescription": "Sausage Biscuit with Egg as a breakfast Extra Value Meal with Hash Browns and a Small Premium Roast Coffee.",
+                    "origin": "McDonald's Menu",
+                    "popularity": "Popular",
+                    "image": "",
+                    "calories": 720,
+                    "allergens": "Wheat, Egg, Milk, Soy"
                 }
             ]
         },
