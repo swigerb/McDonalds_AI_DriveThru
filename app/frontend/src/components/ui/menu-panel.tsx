@@ -55,7 +55,7 @@ export default memo(function MenuPanel() {
                 return (
                     <div
                         key={category.category}
-                        className="rounded-3xl border border-primary/10 bg-white/80 shadow-[0_15px_35px_rgba(40,87,128,0.08)] dark:border-white/10 dark:bg-[#0f1a24]/95 dark:shadow-[0_25px_55px_rgba(0,0,0,0.65)]"
+                        className="rounded-3xl border border-primary/10 bg-white/80 shadow-[0_15px_35px_rgba(39,37,31,0.08)] dark:border-white/10 dark:bg-[#1a1812]/95 dark:shadow-[0_25px_55px_rgba(0,0,0,0.65)]"
                     >
                         <button
                             type="button"
@@ -72,7 +72,7 @@ export default memo(function MenuPanel() {
                                 </h3>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="whitespace-nowrap rounded-full bg-[#285780]/10 px-3 py-1 text-xs font-bold text-[#285780] dark:bg-[#152231] dark:text-[#74D2E7]">
+                                <span className="whitespace-nowrap rounded-full bg-[#27251F]/10 px-3 py-1 text-xs font-bold text-[#27251F] dark:bg-[#211f18] dark:text-[#FFBC0D]">
                                     {category.items.length} items
                                 </span>
                                 <motion.span

@@ -3,17 +3,17 @@ import OrderSummary, { calculateOrderSummary, OrderItem, OrderSummaryProps } fro
 
 describe("OrderSummary", () => {
     const sampleItems: OrderItem[] = [
-        { item: "SuperSONIC® Double Cheeseburger", size: "standard", quantity: 2, price: 6.99, display: "SuperSONIC® Double Cheeseburger" },
-        { item: "Large Tots", size: "standard", quantity: 1, price: 3.29, display: "Large Tots" }
+        { item: "Big Mac", size: "standard", quantity: 2, price: 5.99, display: "Big Mac" },
+        { item: "Large Fries", size: "standard", quantity: 1, price: 3.79, display: "Large Fries" }
     ];
 
-    it("renders Sonic items with the correct totals", () => {
+    it("renders McDonald's items with the correct totals", () => {
         const summary = calculateOrderSummary(sampleItems);
         render(<OrderSummary order={summary} />);
 
-        expect(screen.getByText("Your Sonic Order")).toBeInTheDocument();
-        expect(screen.getByText(/SuperSONIC® Double Cheeseburger/)).toBeInTheDocument();
-        expect(screen.getByText(/Large Tots/)).toBeInTheDocument();
+        expect(screen.getByText("Your McDonald's Order")).toBeInTheDocument();
+        expect(screen.getByText(/Big Mac/)).toBeInTheDocument();
+        expect(screen.getByText(/Large Fries/)).toBeInTheDocument();
         expect(screen.getByText(`$${summary.total.toFixed(2)}`)).toBeInTheDocument();
         expect(screen.getByText(`$${summary.finalTotal.toFixed(2)}`)).toBeInTheDocument();
     });
@@ -22,6 +22,6 @@ describe("OrderSummary", () => {
         const emptySummary: OrderSummaryProps = { items: [], total: 0, tax: 0, finalTotal: 0 };
         render(<OrderSummary order={emptySummary} />);
 
-        expect(screen.getByText(/Add a slush, burger, or shake/i)).toBeInTheDocument();
+        expect(screen.getByText(/Add a Big Mac, McNuggets, or McFlurry/i)).toBeInTheDocument();
     });
 });

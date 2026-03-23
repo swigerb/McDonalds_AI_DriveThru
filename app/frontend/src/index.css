@@ -14,60 +14,60 @@
 
 @layer base {
     :root {
-        --brand-red: 341 100% 45%;
-        --brand-blue: 208 52% 33%;
-        --brand-light: 195 44% 96%;
-        --brand-dark: 208 53% 20%;
+        --brand-red: 357 100% 43%;
+        --brand-blue: 40 12% 14%;
+        --brand-light: 30 33% 94%;
+        --brand-dark: 40 12% 14%;
+        --accent: 44 100% 52%;
         --background: var(--brand-light);
         --foreground: var(--brand-dark);
         --card: 0 0% 100%;
-        --card-foreground: 208 40% 18%;
+        --card-foreground: 40 12% 18%;
         --popover: 0 0% 100%;
-        --popover-foreground: 208 40% 18%;
+        --popover-foreground: 40 12% 18%;
         --primary: var(--brand-red);
         --primary-foreground: 0 0% 100%;
-        --secondary: 192 40% 90%;
-        --secondary-foreground: 208 48% 24%;
-        --muted: 200 20% 90%;
-        --muted-foreground: 210 15% 35%;
-        --accent: 52 100% 50%;
-        --accent-foreground: 208 53% 20%;
+        --secondary: 30 30% 90%;
+        --secondary-foreground: 40 12% 24%;
+        --muted: 30 15% 90%;
+        --muted-foreground: 40 10% 35%;
+        --accent-foreground: 40 12% 14%;
         --destructive: 357 75% 44%;
         --destructive-foreground: 0 0% 100%;
-        --border: 200 20% 85%;
-        --input: 200 20% 85%;
-        --ring: 341 100% 45%;
-        --chart-1: 341 100% 45%;
-        --chart-2: 208 52% 33%;
-        --chart-3: 52 100% 50%;
-        --chart-4: 192 67% 68%;
+        --border: 30 15% 85%;
+        --input: 30 15% 85%;
+        --ring: 357 100% 43%;
+        --chart-1: 357 100% 43%;
+        --chart-2: 44 100% 52%;
+        --chart-3: 40 12% 14%;
+        --chart-4: 30 33% 70%;
         --chart-5: 97 100% 26%;
         --radius: 0.5rem;
     }
     .dark {
-        --background: 210 20% 5%;
+        --background: 40 12% 5%;
         --foreground: 0 0% 98%;
-        --card: 210 20% 5%;
+        --card: 40 12% 5%;
         --card-foreground: 0 0% 98%;
-        --popover: 210 20% 5%;
+        --popover: 40 12% 5%;
         --popover-foreground: 0 0% 98%;
-        --primary: 341 100% 55%;
+        --primary: 357 100% 50%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 208 30% 15%;
+        --secondary: 40 15% 15%;
         --secondary-foreground: 0 0% 98%;
-        --muted: 210 15% 15%;
+        --muted: 40 10% 15%;
         --muted-foreground: 0 0% 63.9%;
-        --accent: 52 100% 50%;
+        --accent: 44 100% 52%;
         --accent-foreground: 0 0% 10%;
         --destructive: 357 75% 35%;
         --destructive-foreground: 0 0% 98%;
-        --border: 210 15% 15%;
-        --input: 210 15% 15%;
-        --ring: 341 100% 55%;
-        --chart-1: 341 100% 55%;
-        --chart-2: 208 60% 50%;
-        --chart-3: 52 100% 55%;
-        --chart-4: 192 67% 68%;
+        --border: 40 10% 15%;
+        --input: 40 10% 15%;
+        --ring: 357 100% 50%;
+        --chart-1: 357 100% 50%;
+        --chart-2: 44 100% 52%;
+        --chart-3: 40 12% 14%;
+        --chart-4: 30 33% 70%;
         --chart-5: 97 80% 40%;
     }
 }
@@ -78,10 +78,10 @@
     }
     body {
         @apply bg-background text-foreground;
-        background-image: radial-gradient(40% 40% at 15% 20%, rgba(228, 0, 70, 0.10), transparent),
-            radial-gradient(38% 38% at 85% 10%, rgba(40, 87, 128, 0.12), transparent),
-            radial-gradient(32% 32% at 75% 60%, rgba(254, 221, 0, 0.15), transparent),
-            linear-gradient(180deg, rgba(242, 248, 250, 0.98), rgba(255, 255, 255, 0.95));
+        background-image: radial-gradient(40% 40% at 15% 20%, rgba(219, 0, 7, 0.10), transparent),
+            radial-gradient(38% 38% at 85% 10%, rgba(39, 37, 31, 0.12), transparent),
+            radial-gradient(32% 32% at 75% 60%, rgba(255, 188, 13, 0.15), transparent),
+            linear-gradient(180deg, rgba(245, 240, 235, 0.98), rgba(255, 255, 255, 0.95));
         min-height: 100vh;
     }
 
@@ -94,7 +94,7 @@
         width: 280px;
         height: 280px;
         border-radius: 50%;
-        background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), rgba(40, 87, 128, 0.12));
+        background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), rgba(39, 37, 31, 0.12));
         filter: blur(40px);
     }
 

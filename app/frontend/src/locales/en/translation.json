@@ -1,6 +1,6 @@
 {
     "app": {
-        "title": "Sonic Voice Ordering",
+        "title": "McDonald's Voice Ordering",
         "footer": "Built with Azure AI, Azure OpenAI, and Azure Speech",
         "showTranscript": "Show transcript",
         "stopRecording": "Stop recording",
@@ -8,7 +8,7 @@
         "stopConversation": "Stop conversation"
     },
     "status": {
-        "notRecordingMessage": "Let's order from America's Drive-In!",
+        "notRecordingMessage": "Welcome to McDonald's Drive-Thru!",
         "conversationInProgress": "Conversation in progress"
     },
     "history": {

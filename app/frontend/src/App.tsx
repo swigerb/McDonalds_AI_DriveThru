@@ -27,7 +27,7 @@ import { AuthProvider, useAuth } from "@/context/auth-context";
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
 import azureLogo from "@/assets/azurelogo.svg";
-import sonicLogo from "@/assets/sonic-logo.svg";
+import mcdonaldsLogo from "@/assets/mcdonalds-logo.svg";
 
 type HighlightTone = "red" | "blue" | "yellow";
 
@@ -40,7 +40,7 @@ type SessionIdentifiersState = {
 const heroHighlights: Array<{ title: string; detail: string; tone: HighlightTone }> = [
     {
         title: "Rewards Ready",
-        detail: "Voice orders auto-sync with Sonic rewards and deals",
+        detail: "Voice orders auto-sync with McDonald's Rewards and deals",
         tone: "red"
     },
     {
@@ -50,17 +50,17 @@ const heroHighlights: Array<{ title: string; detail: string; tone: HighlightTone
     },
     {
         title: "Live Menu",
-        detail: "Azure AI Search keeps Sonic menu items current",
+        detail: "Azure AI Search keeps McDonald's menu items current",
         tone: "yellow"
     }
 ];
 
 const heroCallouts = [
-    { label: "Slush of the Day", value: "Cherry Limeade", accent: "#E40046" },
-    { label: "Carhop Pick", value: "SuperSONIC Cheeseburger", accent: "#285780" }
+    { label: "Featured Item", value: "Big Mac", accent: "#DB0007" },
+    { label: "Crew Pick", value: "Quarter Pounder® w/ Cheese", accent: "#27251F" }
 ];
 
-function SonicApp() {
+function McDonaldsApp() {
     const [isRecording, setIsRecording] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const { useAzureSpeechOn } = useAzureSpeechOnContext();
@@ -347,7 +347,7 @@ function SonicApp() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-primary transition hover:text-accent"
-                        title="View Sonic Voice Ordering source"
+                        title="View McDonald's Voice Ordering source"
                     >
                         <Github className="h-4 w-4" />
                         <span>Source on GitHub</span>
@@ -392,12 +392,12 @@ function SonicApp() {
                         <SheetTrigger asChild>
                             <Button variant="outline" className="mb-4 flex w-full items-center justify-center md:hidden">
                                 <Menu className="mr-2 h-4 w-4" />
-                                View Sonic Menu
+                                View McDonald's Menu
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" className="w-[300px] sm:w-[400px]">
                             <SheetHeader>
-                                <SheetTitle>Sonic Favorites</SheetTitle>
+                                <SheetTitle>McDonald's Favorites</SheetTitle>
                             </SheetHeader>
                             <div className="h-[calc(100vh-4rem)] overflow-auto pr-4">
                                 <MenuPanel />
@@ -407,7 +407,7 @@ function SonicApp() {
 
                     {/* Desktop Menu Panel */}
                     <Card className="hidden p-6 md:block">
-                        <h2 className="mb-4 text-center font-semibold text-primary">Sonic Favorites</h2>
+                        <h2 className="mb-4 text-center font-semibold text-primary">McDonald's Favorites</h2>
                         <div className="h-[calc(100vh-13rem)] overflow-auto pr-4">
                             <MenuPanel />
                         </div>
@@ -421,7 +421,7 @@ function SonicApp() {
                                 <Button
                                     onClick={onToggleListening}
                                     className={`h-12 w-60 border-none font-semibold shadow-lg transition-colors ${
-                                        isRecording ? "bg-[#285780] text-white hover:bg-[#18344D]" : "bg-[#E40046] text-white hover:bg-[#C31B24]"
+                                        isRecording ? "bg-[#27251F] text-white hover:bg-[#3d3a32]" : "bg-[#DB0007] text-white hover:bg-[#a50005]"
                                     }`}
                                     aria-label={isRecording ? t("app.stopRecording") : t("app.startRecording")}
                                 >
@@ -469,11 +469,10 @@ function SonicApp() {
                 </div>
             </div>
             <footer className="mx-auto mt-8 max-w-4xl space-y-2 text-center text-xs text-muted-foreground">
-                <p className="font-semibold uppercase tracking-[0.35em] text-[#285780]/80">{t("app.footer")}</p>
-                <p className="text-[11px] leading-relaxed text-[#18344D]/80">
-                    Disclaimer: This project is a non-commercial demo application created for educational and illustrative purposes only. It is not
-                    affiliated with, endorsed, or sponsored by Inspire Brands, Inc. or Sonic Corp. Any references to Sonic Drive-In or use of Sonic-inspired colors or
-                    themes are solely for demonstration and do not represent an official product.
+                <p className="text-base font-bold italic text-[#FFBC0D]">I'm Lovin' It™</p>
+                <p className="font-semibold uppercase tracking-[0.35em] text-[#27251F]/80">{t("app.footer")}</p>
+                <p className="text-[11px] leading-relaxed text-[#27251F]/80">
+                    This is a demo application built with Azure AI services. It is not affiliated with, endorsed by, or sponsored by McDonald's Corporation. McDonald's, Big Mac, McNuggets, McFlurry, McCafé, and other brand names are trademarks of McDonald's Corporation.
                 </p>
             </footer>
         </div>
@@ -482,18 +481,18 @@ function SonicApp() {
 
 const BrandHero = memo(function BrandHero() {
     return (
-        <section className="hero-card rounded-[32px] border border-white/40 bg-white/80 p-6 shadow-[0_25px_70px_rgba(40,87,128,0.18)] backdrop-blur-lg">
+        <section className="hero-card rounded-[32px] border border-white/40 bg-white/80 p-6 shadow-[0_25px_70px_rgba(39,37,31,0.18)] backdrop-blur-lg">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
                 <div className="flex-1 space-y-5">
                     <div className="flex flex-wrap items-center gap-3">
-                        <img src={sonicLogo} alt="Sonic Drive-In logo" className="h-20 w-auto drop-shadow-sm" loading="lazy" />
-                        <span className="rounded-full bg-[#E40046]/10 px-3 py-1 text-xs font-black uppercase tracking-[0.3em] text-[#E40046]">
+                        <img src={mcdonaldsLogo} alt="McDonald's logo" className="h-20 w-auto drop-shadow-sm" loading="lazy" />
+                        <span className="rounded-full bg-[#DB0007]/10 px-3 py-1 text-xs font-black uppercase tracking-[0.3em] text-[#DB0007]">
                             Voice Ordering Demo
                         </span>
                     </div>
-                    <h1 className="text-4xl font-black leading-tight text-[#E40046] sm:text-5xl">Sonic ordering powered by Azure conversation intelligence</h1>
+                    <h1 className="text-4xl font-black leading-tight text-[#DB0007] sm:text-5xl">McDonald's ordering powered by Azure conversation intelligence</h1>
                     <p className="max-w-2xl text-base text-muted-foreground">
-                        Recreate the Sonic Drive-In experience with slushes, burgers, and carhop favorites styled after America's Drive-In—now
+                        Recreate the McDonald's Drive-Thru experience with Big Macs, McNuggets, and crew member favorites styled after I'm Lovin' It™—now
                         voice activated with Azure OpenAI + Azure AI Search grounding.
                     </p>
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -507,19 +506,19 @@ const BrandHero = memo(function BrandHero() {
                     </div>
                 </div>
                 <div className="relative flex flex-1 items-center justify-center">
-                    <div className="absolute inset-0 -z-10 rounded-[32px] bg-gradient-to-br from-[#E40046]/10 via-[#F2F8FA] to-[#FEDD00]/15 opacity-80 blur-3xl"></div>
+                    <div className="absolute inset-0 -z-10 rounded-[32px] bg-gradient-to-br from-[#DB0007]/10 via-[#F5F0EB] to-[#FFBC0D]/15 opacity-80 blur-3xl"></div>
                     <div className="grid w-full gap-4 sm:grid-cols-2">
-                        <div className="rounded-3xl border border-[#E40046]/20 bg-white/90 p-4 shadow-[0_25px_45px_rgba(228,0,70,0.12)]">
+                        <div className="rounded-3xl border border-[#DB0007]/20 bg-white/90 p-4 shadow-[0_25px_45px_rgba(219,0,7,0.12)]">
                             <div className="mb-3 flex items-center gap-3">
-                                <div className="rounded-2xl bg-[#E40046]/10 p-3">
-                                    <SlushArt />
+                                <div className="rounded-2xl bg-[#DB0007]/10 p-3">
+                                    <FriesArt />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-wide text-[#E40046]">Signature slushes</p>
-                                    <p className="text-sm font-semibold text-[#18344D]">Cherry Limeade & more</p>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-[#DB0007]">World Famous Fries</p>
+                                    <p className="text-sm font-semibold text-[#27251F]">Golden & crispy</p>
                                 </div>
                             </div>
-                            <ul className="text-xs font-medium text-[#18344D]/80">
+                            <ul className="text-xs font-medium text-[#27251F]/80">
                                 {heroCallouts.map(callout => (
                                     <li key={callout.label} className="flex items-center justify-between rounded-full bg-white/80 px-3 py-1">
                                         <span>{callout.label}</span>
@@ -528,19 +527,19 @@ const BrandHero = memo(function BrandHero() {
                                 ))}
                             </ul>
                         </div>
-                        <div className="rounded-3xl border border-[#285780]/25 bg-gradient-to-br from-[#285780]/10 to-[#FEDD00]/10 p-4 shadow-[0_25px_45px_rgba(40,87,128,0.15)]">
+                        <div className="rounded-3xl border border-[#27251F]/25 bg-gradient-to-br from-[#27251F]/10 to-[#FFBC0D]/10 p-4 shadow-[0_25px_45px_rgba(39,37,31,0.15)]">
                             <div className="mb-3 flex items-center gap-3">
                                 <div className="rounded-2xl bg-white/60 p-3">
                                     <BurgerArt />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-wide text-[#285780]">Carhop favorite</p>
-                                    <p className="text-sm font-semibold text-[#18344D]">SuperSONIC® Double Cheeseburger</p>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-[#27251F]">Crew favorite</p>
+                                    <p className="text-sm font-semibold text-[#27251F]">Big Mac®</p>
                                 </div>
                             </div>
-                            <div className="rounded-2xl bg-white/80 p-3 text-sm font-semibold text-[#18344D]">
-                                <p>100% pure beef with melty American cheese</p>
-                                <p className="text-xs text-[#E40046]">Perfect pairing: Large Tots & a Shake</p>
+                            <div className="rounded-2xl bg-white/80 p-3 text-sm font-semibold text-[#27251F]">
+                                <p>Two all-beef patties, special sauce, lettuce, cheese</p>
+                                <p className="text-xs text-[#DB0007]">Perfect pairing: Large Fries & a McCafé</p>
                             </div>
                         </div>
                     </div>
@@ -552,9 +551,9 @@ const BrandHero = memo(function BrandHero() {
 
 function HeroHighlightCard({ title, detail, tone }: { title: string; detail: string; tone: HighlightTone }) {
     const gradientMap: Record<HighlightTone, string> = {
-        red: "from-[#E40046] to-[#FF4D7A]",
-        blue: "from-[#285780] to-[#137AC9]",
-        yellow: "from-[#FEDD00] to-[#FFE84D]"
+        red: "from-[#DB0007] to-[#FF4D4D]",
+        blue: "from-[#27251F] to-[#4a4740]",
+        yellow: "from-[#FFBC0D] to-[#FFD54F]"
     };
 
     return (
@@ -575,7 +574,7 @@ const SessionTokenPanel = memo(function SessionTokenPanel({
     const [expanded, setExpanded] = useState(false);
 
     return (
-        <div className="rounded-xl border border-white/30 bg-white/90 font-mono text-xs shadow-sm dark:border-white/10 dark:bg-[#18344D]/90">
+        <div className="rounded-xl border border-white/30 bg-white/90 font-mono text-xs shadow-sm dark:border-white/10 dark:bg-[#27251F]/90">
             <button
                 type="button"
                 onClick={() => setExpanded(prev => !prev)}
@@ -584,19 +583,19 @@ const SessionTokenPanel = memo(function SessionTokenPanel({
                 aria-label="Toggle session token history"
             >
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="font-semibold text-[#285780] dark:text-[#74D2E7]">Session:</span>
-                    <span className="break-all text-[#18344D] dark:text-gray-200">
+                    <span className="font-semibold text-[#27251F] dark:text-[#FFBC0D]">Session:</span>
+                    <span className="break-all text-[#27251F] dark:text-gray-200">
                         {identifiers.sessionToken || ""}
                     </span>
-                    <span className="mx-1 text-[#18344D]/40 dark:text-gray-500">|</span>
-                    <span className="whitespace-nowrap rounded-full bg-[#285780]/10 px-1.5 py-0.5 font-semibold text-[#285780] dark:bg-[#74D2E7]/10 dark:text-[#74D2E7]">
+                    <span className="mx-1 text-[#27251F]/40 dark:text-gray-500">|</span>
+                    <span className="whitespace-nowrap rounded-full bg-[#27251F]/10 px-1.5 py-0.5 font-semibold text-[#27251F] dark:bg-[#FFBC0D]/10 dark:text-[#FFBC0D]">
                         Round #{identifiers.roundTripIndex}
                     </span>
                 </div>
                 <motion.span
                     animate={{ rotate: expanded ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
-                    className="shrink-0 text-[#285780]/60 dark:text-white/50"
+                    className="shrink-0 text-[#27251F]/60 dark:text-white/50"
                 >
                     <ChevronDown size={18} />
                 </motion.span>
@@ -616,12 +615,12 @@ const SessionTokenPanel = memo(function SessionTokenPanel({
                                 {history.map((entry, i) => (
                                     <div
                                         key={`${entry.roundTripIndex}-${entry.roundTripToken}-${i}`}
-                                        className={`flex items-start gap-2 rounded px-2 py-1 ${i === 0 ? "bg-[#E40046]/5 dark:bg-[#E40046]/10" : ""}`}
+                                        className={`flex items-start gap-2 rounded px-2 py-1 ${i === 0 ? "bg-[#DB0007]/5 dark:bg-[#DB0007]/10" : ""}`}
                                     >
-                                        <span className="w-16 shrink-0 font-semibold text-[#285780] dark:text-[#74D2E7]">
+                                        <span className="w-16 shrink-0 font-semibold text-[#27251F] dark:text-[#FFBC0D]">
                                             Round #{entry.roundTripIndex}
                                         </span>
-                                        <span className="break-all text-[#18344D]/60 dark:text-gray-400">
+                                        <span className="break-all text-[#27251F]/60 dark:text-gray-400">
                                             {entry.roundTripToken || ""}
                                         </span>
                                     </div>
@@ -635,32 +634,31 @@ const SessionTokenPanel = memo(function SessionTokenPanel({
     );
 });
 
-function SlushArt() {
+function FriesArt() {
     return (
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="Sonic slush illustration">
-            <path d="M16 8h16l-2 32H18L16 8z" fill="#74D2E7" stroke="#285780" strokeWidth="2" />
-            <path d="M14 8h20v4H14z" fill="#285780" />
-            <path d="M20 16c2 3 6 3 8 0" stroke="#FEDD00" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="22" cy="24" r="1.5" fill="#E40046" />
-            <circle cx="28" cy="20" r="1.5" fill="#E40046" />
-            <circle cx="24" cy="30" r="1.2" fill="#FEDD00" />
-            <path d="M24 4v4" stroke="#E40046" strokeWidth="2" strokeLinecap="round" />
-            <path d="M20 5l1 3" stroke="#285780" strokeWidth="1.5" strokeLinecap="round" />
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="McDonald's fries illustration">
+            <path d="M14 16h20l-3 24H17L14 16z" fill="#FFBC0D" stroke="#27251F" strokeWidth="2" />
+            <path d="M12 16h24v4H12z" fill="#DB0007" />
+            <rect x="18" y="8" width="2.5" height="14" rx="1" fill="#FFBC0D" stroke="#27251F" strokeWidth="0.5" />
+            <rect x="22" y="6" width="2.5" height="16" rx="1" fill="#FFBC0D" stroke="#27251F" strokeWidth="0.5" />
+            <rect x="26" y="9" width="2.5" height="13" rx="1" fill="#FFBC0D" stroke="#27251F" strokeWidth="0.5" />
+            <rect x="30" y="10" width="2.5" height="12" rx="1" fill="#FFBC0D" stroke="#27251F" strokeWidth="0.5" />
+            <rect x="15" y="10" width="2.5" height="12" rx="1" fill="#FFBC0D" stroke="#27251F" strokeWidth="0.5" />
         </svg>
     );
 }
 
 function BurgerArt() {
     return (
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="Sonic burger illustration">
-            <path d="M10 22c0-8 6-14 14-14s14 6 14 14H10z" fill="#FEDD00" stroke="#285780" strokeWidth="2" />
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="McDonald's burger illustration">
+            <path d="M10 22c0-8 6-14 14-14s14 6 14 14H10z" fill="#FFBC0D" stroke="#27251F" strokeWidth="2" />
             <rect x="9" y="22" width="30" height="4" rx="1" fill="#328500" />
-            <rect x="9" y="26" width="30" height="3" rx="1" fill="#E40046" />
+            <rect x="9" y="26" width="30" height="3" rx="1" fill="#DB0007" />
             <rect x="9" y="29" width="30" height="4" rx="1" fill="#C9CFD4" />
-            <path d="M10 33c0 4 6 7 14 7s14-3 14-7H10z" fill="#FEDD00" stroke="#285780" strokeWidth="2" />
-            <circle cx="16" cy="16" r="1" fill="#E40046" />
-            <circle cx="24" cy="13" r="1" fill="#E40046" />
-            <circle cx="32" cy="16" r="1" fill="#E40046" />
+            <path d="M10 33c0 4 6 7 14 7s14-3 14-7H10z" fill="#FFBC0D" stroke="#27251F" strokeWidth="2" />
+            <circle cx="16" cy="16" r="1" fill="#DB0007" />
+            <circle cx="24" cy="13" r="1" fill="#DB0007" />
+            <circle cx="32" cy="16" r="1" fill="#DB0007" />
         </svg>
     );
 }
@@ -684,7 +682,7 @@ function App() {
         return null; // Auth provider will handle redirect
     }
 
-    return <SonicApp />;
+    return <McDonaldsApp />;
 }
 
 export default function RootApp() {

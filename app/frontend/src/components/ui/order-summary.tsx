@@ -35,7 +35,7 @@ const OrderItemRow = memo(function OrderItemRow({ item }: { item: OrderItem }) {
             <span className="font-semibold">
                 {item.display} {item.quantity > 1 && `(x${item.quantity})`}
             </span>
-            <span className="font-mono text-[#E40046] dark:text-[#FF6B8A]">${(item.price * item.quantity).toFixed(2)}</span>
+            <span className="font-mono text-[#DB0007] dark:text-[#FF6B6B]">${(item.price * item.quantity).toFixed(2)}</span>
         </div>
     );
 });
@@ -45,11 +45,11 @@ export default memo(function OrderSummary({ order }: { order: OrderSummaryProps 
     const { items, total, tax, finalTotal } = order;
 
     return (
-        <div className="rounded-3xl border border-[#285780]/20 bg-gradient-to-br from-white via-[#F2F8FA] to-[#FEDD00]/5 p-5 shadow-[0_20px_45px_rgba(40,87,128,0.12)] dark:border-white/15 dark:bg-gradient-to-br dark:from-[#0f1a24] dark:via-[#152231] dark:to-[#0f1a24]">
+        <div className="rounded-3xl border border-[#27251F]/20 bg-gradient-to-br from-white via-[#F5F0EB] to-[#FFBC0D]/5 p-5 shadow-[0_20px_45px_rgba(39,37,31,0.12)] dark:border-white/15 dark:bg-gradient-to-br dark:from-[#1a1812] dark:via-[#211f18] dark:to-[#1a1812]">
             <div className="mb-4 flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E40046] dark:text-[#FF6B8A]">Carhop ticket</p>
-                    <h2 className="text-2xl font-black text-[#E40046] dark:text-[#FF6B8A]">Your Sonic Order</h2>
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#DB0007] dark:text-[#FF6B6B]">Drive-Thru order</p>
+                    <h2 className="text-2xl font-black text-[#DB0007] dark:text-[#FF6B6B]">Your McDonald's Order</h2>
                 </div>
                 <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center text-sm text-gray-500 dark:text-gray-300 md:hidden">
                     {isExpanded ? (
@@ -64,7 +64,7 @@ export default memo(function OrderSummary({ order }: { order: OrderSummaryProps 
                 </button>
             </div>
             <div className={`space-y-2 ${isExpanded ? "block" : "hidden md:block"}`}>
-                {items.length === 0 && <p className="text-sm text-muted-foreground dark:text-white/70">Add a slush, burger, or shake to kick things off.</p>}
+                {items.length === 0 && <p className="text-sm text-muted-foreground dark:text-white/70">Add a Big Mac, McNuggets, or McFlurry to get started.</p>}
                 {items.map((item, index) => (
                     <OrderItemRow key={index} item={item} />
                 ))}
@@ -80,9 +80,9 @@ export default memo(function OrderSummary({ order }: { order: OrderSummaryProps 
                     </div>
                 </div>
             </div>
-            <div className="mt-4 flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3 text-lg font-semibold text-primary shadow-inner dark:bg-[#152231] dark:text-[#FF6B8A]">
+            <div className="mt-4 flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3 text-lg font-semibold text-primary shadow-inner dark:bg-[#211f18] dark:text-[#FF6B6B]">
                 <span>Total Due</span>
-                <span className="font-mono text-[#E40046] dark:text-[#FF6B8A]">${finalTotal.toFixed(2)}</span>
+                <span className="font-mono text-[#DB0007] dark:text-[#FF6B6B]">${finalTotal.toFixed(2)}</span>
             </div>
         </div>
     );

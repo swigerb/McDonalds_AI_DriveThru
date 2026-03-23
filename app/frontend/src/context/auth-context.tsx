@@ -14,7 +14,7 @@ interface AuthInfo {
 
 // App info that gets sent to authentication service
 const info: AuthInfo = {
-    app: "Sonic Voice Ordering",
+    app: "McDonald's Voice Ordering",
     url: window.location.origin
 };
 
