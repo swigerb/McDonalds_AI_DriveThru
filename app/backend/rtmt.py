@@ -130,6 +130,7 @@ _MARKER_SESSION_UPDATED = '"session.updated"'
 _MARKER_RESPONSE_CANCEL = '"response.cancel"'
 _MARKER_VERBOSE_LOGGING = '"extension.set_verbose_logging"'
 _MARKER_LOG_TO_FILE = '"extension.set_log_to_file"'
+_MARKER_SET_VOICE = '"extension.set_voice"'
 
 # Connection tuning constants
 _WS_HEARTBEAT_SEC = 15.0
@@ -590,6 +591,18 @@ class RTMiddleTier:
                                               "║  LOG TO FILE: %-8s              ║\n"
                                               "╚══════════════════════════════════════╝",
                                               "ENABLED" if enabled else "DISABLED")
+                                        continue  # Don't forward to OpenAI
+                                except (json.JSONDecodeError, KeyError):
+                                    pass
+
+                            if _MARKER_SET_VOICE in msg.data:
+                                try:
+                                    ext_msg = json.loads(msg.data)
+                                    if ext_msg.get("type") == "extension.set_voice":
+                                        new_voice = ext_msg.get("voice", "shimmer")
+                                        if new_voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+                                            self.voice_choice = new_voice
+                                            logger.info("Voice changed to %s for session %s", new_voice, session_id)
                                         continue  # Don't forward to OpenAI
                                 except (json.JSONDecodeError, KeyError):
                                     pass

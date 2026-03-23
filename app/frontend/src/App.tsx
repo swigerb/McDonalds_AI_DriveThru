@@ -101,6 +101,9 @@ function McDonaldsApp() {
     const [logToFile, setLogToFile] = useState<boolean>(() => {
         return localStorage.getItem("verboseLogToFile") === "true";
     });
+    const [voiceChoice, setVoiceChoice] = useState<string>(() => {
+        return localStorage.getItem("voiceChoice") || "shimmer";
+    });
 
     useEffect(() => {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
@@ -113,6 +116,10 @@ function McDonaldsApp() {
     useEffect(() => {
         localStorage.setItem("verboseLogToFile", logToFile.toString());
     }, [logToFile]);
+
+    useEffect(() => {
+        localStorage.setItem("voiceChoice", voiceChoice);
+    }, [voiceChoice]);
 
     const handleSessionIdentifiers = useCallback((message: ExtensionSessionMetadata | ExtensionRoundTripToken) => {
         const snapshot: SessionIdentifiersState = {
@@ -371,6 +378,11 @@ function McDonaldsApp() {
                                 onLogToFileChange={(checked: boolean) => {
                                     setLogToFile(checked);
                                     realtime.sendLogToFile(checked);
+                                }}
+                                voiceChoice={voiceChoice}
+                                onVoiceChoiceChange={(voice: string) => {
+                                    setVoiceChoice(voice);
+                                    realtime.sendVoiceChoice(voice);
                                 }}
                             />
                         </Suspense>
