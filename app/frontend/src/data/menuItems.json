@@ -4,15 +4,15 @@
             "category": "Burgers & Sandwiches",
             "items": [
                 {
-                    "name": "Big MacÂ®",
+                    "name": "Big Mac®",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 5.29
                         }
                     ],
-                    "description": "Mouthwatering perfection starts with two 100% pure all beef patties and Big MacÂ® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese.",
-                    "longDescription": "Mouthwatering perfection starts with two 100% pure all beef patties and Big MacÂ® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions â€” on a sesame seed bun.",
+                    "description": "Mouthwatering perfection starts with two 100% pure all beef patties and Big Mac® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese.",
+                    "longDescription": "Mouthwatering perfection starts with two 100% pure all beef patties and Big Mac® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions â€” on a sesame seed bun.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMac_832x472",
@@ -20,7 +20,7 @@
                     "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Quarter PounderÂ® with Cheese",
+                    "name": "Quarter Pounder® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -36,7 +36,7 @@
                     "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Double Quarter PounderÂ® with Cheese",
+                    "name": "Double Quarter Pounder® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -52,7 +52,7 @@
                     "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Bacon Quarter PounderÂ® with Cheese",
+                    "name": "Bacon Quarter Pounder® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -68,7 +68,7 @@
                     "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "McDoubleÂ®",
+                    "name": "McDouble®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -132,7 +132,7 @@
                     "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "McCrispyÂ®",
+                    "name": "McCrispy®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -148,7 +148,7 @@
                     "allergens": "Wheat, Milk, Soy"
                 },
                 {
-                    "name": "Filet-O-FishÂ®",
+                    "name": "Filet-O-Fish®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -166,10 +166,10 @@
             ]
         },
         {
-            "category": "Chicken & McNuggetsÂ®",
+            "category": "Chicken & McNuggets®",
             "items": [
                 {
-                    "name": "Chicken McNuggetsÂ®",
+                    "name": "Chicken McNuggets®",
                     "sizes": [
                         {
                             "size": "4 Piece",
@@ -201,7 +201,7 @@
                     "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "McChickenÂ®",
+                    "name": "McChicken®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -217,7 +217,7 @@
                     "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "Spicy McCrispyÂ®",
+                    "name": "Spicy McCrispy®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -233,7 +233,7 @@
                     "allergens": "Wheat, Milk, Soy"
                 },
                 {
-                    "name": "Deluxe McCrispyÂ®",
+                    "name": "Deluxe McCrispy®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -249,7 +249,7 @@
                     "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Spicy Deluxe McCrispyÂ®",
+                    "name": "Spicy Deluxe McCrispy®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -265,7 +265,7 @@
                     "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Hot 'N Spicy McChickenÂ®",
+                    "name": "Hot 'N Spicy McChicken®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -281,15 +281,15 @@
                     "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "10 Piece McNuggetsÂ® Meal",
+                    "name": "10 Piece McNuggets® Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 8.89
                         }
                     ],
-                    "description": "10 tender Chicken McNuggetsÂ® made with 100% white meat chicken, served with medium World Famous FriesÂ® and your choice of a medium drink.",
-                    "longDescription": "10 tender Chicken McNuggetsÂ® made with 100% white meat chicken, served with medium World Famous FriesÂ® and your choice of a medium drink. Includes your choice of dipping sauce.",
+                    "description": "10 tender Chicken McNuggets® made with 100% white meat chicken, served with medium World Famous Fries® and your choice of a medium drink.",
+                    "longDescription": "10 tender Chicken McNuggets® made with 100% white meat chicken, served with medium World Famous Fries® and your choice of a medium drink. Includes your choice of dipping sauce.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pcMeal_832x472",
@@ -297,15 +297,15 @@
                     "allergens": "Wheat, Soy, Milk"
                 },
                 {
-                    "name": "Big MacÂ® Meal",
+                    "name": "Big Mac® Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 8.99
                         }
                     ],
-                    "description": "The iconic Big MacÂ® paired with medium World Famous FriesÂ® and your choice of a medium drink. The classic combo.",
-                    "longDescription": "The iconic Big MacÂ® paired with medium World Famous FriesÂ® and your choice of a medium drink. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions on a sesame seed bun â€” plus fries and a drink.",
+                    "description": "The iconic Big Mac® paired with medium World Famous Fries® and your choice of a medium drink. The classic combo.",
+                    "longDescription": "The iconic Big Mac® paired with medium World Famous Fries® and your choice of a medium drink. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions on a sesame seed bun â€” plus fries and a drink.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMacMeal_832x472",
@@ -313,15 +313,15 @@
                     "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Quarter PounderÂ® with Cheese Meal",
+                    "name": "Quarter Pounder® with Cheese Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 8.59
                         }
                     ],
-                    "description": "A Quarter PounderÂ® with Cheese made with fresh beef, paired with medium World Famous FriesÂ® and your choice of a medium drink.",
-                    "longDescription": "A Quarter PounderÂ® with Cheese made with 100% fresh beef, cooked when you order, paired with medium World Famous FriesÂ® and your choice of a medium drink.",
+                    "description": "A Quarter Pounder® with Cheese made with fresh beef, paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "longDescription": "A Quarter Pounder® with Cheese made with 100% fresh beef, cooked when you order, paired with medium World Famous Fries® and your choice of a medium drink.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QPCMeal_832x472",
@@ -329,15 +329,15 @@
                     "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "McCrispyÂ® Meal",
+                    "name": "McCrispy® Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 7.99
                         }
                     ],
-                    "description": "The crispy, juicy McCrispyÂ® chicken sandwich paired with medium World Famous FriesÂ® and your choice of a medium drink.",
-                    "longDescription": "The crispy, juicy McCrispyÂ® chicken sandwich on a buttery potato roll with crinkle-cut pickles, paired with medium World Famous FriesÂ® and your choice of a medium drink.",
+                    "description": "The crispy, juicy McCrispy® chicken sandwich paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "longDescription": "The crispy, juicy McCrispy® chicken sandwich on a buttery potato roll with crinkle-cut pickles, paired with medium World Famous Fries® and your choice of a medium drink.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispyMeal_832x472",
@@ -350,7 +350,7 @@
             "category": "Breakfast",
             "items": [
                 {
-                    "name": "Egg McMuffinÂ®",
+                    "name": "Egg McMuffin®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -366,7 +366,7 @@
                     "allergens": "Wheat, Milk, Egg"
                 },
                 {
-                    "name": "Sausage McMuffinÂ® with Egg",
+                    "name": "Sausage McMuffin® with Egg",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -382,7 +382,7 @@
                     "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Sausage McMuffinÂ®",
+                    "name": "Sausage McMuffin®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -414,7 +414,7 @@
                     "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Sausage, Egg & Cheese McGriddlesÂ®",
+                    "name": "Sausage, Egg & Cheese McGriddles®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -430,7 +430,7 @@
                     "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Bacon, Egg & Cheese McGriddlesÂ®",
+                    "name": "Bacon, Egg & Cheese McGriddles®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -515,7 +515,7 @@
             "category": "Fries, Sides & Drinks",
             "items": [
                 {
-                    "name": "World Famous FriesÂ®",
+                    "name": "World Famous Fries®",
                     "sizes": [
                         {
                             "size": "Small",
@@ -530,8 +530,8 @@
                             "price": 4.19
                         }
                     ],
-                    "description": "Our World Famous FriesÂ® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted.",
-                    "longDescription": "Our World Famous FriesÂ® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted. The iconic fries that make every meal complete.",
+                    "description": "Our World Famous Fries® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted.",
+                    "longDescription": "Our World Famous Fries® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted. The iconic fries that make every meal complete.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FrenchFries_832x472",
@@ -555,7 +555,7 @@
                     "allergens": ""
                 },
                 {
-                    "name": "Coca-ColaÂ®",
+                    "name": "Coca-Cola®",
                     "sizes": [
                         {
                             "size": "Small",
@@ -570,8 +570,8 @@
                             "price": 2.29
                         }
                     ],
-                    "description": "Ice-cold Coca-ColaÂ® â€” the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal.",
-                    "longDescription": "Ice-cold Coca-ColaÂ® â€” the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal. Served from our fountain, just the way you like it.",
+                    "description": "Ice-cold Coca-Cola® â€” the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal.",
+                    "longDescription": "Ice-cold Coca-Cola® â€” the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal. Served from our fountain, just the way you like it.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CocaCola_832x472",
@@ -579,7 +579,7 @@
                     "allergens": ""
                 },
                 {
-                    "name": "SpriteÂ®",
+                    "name": "Sprite®",
                     "sizes": [
                         {
                             "size": "Small",
@@ -594,8 +594,8 @@
                             "price": 2.29
                         }
                     ],
-                    "description": "Crisp, refreshing SpriteÂ® with a lemon-lime flavor that quenches your thirst and complements any meal.",
-                    "longDescription": "Crisp, refreshing SpriteÂ® with a lemon-lime flavor that quenches your thirst and complements any meal. Served from our fountain with ice.",
+                    "description": "Crisp, refreshing Sprite® with a lemon-lime flavor that quenches your thirst and complements any meal.",
+                    "longDescription": "Crisp, refreshing Sprite® with a lemon-lime flavor that quenches your thirst and complements any meal. Served from our fountain with ice.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Sprite_832x472",
@@ -603,7 +603,7 @@
                     "allergens": ""
                 },
                 {
-                    "name": "Hi-CÂ® Orange Lavaburst",
+                    "name": "Hi-C® Orange Lavaburst",
                     "sizes": [
                         {
                             "size": "Small",
@@ -618,8 +618,8 @@
                             "price": 2.29
                         }
                     ],
-                    "description": "The fan-favorite Hi-CÂ® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip.",
-                    "longDescription": "The fan-favorite Hi-CÂ® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip. The beloved McDonald's fountain drink that fans asked for by name.",
+                    "description": "The fan-favorite Hi-C® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip.",
+                    "longDescription": "The fan-favorite Hi-C® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip. The beloved McDonald's fountain drink that fans asked for by name.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HiCOrange_832x472",
@@ -691,7 +691,7 @@
                         }
                     ],
                     "description": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle.",
-                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafÃ©Â® favorite.",
+                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafÃ©® favorite.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelFrappe_832x472",
@@ -715,7 +715,7 @@
                         }
                     ],
                     "description": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy.",
-                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafÃ©Â® treat.",
+                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafÃ©® treat.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_MochaFrappe_832x472",
@@ -723,7 +723,7 @@
                     "allergens": "Milk, Soy"
                 },
                 {
-                    "name": "Minute MaidÂ® Orange Juice",
+                    "name": "Minute Maid® Orange Juice",
                     "sizes": [
                         {
                             "size": "Small",
@@ -738,8 +738,8 @@
                             "price": 3.79
                         }
                     ],
-                    "description": "100% orange juice, freshly squeezed goodness from Minute MaidÂ®. A refreshing way to start your morning.",
-                    "longDescription": "100% orange juice, freshly squeezed goodness from Minute MaidÂ®. A refreshing way to start your morning or pair with any McDonald's meal.",
+                    "description": "100% orange juice, freshly squeezed goodness from Minute Maid®. A refreshing way to start your morning.",
+                    "longDescription": "100% orange juice, freshly squeezed goodness from Minute Maid®. A refreshing way to start your morning or pair with any McDonald's meal.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_OrangeJuice_832x472",
@@ -752,15 +752,15 @@
             "category": "Sweets & Treats",
             "items": [
                 {
-                    "name": "McFlurryÂ® with OREOÂ® Cookies",
+                    "name": "McFlurry® with OREO® Cookies",
                     "sizes": [
                         {
                             "size": "Regular",
                             "price": 4.29
                         }
                     ],
-                    "description": "Creamy vanilla soft serve swirled with crunchy OREOÂ® cookie pieces. A delicious frozen treat that's the perfect ending to any meal.",
-                    "longDescription": "Creamy vanilla soft serve swirled with crunchy OREOÂ® cookie pieces. A delicious frozen treat that's the perfect ending to any meal. Made with our creamy vanilla soft serve.",
+                    "description": "Creamy vanilla soft serve swirled with crunchy OREO® cookie pieces. A delicious frozen treat that's the perfect ending to any meal.",
+                    "longDescription": "Creamy vanilla soft serve swirled with crunchy OREO® cookie pieces. A delicious frozen treat that's the perfect ending to any meal. Made with our creamy vanilla soft serve.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryOreo_832x472",
@@ -768,15 +768,15 @@
                     "allergens": "Wheat, Milk, Soy"
                 },
                 {
-                    "name": "McFlurryÂ® with M&M'sÂ® Candies",
+                    "name": "McFlurry® with M&M's® Candies",
                     "sizes": [
                         {
                             "size": "Regular",
                             "price": 4.29
                         }
                     ],
-                    "description": "Creamy vanilla soft serve blended with colorful, crunchy M&M'sÂ® chocolate candies. A sweet, crunchy, irresistible combination.",
-                    "longDescription": "Creamy vanilla soft serve blended with colorful, crunchy M&M'sÂ® chocolate candies. A sweet, crunchy, irresistible combination that's fun in every bite.",
+                    "description": "Creamy vanilla soft serve blended with colorful, crunchy M&M's® chocolate candies. A sweet, crunchy, irresistible combination.",
+                    "longDescription": "Creamy vanilla soft serve blended with colorful, crunchy M&M's® chocolate candies. A sweet, crunchy, irresistible combination that's fun in every bite.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryMM_832x472",
