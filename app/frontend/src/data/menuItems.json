@@ -439,7 +439,7 @@
                     "sizes": [
                         {
                             "size": "Standard",
-                            "price": 7.49
+                            "price": 5.99
                         }
                     ],
                     "description": "The McChicken® as a meal with Medium Fries and a Medium Drink.",
@@ -866,7 +866,7 @@
                     "allergens": ""
                 },
                 {
-                    "name": "Caramel FrappÃ©",
+                    "name": "Caramel Frappé",
                     "sizes": [
                         {
                             "size": "Small",
@@ -882,7 +882,7 @@
                         }
                     ],
                     "description": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle.",
-                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafÃ©® favorite.",
+                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafé® favorite.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelFrappe_832x472",
@@ -890,7 +890,7 @@
                     "allergens": "Milk, Soy"
                 },
                 {
-                    "name": "Mocha FrappÃ©",
+                    "name": "Mocha Frappé",
                     "sizes": [
                         {
                             "size": "Small",
@@ -906,7 +906,7 @@
                         }
                     ],
                     "description": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy.",
-                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafÃ©® treat.",
+                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafé® treat.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
                     "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_MochaFrappe_832x472",
