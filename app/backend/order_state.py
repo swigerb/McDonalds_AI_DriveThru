@@ -21,7 +21,7 @@ def _infer_combo_component(item_name: str) -> str:
     n = item_name.lower()
     if "tot" in n or "fries" in n or "onion rings" in n:
         return "sides"
-    if any(kw in n for kw in ("slush", "limeade", "ocean water", "drink", "tea", "lemonade", "shake", "blast", "malt", "coke", "sprite", "pepper", "root beer")):
+    if any(kw in n for kw in ("slush", "limeade", "ocean water", "drink", "tea", "lemonade", "shake", "blast", "malt", "coke", "coca", "sprite", "pepper", "root beer", "coffee", "mcflurry", "hi-c", "fanta", "mccaf")):
         return "drinks"
     return ""
 
@@ -173,9 +173,9 @@ class OrderState:
 
         missing = []
         if side_count < combo_count:
-            missing.append("a side (fries or tots)")
+            missing.append("a side (fries or another side)")
         if drink_count < combo_count:
-            missing.append("a drink or slush")
+            missing.append("a drink")
 
         return {
             "is_complete": len(missing) == 0,
@@ -186,7 +186,7 @@ class OrderState:
     def get_grouped_order_for_readback(self, session_id: str) -> str:
         """
         Groups items with the same display name for a natural voice read-back.
-        Example: 'Two Medium Cherry Limeades and one Footlong Quarter Pound Coney.'
+        Example: 'Two Medium Coca-Colas and one Big Mac.'
         """
         session = self.sessions[session_id]
         items = session["order_state"]
@@ -198,7 +198,7 @@ class OrderState:
         for oi in items:
             clean_name = oi.display.replace("RT 44", "Route 44").replace("RT44", "Route 44")
             # Convert parenthesized mods to speech-friendly format
-            # e.g. "Sonic Cheeseburger (No Lettuce)" -> "Sonic Cheeseburger with no lettuce"
+            # e.g. "Big Mac (No Lettuce)" -> "Big Mac with no lettuce"
             if "(" in clean_name and ")" in clean_name:
                 clean_name = clean_name.replace("(", "with ").replace(")", "")
             counts[clean_name] = counts.get(clean_name, 0) + oi.quantity

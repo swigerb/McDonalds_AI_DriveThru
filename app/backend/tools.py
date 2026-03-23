@@ -91,7 +91,7 @@ BLOCKED_EXTRA_CATEGORIES = {"hot dogs & tots", "sides", "hot dogs"}
 
 def _load_menu_category_map() -> dict[str, str]:
     env_override = (
-        os.environ.get("SONIC_MENU_ITEMS_PATH")
+        os.environ.get("MCDONALDS_MENU_ITEMS_PATH")
         or os.environ.get("MENU_ITEMS_PATH")
     )
 
@@ -138,15 +138,15 @@ def _infer_category(item_name: str) -> str:
         return MENU_CATEGORY_MAP[normalized]
     if "slush" in normalized or "limeade" in normalized or "ocean water" in normalized:
         return "slushes"
-    if "shake" in normalized or "blast" in normalized or "malt" in normalized:
+    if "shake" in normalized or "blast" in normalized or "malt" in normalized or "mcflurry" in normalized:
         return "shakes"
-    if "burger" in normalized or "combo" in normalized:
+    if "burger" in normalized or "combo" in normalized or "big mac" in normalized or "quarter pounder" in normalized or "mcchicken" in normalized:
         return "combos"
     if "hot dog" in normalized or "coney" in normalized:
         return "hot dogs"
     if "tot" in normalized or "fries" in normalized or "onion rings" in normalized:
         return "sides"
-    if "drink" in normalized or "tea" in normalized or "lemonade" in normalized:
+    if "drink" in normalized or "tea" in normalized or "lemonade" in normalized or "coca" in normalized or "coke" in normalized or "sprite" in normalized or "fanta" in normalized or "hi-c" in normalized or "root beer" in normalized or "pepper" in normalized:
         return "drinks"
     return ""
 
@@ -323,7 +323,7 @@ update_order_tool_schema = {
             },
             "item_name": { 
                 "type": "string", 
-                "description": "Name of the item to update, e.g., 'Cherry Limeade'."
+                "description": "Name of the item to update, e.g., 'Big Mac'."
             },
             "size": { 
                 "type": "string", 
@@ -473,15 +473,15 @@ async def update_order(args, session_id: str) -> ToolResult:
         # ── Category-aware upsell hints (only when combo requirements are met) ──
         category = _infer_category(item_name)
         if category == "combos":
-            delta_text += " (UPSELL HINT: Combos are a great base! Ask if they want to upgrade to a Large size, or add a delicious Shake or Dessert!)"
+            delta_text += " (UPSELL HINT: Combos are a great base! Ask if they want to upgrade to a Large size, or add a delicious McFlurry or Dessert!)"
         elif category in ("burgers", "burgers & sandwiches"):
-            delta_text += " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Tots or Fries and a refreshing Drink!)"
+            delta_text += " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Fries and a refreshing Drink!)"
         elif category in ("drinks", "slushes"):
             delta_text += " (UPSELL HINT: Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!)"
         elif category in ("shakes", "desserts", "shakes & ice cream"):
             delta_text += " (UPSELL HINT: Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!)"
         elif category in ("sides", "hot dogs", "hot dogs & tots"):
-            delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink or Slush to complete their meal!)"
+            delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink to complete their meal!)"
         else:
             delta_text += " (UPSELL HINT: Ask if they'd like to add anything else — maybe a drink, side, or dessert!)"
         logger.debug("Upsell hint for category '%s'", category)

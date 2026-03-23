@@ -1,4 +1,4 @@
-"""Performance test harness for the Sonic AI Drive-Thru voice interaction pipeline.
+"""Performance test harness for the McDonald's AI Drive-Thru voice interaction pipeline.
 
 Validates latency benchmarks, memory efficiency, concurrency safety,
 and production readiness — all without touching real Azure services.
@@ -67,17 +67,17 @@ class OrderStateLatencyTests(unittest.TestCase):
         sid = order_state_singleton.create_session()
         _, elapsed = _timed(
             order_state_singleton.handle_order_update,
-            sid, "add", "Cherry Limeade", "Large", 1, 3.49,
+            sid, "add", "Coca-Cola", "Large", 1, 3.49,
         )
         self.assertLess(elapsed, self.THRESHOLD_MS,
                         f"handle_order_update(add) took {elapsed:.2f} ms")
 
     def test_remove_item_latency(self):
         sid = order_state_singleton.create_session()
-        order_state_singleton.handle_order_update(sid, "add", "Cherry Limeade", "Large", 2, 3.49)
+        order_state_singleton.handle_order_update(sid, "add", "Coca-Cola", "Large", 2, 3.49)
         _, elapsed = _timed(
             order_state_singleton.handle_order_update,
-            sid, "remove", "Cherry Limeade", "Large", 1, 3.49,
+            sid, "remove", "Coca-Cola", "Large", 1, 3.49,
         )
         self.assertLess(elapsed, self.THRESHOLD_MS,
                         f"handle_order_update(remove) took {elapsed:.2f} ms")

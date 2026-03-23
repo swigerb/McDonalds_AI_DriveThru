@@ -16,12 +16,12 @@ from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 from order_state import SessionIdentifiers, order_state_singleton
 
-logger = logging.getLogger("sonic-drive-in")
+logger = logging.getLogger("mcdonalds-drive-thru")
 
 # ── Verbose diagnostic logger ──
 # Separate logger so verbose output can be toggled without affecting production logs.
 # Enabled globally via VERBOSE_LOGGING=true env var, or per-session via WebSocket message.
-vlogger = logging.getLogger("sonic-verbose")
+vlogger = logging.getLogger("mcdonalds-verbose")
 _VERBOSE_GLOBAL = os.environ.get("VERBOSE_LOGGING", "").lower() in ("true", "1", "yes")
 if _VERBOSE_GLOBAL:
     vlogger.setLevel(logging.DEBUG)
@@ -144,14 +144,14 @@ _GREETING_MSG = json.dumps({
         "type": "message",
         "role": "user",
         "content": [
-            {"type": "input_text", "text": "Say EXACTLY this greeting and NOTHING else: Welcome to Sonic Drive-In! What can I get started for you today?"}
+            {"type": "input_text", "text": "Say EXACTLY this greeting and NOTHING else: Welcome to McDonald's! What can I get started for you today?"}
         ]
     }
 })
 
 
 def _vlog(verbose: bool, msg: str, *args: Any) -> None:
-    """Log to sonic-verbose at DEBUG level if this session has verbose enabled."""
+    """Log to mcdonalds-verbose at DEBUG level if this session has verbose enabled."""
     if verbose or _VERBOSE_GLOBAL:
         vlogger.debug(msg, *args)
 

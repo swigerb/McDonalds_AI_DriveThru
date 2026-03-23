@@ -27,7 +27,7 @@ class QuantityLimitTests(unittest.TestCase):
         session_id = order_state_singleton.create_session()
         result = self._run(update_order({
             "action": "add",
-            "item_name": "SuperSONIC Cheeseburger",
+            "item_name": "Big Mac",
             "size": "standard",
             "quantity": MAX_QUANTITY_PER_ITEM,
             "price": 5.99,
@@ -42,7 +42,7 @@ class QuantityLimitTests(unittest.TestCase):
         session_id = order_state_singleton.create_session()
         result = self._run(update_order({
             "action": "add",
-            "item_name": "SuperSONIC Cheeseburger",
+            "item_name": "Big Mac",
             "size": "standard",
             "quantity": MAX_QUANTITY_PER_ITEM + 1,
             "price": 5.99,
@@ -56,11 +56,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_incremental_add_up_to_max_succeeds(self):
         """Adding items incrementally up to MAX should succeed at exactly MAX."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", 7, 2.79)
+        self._add_item(session_id, "Fries", "medium", 7, 2.79)
 
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Tots",
+            "item_name": "Fries",
             "size": "medium",
             "quantity": 3,
             "price": 2.79,
@@ -73,11 +73,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_incremental_add_over_max_rejected(self):
         """Adding one more than allowed to an existing item should be rejected."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", MAX_QUANTITY_PER_ITEM, 2.79)
+        self._add_item(session_id, "Fries", "medium", MAX_QUANTITY_PER_ITEM, 2.79)
 
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Tots",
+            "item_name": "Fries",
             "size": "medium",
             "quantity": 1,
             "price": 2.79,
@@ -89,11 +89,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_different_sizes_have_separate_limits(self):
         """Same item in different sizes should have independent limits."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Cherry Limeade", "medium", MAX_QUANTITY_PER_ITEM, 2.99)
+        self._add_item(session_id, "Coca-Cola", "medium", MAX_QUANTITY_PER_ITEM, 2.99)
 
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Cherry Limeade",
+            "item_name": "Coca-Cola",
             "size": "large",
             "quantity": MAX_QUANTITY_PER_ITEM,
             "price": 3.49,
@@ -108,11 +108,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_total_order_at_max_succeeds(self):
         """Total items exactly at MAX_TOTAL_ITEMS should succeed."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", MAX_TOTAL_ITEMS - 1, 2.79)
+        self._add_item(session_id, "Fries", "medium", MAX_TOTAL_ITEMS - 1, 2.79)
 
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Cherry Limeade",
+            "item_name": "Coca-Cola",
             "size": "large",
             "quantity": 1,
             "price": 3.49,
@@ -123,11 +123,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_total_order_over_max_rejected(self):
         """Exceeding MAX_TOTAL_ITEMS should be rejected."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", MAX_TOTAL_ITEMS, 2.79)
+        self._add_item(session_id, "Fries", "medium", MAX_TOTAL_ITEMS, 2.79)
 
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Cherry Limeade",
+            "item_name": "Coca-Cola",
             "size": "large",
             "quantity": 1,
             "price": 3.49,
@@ -143,7 +143,7 @@ class QuantityLimitTests(unittest.TestCase):
         session_id = order_state_singleton.create_session()
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Cherry Limeade",
+            "item_name": "Coca-Cola",
             "size": "medium",
             "quantity": 1,
             "price": 2.99,
@@ -160,7 +160,7 @@ class QuantityLimitTests(unittest.TestCase):
         session_id = order_state_singleton.create_session()
         result = self._run(update_order({
             "action": "add",
-            "item_name": "SuperSONIC Cheeseburger",
+            "item_name": "Big Mac",
             "size": "standard",
             "quantity": MAX_QUANTITY_PER_ITEM + 5,
             "price": 5.99,
@@ -172,11 +172,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_limit_response_ends_with_question(self):
         """All limit-exceeded responses should end with a question to keep conversation alive."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", MAX_QUANTITY_PER_ITEM, 2.79)
+        self._add_item(session_id, "Fries", "medium", MAX_QUANTITY_PER_ITEM, 2.79)
 
         result = self._run(update_order({
             "action": "add",
-            "item_name": "Tots",
+            "item_name": "Fries",
             "size": "medium",
             "quantity": 1,
             "price": 2.79,
@@ -187,11 +187,11 @@ class QuantityLimitTests(unittest.TestCase):
     def test_remove_bypasses_limits(self):
         """Remove actions should never be blocked by limits."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", MAX_QUANTITY_PER_ITEM, 2.79)
+        self._add_item(session_id, "Fries", "medium", MAX_QUANTITY_PER_ITEM, 2.79)
 
         result = self._run(update_order({
             "action": "remove",
-            "item_name": "Tots",
+            "item_name": "Fries",
             "size": "medium",
             "quantity": 3,
             "price": 2.79,

@@ -9,7 +9,7 @@ async def test_combo_logic():
     # 2. Add two Burgers (Combos)
     # Scenario: Customer says "Give me two Number 1 combos"
     order_state_singleton.handle_order_update(
-        session_id, "add", "Sonic Cheeseburger Combo", "Medium", 2, 8.99
+        session_id, "add", "Big Mac Combo", "Medium", 2, 8.99
     )
     
     # 3. Check requirements
@@ -18,13 +18,13 @@ async def test_combo_logic():
     # EXPECTED: "Ask the guest for a side (fries or tots), and a drink or slush..."
 
     # 4. Add only ONE side
-    # Scenario: Customer says "I'll take Tots with that"
+    # Scenario: Customer says "I'll take Fries with that"
     order_state_singleton.handle_order_update(
-        session_id, "add", "Tots", "Medium", 1, 2.49
+        session_id, "add", "Fries", "Medium", 1, 2.49
     )
     
     status = order_state_singleton.get_combo_requirements(session_id)
-    print(f"After 1 Tot: {status['prompt_hint']}")
+    print(f"After 1 Fries: {status['prompt_hint']}")
     # EXPECTED: Still shows missing items because we have 2 combos but only 1 side.
 
     # 5. Get the Grouped Readback

@@ -1,6 +1,6 @@
 """Rebrand verification tests.
 
-These tests ensure no Dunkin' references remain after the Sonic rebrand.
+These tests ensure no Sonic/Dunkin' references remain after the McDonald's rebrand.
 Every source file (Python, TypeScript, HTML, CSS, JSON) is scanned for
 forbidden terms.  Failures report the exact file and line number so the
 team can surgically fix stragglers.
@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 
 # ── Paths ────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parents[3]  # SonicAIDriveThru/
+PROJECT_ROOT = Path(__file__).resolve().parents[3]  # mcdonalds_ai_drivethru/
 BACKEND_DIR = PROJECT_ROOT / "app" / "backend"
 FRONTEND_DIR = PROJECT_ROOT / "app" / "frontend"
 
@@ -22,8 +22,10 @@ FRONTEND_DIR = PROJECT_ROOT / "app" / "frontend"
 # Each tuple: (compiled regex, human-readable label)
 FORBIDDEN_PATTERNS = [
     (re.compile(r"\bdunkin\b", re.IGNORECASE), "dunkin"),
-    (re.compile(r"\bcrew\s+member\b", re.IGNORECASE), "crew member (should be carhop)"),
+    (re.compile(r"\bcarhop\b", re.IGNORECASE), "carhop (should be crew member)"),
     (re.compile(r"\bcoffee[-\s]?chat\b", re.IGNORECASE), "coffee-chat (old repo name)"),
+    (re.compile(r"\bsonic\s+drive[\s-]?in\b", re.IGNORECASE), "Sonic Drive-In"),
+    (re.compile(r"\bInspire\s+Brands\b", re.IGNORECASE), "Inspire Brands"),
 ]
 
 # File extensions to scan
@@ -45,6 +47,8 @@ EXCLUDED_FILES = {
     "voice_rag_README.md",
     # This test file itself contains the forbidden words by necessity
     "test_rebrand_verification.py",
+    # The original Sonic menu data file is kept for the ingestion notebook
+    "sonic-menu-items.json",
 }
 
 
@@ -89,7 +93,7 @@ def _scan_for_forbidden(files: list[Path]) -> list[tuple[Path, int, str, str]]:
 # ── Test class ───────────────────────────────────────────────────────────
 
 class TestRebrandVerification(unittest.TestCase):
-    """Verify the Dunkin → Sonic rebrand is complete across the codebase."""
+    """Verify the Sonic/Dunkin → McDonald's rebrand is complete across the codebase."""
 
     # ── Broad codebase scan ──────────────────────────────────────────
 
@@ -115,10 +119,10 @@ class TestRebrandVerification(unittest.TestCase):
             f"\n{len(hits)} file(s) still reference '{label}':\n" + "\n".join(hits),
         )
 
-    def test_no_crew_member_references(self):
-        """'crew member' should have been replaced with 'carhop' everywhere."""
+    def test_no_carhop_references(self):
+        """'carhop' should have been replaced with 'crew member' everywhere."""
         files = _collect_source_files()
-        pattern, label = FORBIDDEN_PATTERNS[1]  # crew member
+        pattern, label = FORBIDDEN_PATTERNS[1]  # carhop
         hits = []
         for filepath in files:
             try:
@@ -174,8 +178,8 @@ class TestRebrandVerification(unittest.TestCase):
 
     # ── Targeted file checks ─────────────────────────────────────────
 
-    def test_readme_title_contains_sonic(self):
-        """README.md project title/heading must mention 'Sonic'."""
+    def test_readme_title_contains_mcdonalds(self):
+        """README.md project title/heading must mention 'McDonald's'."""
         readme = PROJECT_ROOT / "README.md"
         self.assertTrue(readme.exists(), "README.md not found at project root")
         content = readme.read_text(encoding="utf-8", errors="replace")
@@ -185,8 +189,8 @@ class TestRebrandVerification(unittest.TestCase):
                 first_heading = line
                 break
         self.assertTrue(
-            "sonic" in first_heading.lower(),
-            f"README.md first heading does not mention Sonic: '{first_heading}'",
+            "mcdonald" in first_heading.lower(),
+            f"README.md first heading does not mention McDonald's: '{first_heading}'",
         )
 
     def test_readme_does_not_mention_dunkin(self):
@@ -203,8 +207,8 @@ class TestRebrandVerification(unittest.TestCase):
             f"\nREADME.md still references Dunkin:\n" + "\n".join(hits),
         )
 
-    def test_frontend_index_html_title_contains_sonic(self):
-        """app/frontend/index.html <title> must contain 'Sonic'."""
+    def test_frontend_index_html_title_contains_mcdonalds(self):
+        """app/frontend/index.html <title> must contain 'McDonald's'."""
         index = FRONTEND_DIR / "index.html"
         self.assertTrue(index.exists(), "app/frontend/index.html not found")
         content = index.read_text(encoding="utf-8", errors="replace")
@@ -212,8 +216,8 @@ class TestRebrandVerification(unittest.TestCase):
         self.assertIsNotNone(title_match, "No <title> tag found in index.html")
         title_text = title_match.group(1)
         self.assertTrue(
-            "sonic" in title_text.lower(),
-            f"index.html <title> does not mention Sonic: '{title_text}'",
+            "mcdonald" in title_text.lower(),
+            f"index.html <title> does not mention McDonald's: '{title_text}'",
         )
 
     def test_frontend_index_html_no_dunkin(self):
@@ -230,8 +234,8 @@ class TestRebrandVerification(unittest.TestCase):
             f"\nindex.html still references Dunkin:\n" + "\n".join(hits),
         )
 
-    def test_backend_system_prompt_mentions_sonic(self):
-        """The backend system prompt in app.py must reference 'Sonic'."""
+    def test_backend_system_prompt_mentions_mcdonalds(self):
+        """The backend system prompt in app.py must reference 'McDonald's'."""
         app_py = BACKEND_DIR / "app.py"
         self.assertTrue(app_py.exists(), "app/backend/app.py not found")
         content = app_py.read_text(encoding="utf-8", errors="replace")
@@ -246,8 +250,8 @@ class TestRebrandVerification(unittest.TestCase):
         prompt_text = match.group(1)
 
         self.assertTrue(
-            "sonic" in prompt_text.lower(),
-            "system_message in app.py does not mention 'Sonic'",
+            "mcdonald" in prompt_text.lower(),
+            "system_message in app.py does not mention 'McDonald's'",
         )
 
     def test_backend_system_prompt_no_dunkin(self):
@@ -274,8 +278,32 @@ class TestRebrandVerification(unittest.TestCase):
             f"\nsystem_message in app.py still references Dunkin:\n" + "\n".join(hits),
         )
 
-    def test_backend_system_prompt_uses_carhop_not_crew_member(self):
-        """The system prompt should say 'carhop', not 'crew member'."""
+    def test_backend_system_prompt_no_sonic(self):
+        """The backend system prompt in app.py must NOT reference 'Sonic'."""
+        app_py = BACKEND_DIR / "app.py"
+        self.assertTrue(app_py.exists(), "app/backend/app.py not found")
+        content = app_py.read_text(encoding="utf-8", errors="replace")
+
+        match = re.search(
+            r"system_message\s*=\s*\((.*?)\)",
+            content,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match, "Could not locate system_message in app.py")
+        prompt_text = match.group(1)
+
+        hits = []
+        for i, line in enumerate(prompt_text.splitlines(), start=1):
+            if re.search(r"\bsonic\b", line, re.IGNORECASE):
+                hits.append(f"  system_message line {i}: {line.strip()}")
+
+        self.assertEqual(
+            hits, [],
+            f"\nsystem_message in app.py still references Sonic:\n" + "\n".join(hits),
+        )
+
+    def test_backend_system_prompt_uses_crew_member_not_carhop(self):
+        """The system prompt should say 'crew member', not 'carhop'."""
         app_py = BACKEND_DIR / "app.py"
         content = app_py.read_text(encoding="utf-8", errors="replace")
 
@@ -288,8 +316,8 @@ class TestRebrandVerification(unittest.TestCase):
         prompt_text = match.group(1).lower()
 
         self.assertNotIn(
-            "crew member", prompt_text,
-            "system_message still uses 'crew member' — should be 'carhop'",
+            "carhop", prompt_text,
+            "system_message still uses 'carhop' — should be 'crew member'",
         )
 
     # ── Scan finds files sanity check ────────────────────────────────

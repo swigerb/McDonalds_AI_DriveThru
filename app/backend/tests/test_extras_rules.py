@@ -45,7 +45,7 @@ class ExtrasRuleTests(unittest.TestCase):
 
     def test_allow_extra_when_slush_present(self):
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Cherry Limeade", "medium", 1, 2.99)
+        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
 
         result = asyncio.run(
             update_order(
@@ -72,7 +72,7 @@ class ExtrasRuleTests(unittest.TestCase):
 
     def test_block_extra_when_only_sides(self):
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", 1, 2.79)
+        self._add_item(session_id, "Fries", "medium", 1, 2.79)
 
         result = asyncio.run(
             update_order(
@@ -92,7 +92,7 @@ class ExtrasRuleTests(unittest.TestCase):
 
         summary = order_state_singleton.get_order_summary(session_id)
         self.assertEqual(len(summary.items), 1)
-        self.assertEqual(summary.items[0].item, "Tots")
+        self.assertEqual(summary.items[0].item, "Fries")
         self.assertTrue(math.isclose(summary.total, 2.79, rel_tol=1e-9))
 
     # ── Additional extras scenarios ──
@@ -119,10 +119,10 @@ class ExtrasRuleTests(unittest.TestCase):
         self.assertEqual(len(summary.items), 2)
 
     def test_allow_extra_when_mixed_order_has_slush(self):
-        """Extras allowed when order has both tots AND a slush."""
+        """Extras allowed when order has both fries AND a drink."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", 1, 2.79)
-        self._add_item(session_id, "Cherry Limeade", "medium", 1, 2.99)
+        self._add_item(session_id, "Fries", "medium", 1, 2.79)
+        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
 
         result = asyncio.run(
             update_order(
@@ -143,7 +143,7 @@ class ExtrasRuleTests(unittest.TestCase):
     def test_block_extra_with_only_multiple_sides(self):
         """Even multiple sides should not unlock extras."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "large", 3, 3.29)
+        self._add_item(session_id, "Fries", "large", 3, 3.29)
         self._add_item(session_id, "Onion Rings", "medium", 1, 2.99)
 
         result = asyncio.run(
@@ -164,8 +164,8 @@ class ExtrasRuleTests(unittest.TestCase):
     def test_allow_extra_with_multiple_drinks(self):
         """Multiple drinks in the order — extras should still be allowed."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Cherry Limeade", "small", 1, 2.49)
-        self._add_item(session_id, "Ocean Water", "large", 1, 3.49)
+        self._add_item(session_id, "Coca-Cola", "small", 1, 2.49)
+        self._add_item(session_id, "Sprite", "large", 1, 3.49)
 
         result = asyncio.run(
             update_order(
@@ -206,13 +206,13 @@ class ExtrasRuleTests(unittest.TestCase):
     def test_non_extra_item_always_allowed(self):
         """Non-extra items should always be addable regardless of order contents."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Tots", "medium", 1, 2.79)
+        self._add_item(session_id, "Fries", "medium", 1, 2.79)
 
         result = asyncio.run(
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Cherry Limeade",
+                    "item_name": "Coca-Cola",
                     "size": "medium",
                     "quantity": 1,
                     "price": 2.99,
@@ -227,11 +227,11 @@ class ExtrasRuleTests(unittest.TestCase):
     def test_remove_action_bypasses_extra_check(self):
         """Removing an extra should work even without a qualifying drink."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Cherry Limeade", "medium", 1, 2.99)
+        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
         self._add_item(session_id, "Flavor Add-In", "standard", 1, 0.50)
 
-        # Now remove the slush, leaving only the extra
-        order_state_singleton.handle_order_update(session_id, "remove", "Cherry Limeade", "medium", 1, 2.99)
+        # Now remove the drink, leaving only the extra
+        order_state_singleton.handle_order_update(session_id, "remove", "Coca-Cola", "medium", 1, 2.99)
 
         # Removing the extra should still work (remove is not gated)
         result = asyncio.run(

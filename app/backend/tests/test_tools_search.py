@@ -22,27 +22,27 @@ class IsExtraItemTests(unittest.TestCase):
         self.assertTrue(_is_extra_item("WHIPPED CREAM"))
 
     def test_non_extras(self):
-        self.assertFalse(_is_extra_item("Tots"))
-        self.assertFalse(_is_extra_item("Cherry Limeade"))
-        self.assertFalse(_is_extra_item("Sonic Cheeseburger"))
+        self.assertFalse(_is_extra_item("Fries"))
+        self.assertFalse(_is_extra_item("Coca-Cola"))
+        self.assertFalse(_is_extra_item("Big Mac"))
         self.assertFalse(_is_extra_item("Onion Rings"))
 
 
 class InferCategoryTests(unittest.TestCase):
     def test_slush_inferred(self):
-        cat = _infer_category("Cherry Limeade")
-        self.assertIn("slush", cat)
-        cat2 = _infer_category("Ocean Water")
-        self.assertIn("slush", cat2)
+        cat = _infer_category("Coca-Cola")
+        self.assertIn("drink", cat)
+        cat2 = _infer_category("Sprite")
+        self.assertIn("drink", cat2)
 
     def test_shakes_inferred(self):
         cat = _infer_category("Classic Vanilla Shake")
         self.assertIn("shake", cat)
-        cat2 = _infer_category("Oreo Blast")
+        cat2 = _infer_category("McFlurry")
         self.assertIn("shake", cat2)
 
     def test_combos_inferred(self):
-        cat = _infer_category("Sonic Cheeseburger")
+        cat = _infer_category("Big Mac")
         self.assertTrue("burger" in cat or "combo" in cat)
 
     def test_hot_dogs_inferred(self):
