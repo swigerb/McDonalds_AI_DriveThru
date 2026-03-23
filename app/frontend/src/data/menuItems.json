@@ -4,21 +4,23 @@
             "category": "Burgers & Sandwiches",
             "items": [
                 {
-                    "name": "Big Mac®",
+                    "name": "Big MacÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 5.29
                         }
                     ],
-                    "description": "Mouthwatering perfection starts with two 100% pure all beef patties and Big Mac® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese.",
-                    "longDescription": "Mouthwatering perfection starts with two 100% pure all beef patties and Big Mac® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions — on a sesame seed bun.",
+                    "description": "Mouthwatering perfection starts with two 100% pure all beef patties and Big MacÂ® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese.",
+                    "longDescription": "Mouthwatering perfection starts with two 100% pure all beef patties and Big MacÂ® sauce sandwiched between a sesame seed bun. It's topped off with pickles, crisp shredded lettuce, finely chopped onion, and a slice of melty American cheese. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions â€” on a sesame seed bun.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMac_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMac_832x472",
+                    "calories": 550,
+                    "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Quarter Pounder® with Cheese",
+                    "name": "Quarter PounderÂ® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -29,10 +31,12 @@
                     "longDescription": "A quarter pound of 100% fresh beef, hot off the grill and seasoned with just a pinch of salt and pepper. Topped with two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun. Weight before cooking: 4 oz.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QuarterPounderCheese_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QuarterPounderCheese_832x472",
+                    "calories": 520,
+                    "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Double Quarter Pounder® with Cheese",
+                    "name": "Double Quarter PounderÂ® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -43,10 +47,12 @@
                     "longDescription": "Two quarter pound 100% fresh beef patties, hot off the grill and seasoned with just a pinch of salt and pepper. Topped with two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun. A double dose of deliciousness.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DoubleQuarterPounderCheese_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DoubleQuarterPounderCheese_832x472",
+                    "calories": 740,
+                    "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Bacon Quarter Pounder® with Cheese",
+                    "name": "Bacon Quarter PounderÂ® with Cheese",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -57,10 +63,12 @@
                     "longDescription": "A quarter pound of 100% fresh beef, topped with thick-cut Applewood smoked bacon, two slices of melty American cheese, slivered onions, tangy pickles, ketchup, and mustard on a toasted sesame seed bun. The perfect combination of beef and bacon.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconQPC_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconQPC_832x472",
+                    "calories": 620,
+                    "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "McDouble®",
+                    "name": "McDoubleÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -71,7 +79,9 @@
                     "longDescription": "A classic double burger featuring two 100% pure beef patties seasoned with just a pinch of salt and pepper, topped with tangy pickles, chopped onions, ketchup, mustard, and a slice of melty American cheese on a toasted bun. Big flavor at a great value.",
                     "origin": "McDonald's Menu",
                     "popularity": "Value Pick",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McDouble_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McDouble_832x472",
+                    "calories": 400,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
                     "name": "Cheeseburger",
@@ -85,7 +95,9 @@
                     "longDescription": "A simple, satisfying classic. A 100% pure beef patty seasoned with just a pinch of salt and pepper, topped with a slice of melty American cheese, tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. The McDonald's cheeseburger that started it all.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Cheeseburger_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Cheeseburger_832x472",
+                    "calories": 300,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
                     "name": "Double Cheeseburger",
@@ -99,7 +111,9 @@
                     "longDescription": "Two 100% pure beef patties with two slices of melty American cheese, tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. Double the beef, double the cheese, double the deliciousness.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DoubleCheese_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DoubleCheese_832x472",
+                    "calories": 450,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
                     "name": "Hamburger",
@@ -113,10 +127,12 @@
                     "longDescription": "The original McDonald's burger. A 100% pure beef patty seasoned with just a pinch of salt and pepper, topped with tangy pickles, chopped onions, ketchup, and mustard on a toasted bun. Simple, classic, and delicious since 1955.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Hamburger_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Hamburger_832x472",
+                    "calories": 250,
+                    "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "McCrispy®",
+                    "name": "McCrispyÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -127,10 +143,12 @@
                     "longDescription": "Crispy, juicy, tender perfection. A Southern-style fried chicken fillet on a toasted, buttery potato roll with crinkle-cut pickles. Simple, bold, and unforgettable. Also available Spicy and Deluxe.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispy_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispy_832x472",
+                    "calories": 470,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
-                    "name": "Filet-O-Fish®",
+                    "name": "Filet-O-FishÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -141,15 +159,17 @@
                     "longDescription": "Dive into a wild-caught Alaskan Pollock filet, breaded and fried to golden perfection, with creamy tartar sauce and a slice of melty American cheese, all on a soft, steamed bun. A McDonald's classic since 1962.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FiletOFish_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FiletOFish_832x472",
+                    "calories": 390,
+                    "allergens": "Wheat, Milk, Fish, Soy"
                 }
             ]
         },
         {
-            "category": "Chicken & McNuggets®",
+            "category": "Chicken & McNuggetsÂ®",
             "items": [
                 {
-                    "name": "Chicken McNuggets®",
+                    "name": "Chicken McNuggetsÂ®",
                     "sizes": [
                         {
                             "size": "4 Piece",
@@ -176,10 +196,12 @@
                     "longDescription": "Tender, bite-sized pieces made with 100% white meat chicken, battered, breaded, and seasoned to crispy, golden perfection. Served with your choice of dipping sauce including BBQ, Sweet 'N Sour, Honey Mustard, Spicy Buffalo, or Ranch.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pc_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pc_832x472",
+                    "calories": 410,
+                    "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "McChicken®",
+                    "name": "McChickenÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -190,10 +212,12 @@
                     "longDescription": "A crispy, seasoned chicken patty topped with shredded iceberg lettuce and creamy mayonnaise on a perfectly toasted bun. A classic value favorite that's been a go-to for chicken lovers since 1980.",
                     "origin": "McDonald's Menu",
                     "popularity": "Value Pick",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McChicken_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McChicken_832x472",
+                    "calories": 400,
+                    "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "Spicy McCrispy®",
+                    "name": "Spicy McCrispyÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -204,10 +228,12 @@
                     "longDescription": "A Southern-style fried chicken fillet seasoned with a bold, spicy pepper blend, topped with crinkle-cut pickles and spicy sauce on a toasted, buttery potato roll. Bringing the heat to every bite.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SpicyMcCrispy_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SpicyMcCrispy_832x472",
+                    "calories": 530,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
-                    "name": "Deluxe McCrispy®",
+                    "name": "Deluxe McCrispyÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -218,10 +244,12 @@
                     "longDescription": "A Southern-style fried chicken fillet topped with shredded lettuce, Roma tomatoes, and creamy mayo on a toasted, buttery potato roll. The deluxe upgrade you deserve.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DeluxeMcCrispy_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_DeluxeMcCrispy_832x472",
+                    "calories": 530,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Spicy Deluxe McCrispy®",
+                    "name": "Spicy Deluxe McCrispyÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -232,10 +260,12 @@
                     "longDescription": "A spicy, Southern-style fried chicken fillet topped with shredded lettuce, Roma tomatoes, and creamy mayo on a toasted, buttery potato roll. Heat meets deluxe for the ultimate chicken sandwich experience.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SpicyDeluxeMcCrispy_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SpicyDeluxeMcCrispy_832x472",
+                    "calories": 540,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Hot 'N Spicy McChicken®",
+                    "name": "Hot 'N Spicy McChickenÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -246,63 +276,73 @@
                     "longDescription": "A crispy chicken patty seasoned with a bold, spicy blend, topped with shredded lettuce and creamy mayonnaise on a perfectly toasted bun. All the McChicken flavor with an extra kick.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotNSpicyMcChicken_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotNSpicyMcChicken_832x472",
+                    "calories": 400,
+                    "allergens": "Wheat, Soy"
                 },
                 {
-                    "name": "10 Piece McNuggets® Meal",
+                    "name": "10 Piece McNuggetsÂ® Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 8.89
                         }
                     ],
-                    "description": "10 tender Chicken McNuggets® made with 100% white meat chicken, served with medium World Famous Fries® and your choice of a medium drink.",
-                    "longDescription": "10 tender Chicken McNuggets® made with 100% white meat chicken, served with medium World Famous Fries® and your choice of a medium drink. Includes your choice of dipping sauce.",
+                    "description": "10 tender Chicken McNuggetsÂ® made with 100% white meat chicken, served with medium World Famous FriesÂ® and your choice of a medium drink.",
+                    "longDescription": "10 tender Chicken McNuggetsÂ® made with 100% white meat chicken, served with medium World Famous FriesÂ® and your choice of a medium drink. Includes your choice of dipping sauce.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pcMeal_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McNuggets10pcMeal_832x472",
+                    "calories": 1080,
+                    "allergens": "Wheat, Soy, Milk"
                 },
                 {
-                    "name": "Big Mac® Meal",
+                    "name": "Big MacÂ® Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 8.99
                         }
                     ],
-                    "description": "The iconic Big Mac® paired with medium World Famous Fries® and your choice of a medium drink. The classic combo.",
-                    "longDescription": "The iconic Big Mac® paired with medium World Famous Fries® and your choice of a medium drink. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions on a sesame seed bun — plus fries and a drink.",
+                    "description": "The iconic Big MacÂ® paired with medium World Famous FriesÂ® and your choice of a medium drink. The classic combo.",
+                    "longDescription": "The iconic Big MacÂ® paired with medium World Famous FriesÂ® and your choice of a medium drink. Two all-beef patties, special sauce, lettuce, cheese, pickles, onions on a sesame seed bun â€” plus fries and a drink.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMacMeal_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BigMacMeal_832x472",
+                    "calories": 1100,
+                    "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "Quarter Pounder® with Cheese Meal",
+                    "name": "Quarter PounderÂ® with Cheese Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 8.59
                         }
                     ],
-                    "description": "A Quarter Pounder® with Cheese made with fresh beef, paired with medium World Famous Fries® and your choice of a medium drink.",
-                    "longDescription": "A Quarter Pounder® with Cheese made with 100% fresh beef, cooked when you order, paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "description": "A Quarter PounderÂ® with Cheese made with fresh beef, paired with medium World Famous FriesÂ® and your choice of a medium drink.",
+                    "longDescription": "A Quarter PounderÂ® with Cheese made with 100% fresh beef, cooked when you order, paired with medium World Famous FriesÂ® and your choice of a medium drink.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QPCMeal_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_QPCMeal_832x472",
+                    "calories": 1080,
+                    "allergens": "Wheat, Milk, Soy, Sesame"
                 },
                 {
-                    "name": "McCrispy® Meal",
+                    "name": "McCrispyÂ® Meal",
                     "sizes": [
                         {
                             "size": "Standard",
                             "price": 7.99
                         }
                     ],
-                    "description": "The crispy, juicy McCrispy® chicken sandwich paired with medium World Famous Fries® and your choice of a medium drink.",
-                    "longDescription": "The crispy, juicy McCrispy® chicken sandwich on a buttery potato roll with crinkle-cut pickles, paired with medium World Famous Fries® and your choice of a medium drink.",
+                    "description": "The crispy, juicy McCrispyÂ® chicken sandwich paired with medium World Famous FriesÂ® and your choice of a medium drink.",
+                    "longDescription": "The crispy, juicy McCrispyÂ® chicken sandwich on a buttery potato roll with crinkle-cut pickles, paired with medium World Famous FriesÂ® and your choice of a medium drink.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispyMeal_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McCrispyMeal_832x472",
+                    "calories": 1030,
+                    "allergens": "Wheat, Milk, Soy"
                 }
             ]
         },
@@ -310,7 +350,7 @@
             "category": "Breakfast",
             "items": [
                 {
-                    "name": "Egg McMuffin®",
+                    "name": "Egg McMuffinÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -321,10 +361,12 @@
                     "longDescription": "A freshly cracked Grade A egg on a toasted English muffin with real butter, lean Canadian bacon, and a slice of melty American cheese. An excellent source of protein and the breakfast sandwich that started it all.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_EggMcMuffin_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_EggMcMuffin_832x472",
+                    "calories": 300,
+                    "allergens": "Wheat, Milk, Egg"
                 },
                 {
-                    "name": "Sausage McMuffin® with Egg",
+                    "name": "Sausage McMuffinÂ® with Egg",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -335,10 +377,12 @@
                     "longDescription": "A savory hot sausage patty, a freshly cracked egg, and a slice of melty American cheese on a toasted English muffin. A hearty, protein-packed start to your day.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageMcMuffinEgg_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageMcMuffinEgg_832x472",
+                    "calories": 480,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Sausage McMuffin®",
+                    "name": "Sausage McMuffinÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -349,7 +393,9 @@
                     "longDescription": "A warm, freshly toasted English muffin topped with a savory hot sausage patty and a slice of melty American cheese. Simple, satisfying, and bursting with flavor.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageMcMuffin_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageMcMuffin_832x472",
+                    "calories": 400,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
                     "name": "Bacon, Egg & Cheese Biscuit",
@@ -363,10 +409,12 @@
                     "longDescription": "Thick-cut Applewood smoked bacon, a fluffy folded egg, and a slice of melty American cheese on a warm, buttermilk biscuit. Southern comfort in every bite. A McDonald's breakfast staple.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconEggCheeseBiscuit_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconEggCheeseBiscuit_832x472",
+                    "calories": 460,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Sausage, Egg & Cheese McGriddles®",
+                    "name": "Sausage, Egg & Cheese McGriddlesÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -377,10 +425,12 @@
                     "longDescription": "Soft, warm griddle cakes with the taste of sweet maple, filled with a savory sausage patty, fluffy egg, and melty American cheese. A sweet and savory breakfast combo that's uniquely McDonald's.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageEggCheeseGriddle_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageEggCheeseGriddle_832x472",
+                    "calories": 550,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
-                    "name": "Bacon, Egg & Cheese McGriddles®",
+                    "name": "Bacon, Egg & Cheese McGriddlesÂ®",
                     "sizes": [
                         {
                             "size": "Standard",
@@ -391,7 +441,9 @@
                     "longDescription": "Thick-cut Applewood smoked bacon, a fluffy folded egg, and melty American cheese between soft, warm griddle cakes with the taste of sweet maple. Breakfast perfection.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconEggCheeseGriddle_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_BaconEggCheeseGriddle_832x472",
+                    "calories": 520,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
                     "name": "Hotcakes",
@@ -405,7 +457,9 @@
                     "longDescription": "Three fluffy, golden-brown hotcakes served with real butter and sweet maple-flavored hotcake syrup. A warm, comforting breakfast classic. Also available with sausage.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Hotcakes_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Hotcakes_832x472",
+                    "calories": 580,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
                     "name": "Hotcakes & Sausage",
@@ -419,7 +473,9 @@
                     "longDescription": "Three fluffy, golden-brown hotcakes with real butter and sweet maple-flavored syrup, plus a warm sausage patty on the side. The ultimate hearty breakfast.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotcakesSausage_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotcakesSausage_832x472",
+                    "calories": 770,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
                     "name": "Sausage Burrito",
@@ -433,7 +489,9 @@
                     "longDescription": "A warm flour tortilla filled with fluffy scrambled egg, pork sausage, melty cheese, green chiles, and onions. A portable breakfast favorite at a great value.",
                     "origin": "McDonald's Menu",
                     "popularity": "Value Pick",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageBurrito_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SausageBurrito_832x472",
+                    "calories": 310,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
                     "name": "Hash Browns",
@@ -447,7 +505,9 @@
                     "longDescription": "Crispy, golden hash brown patties made from freshly shredded potatoes, seasoned and fried to delicious perfection. The perfect breakfast side or snack.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HashBrowns_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HashBrowns_832x472",
+                    "calories": 140,
+                    "allergens": "Wheat, Milk"
                 }
             ]
         },
@@ -455,7 +515,7 @@
             "category": "Fries, Sides & Drinks",
             "items": [
                 {
-                    "name": "World Famous Fries®",
+                    "name": "World Famous FriesÂ®",
                     "sizes": [
                         {
                             "size": "Small",
@@ -470,11 +530,13 @@
                             "price": 4.19
                         }
                     ],
-                    "description": "Our World Famous Fries® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted.",
-                    "longDescription": "Our World Famous Fries® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted. The iconic fries that make every meal complete.",
+                    "description": "Our World Famous FriesÂ® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted.",
+                    "longDescription": "Our World Famous FriesÂ® are made with premium potatoes like the Russet Burbank and Shepody. Crispy and golden on the outside, fluffy on the inside, and perfectly salted. The iconic fries that make every meal complete.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FrenchFries_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_FrenchFries_832x472",
+                    "calories": 320,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
                     "name": "Apple Slices",
@@ -488,10 +550,12 @@
                     "longDescription": "Fresh, crisp apple slices. A wholesome snack or side that's a great complement to any meal. Perfect for kids and adults alike.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_AppleSlices_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_AppleSlices_832x472",
+                    "calories": 15,
+                    "allergens": ""
                 },
                 {
-                    "name": "Coca-Cola®",
+                    "name": "Coca-ColaÂ®",
                     "sizes": [
                         {
                             "size": "Small",
@@ -506,14 +570,16 @@
                             "price": 2.29
                         }
                     ],
-                    "description": "Ice-cold Coca-Cola® — the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal.",
-                    "longDescription": "Ice-cold Coca-Cola® — the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal. Served from our fountain, just the way you like it.",
+                    "description": "Ice-cold Coca-ColaÂ® â€” the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal.",
+                    "longDescription": "Ice-cold Coca-ColaÂ® â€” the refreshing, ice-cold soft drink that pairs perfectly with any McDonald's meal. Served from our fountain, just the way you like it.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CocaCola_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CocaCola_832x472",
+                    "calories": 210,
+                    "allergens": ""
                 },
                 {
-                    "name": "Sprite®",
+                    "name": "SpriteÂ®",
                     "sizes": [
                         {
                             "size": "Small",
@@ -528,14 +594,16 @@
                             "price": 2.29
                         }
                     ],
-                    "description": "Crisp, refreshing Sprite® with a lemon-lime flavor that quenches your thirst and complements any meal.",
-                    "longDescription": "Crisp, refreshing Sprite® with a lemon-lime flavor that quenches your thirst and complements any meal. Served from our fountain with ice.",
+                    "description": "Crisp, refreshing SpriteÂ® with a lemon-lime flavor that quenches your thirst and complements any meal.",
+                    "longDescription": "Crisp, refreshing SpriteÂ® with a lemon-lime flavor that quenches your thirst and complements any meal. Served from our fountain with ice.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Sprite_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_Sprite_832x472",
+                    "calories": 200,
+                    "allergens": ""
                 },
                 {
-                    "name": "Hi-C® Orange Lavaburst",
+                    "name": "Hi-CÂ® Orange Lavaburst",
                     "sizes": [
                         {
                             "size": "Small",
@@ -550,11 +618,13 @@
                             "price": 2.29
                         }
                     ],
-                    "description": "The fan-favorite Hi-C® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip.",
-                    "longDescription": "The fan-favorite Hi-C® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip. The beloved McDonald's fountain drink that fans asked for by name.",
+                    "description": "The fan-favorite Hi-CÂ® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip.",
+                    "longDescription": "The fan-favorite Hi-CÂ® Orange Lavaburst is back! A burst of sweet, citrusy orange flavor in every sip. The beloved McDonald's fountain drink that fans asked for by name.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HiCOrange_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HiCOrange_832x472",
+                    "calories": 230,
+                    "allergens": ""
                 },
                 {
                     "name": "Sweet Iced Tea",
@@ -576,7 +646,9 @@
                     "longDescription": "Freshly brewed and sweetened to perfection. McDonald's Sweet Iced Tea is made from a refreshing blend of brewed orange pekoe and pekoe cut black tea, served ice-cold. A Southern classic.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SweetTea_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_SweetTea_832x472",
+                    "calories": 90,
+                    "allergens": ""
                 },
                 {
                     "name": "Premium Roast Coffee",
@@ -598,10 +670,12 @@
                     "longDescription": "A rich, smooth blend of 100% Arabica beans, freshly brewed every 30 minutes. The perfect cup to start your morning or keep you going through the day.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_PremiumCoffee_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_PremiumCoffee_832x472",
+                    "calories": 0,
+                    "allergens": ""
                 },
                 {
-                    "name": "Caramel Frappé",
+                    "name": "Caramel FrappÃ©",
                     "sizes": [
                         {
                             "size": "Small",
@@ -617,13 +691,15 @@
                         }
                     ],
                     "description": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle.",
-                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafé® favorite.",
+                    "longDescription": "Cool, creamy, and caffeinated. A sweet blend of rich caramel flavor with coffee, milk, and ice, topped with whipped topping and caramel drizzle. A McCafÃ©Â® favorite.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelFrappe_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelFrappe_832x472",
+                    "calories": 510,
+                    "allergens": "Milk, Soy"
                 },
                 {
-                    "name": "Mocha Frappé",
+                    "name": "Mocha FrappÃ©",
                     "sizes": [
                         {
                             "size": "Small",
@@ -639,13 +715,15 @@
                         }
                     ],
                     "description": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy.",
-                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafé® treat.",
+                    "longDescription": "A sweet blend of rich chocolate flavor with coffee, milk, and ice, topped with whipped topping and a chocolate drizzle. Indulgently cool and creamy. A McCafÃ©Â® treat.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_MochaFrappe_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_MochaFrappe_832x472",
+                    "calories": 500,
+                    "allergens": "Milk, Soy"
                 },
                 {
-                    "name": "Minute Maid® Orange Juice",
+                    "name": "Minute MaidÂ® Orange Juice",
                     "sizes": [
                         {
                             "size": "Small",
@@ -660,11 +738,13 @@
                             "price": 3.79
                         }
                     ],
-                    "description": "100% orange juice, freshly squeezed goodness from Minute Maid®. A refreshing way to start your morning.",
-                    "longDescription": "100% orange juice, freshly squeezed goodness from Minute Maid®. A refreshing way to start your morning or pair with any McDonald's meal.",
+                    "description": "100% orange juice, freshly squeezed goodness from Minute MaidÂ®. A refreshing way to start your morning.",
+                    "longDescription": "100% orange juice, freshly squeezed goodness from Minute MaidÂ®. A refreshing way to start your morning or pair with any McDonald's meal.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_OrangeJuice_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_OrangeJuice_832x472",
+                    "calories": 190,
+                    "allergens": ""
                 }
             ]
         },
@@ -672,32 +752,36 @@
             "category": "Sweets & Treats",
             "items": [
                 {
-                    "name": "McFlurry® with OREO® Cookies",
+                    "name": "McFlurryÂ® with OREOÂ® Cookies",
                     "sizes": [
                         {
                             "size": "Regular",
                             "price": 4.29
                         }
                     ],
-                    "description": "Creamy vanilla soft serve swirled with crunchy OREO® cookie pieces. A delicious frozen treat that's the perfect ending to any meal.",
-                    "longDescription": "Creamy vanilla soft serve swirled with crunchy OREO® cookie pieces. A delicious frozen treat that's the perfect ending to any meal. Made with our creamy vanilla soft serve.",
+                    "description": "Creamy vanilla soft serve swirled with crunchy OREOÂ® cookie pieces. A delicious frozen treat that's the perfect ending to any meal.",
+                    "longDescription": "Creamy vanilla soft serve swirled with crunchy OREOÂ® cookie pieces. A delicious frozen treat that's the perfect ending to any meal. Made with our creamy vanilla soft serve.",
                     "origin": "McDonald's Menu",
                     "popularity": "Best Seller",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryOreo_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryOreo_832x472",
+                    "calories": 510,
+                    "allergens": "Wheat, Milk, Soy"
                 },
                 {
-                    "name": "McFlurry® with M&M's® Candies",
+                    "name": "McFlurryÂ® with M&M'sÂ® Candies",
                     "sizes": [
                         {
                             "size": "Regular",
                             "price": 4.29
                         }
                     ],
-                    "description": "Creamy vanilla soft serve blended with colorful, crunchy M&M's® chocolate candies. A sweet, crunchy, irresistible combination.",
-                    "longDescription": "Creamy vanilla soft serve blended with colorful, crunchy M&M's® chocolate candies. A sweet, crunchy, irresistible combination that's fun in every bite.",
+                    "description": "Creamy vanilla soft serve blended with colorful, crunchy M&M'sÂ® chocolate candies. A sweet, crunchy, irresistible combination.",
+                    "longDescription": "Creamy vanilla soft serve blended with colorful, crunchy M&M'sÂ® chocolate candies. A sweet, crunchy, irresistible combination that's fun in every bite.",
                     "origin": "McDonald's Menu",
                     "popularity": "Popular",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryMM_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_McFlurryMM_832x472",
+                    "calories": 640,
+                    "allergens": "Wheat, Milk, Soy, Peanut"
                 },
                 {
                     "name": "Chocolate Shake",
@@ -715,11 +799,13 @@
                             "price": 4.19
                         }
                     ],
-                    "description": "Thick, creamy, and delicious — our chocolate shake is made with our creamy vanilla soft serve and chocolate syrup, topped with whipped topping.",
-                    "longDescription": "Thick, creamy, and delicious — our chocolate shake is made with our creamy vanilla soft serve and chocolate syrup, topped with whipped topping. A classic treat.",
+                    "description": "Thick, creamy, and delicious â€” our chocolate shake is made with our creamy vanilla soft serve and chocolate syrup, topped with whipped topping.",
+                    "longDescription": "Thick, creamy, and delicious â€” our chocolate shake is made with our creamy vanilla soft serve and chocolate syrup, topped with whipped topping. A classic treat.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ChocolateShake_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ChocolateShake_832x472",
+                    "calories": 630,
+                    "allergens": "Milk, Soy"
                 },
                 {
                     "name": "Vanilla Shake",
@@ -737,11 +823,13 @@
                             "price": 4.19
                         }
                     ],
-                    "description": "Thick, creamy, and delicious — our vanilla shake is made with our creamy vanilla soft serve and topped with whipped topping. Simple perfection.",
-                    "longDescription": "Thick, creamy, and delicious — our vanilla shake is made with our creamy vanilla soft serve and topped with whipped topping. Simple perfection in every sip.",
+                    "description": "Thick, creamy, and delicious â€” our vanilla shake is made with our creamy vanilla soft serve and topped with whipped topping. Simple perfection.",
+                    "longDescription": "Thick, creamy, and delicious â€” our vanilla shake is made with our creamy vanilla soft serve and topped with whipped topping. Simple perfection in every sip.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_VanillaShake_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_VanillaShake_832x472",
+                    "calories": 530,
+                    "allergens": "Milk"
                 },
                 {
                     "name": "Strawberry Shake",
@@ -759,11 +847,13 @@
                             "price": 4.19
                         }
                     ],
-                    "description": "Thick, creamy, and delicious — our strawberry shake is made with our creamy vanilla soft serve and strawberry syrup, topped with whipped topping.",
-                    "longDescription": "Thick, creamy, and delicious — our strawberry shake is made with our creamy vanilla soft serve and strawberry syrup, topped with whipped topping. Fruity and refreshing.",
+                    "description": "Thick, creamy, and delicious â€” our strawberry shake is made with our creamy vanilla soft serve and strawberry syrup, topped with whipped topping.",
+                    "longDescription": "Thick, creamy, and delicious â€” our strawberry shake is made with our creamy vanilla soft serve and strawberry syrup, topped with whipped topping. Fruity and refreshing.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_StrawberryShake_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_StrawberryShake_832x472",
+                    "calories": 550,
+                    "allergens": "Milk"
                 },
                 {
                     "name": "Vanilla Cone",
@@ -777,7 +867,9 @@
                     "longDescription": "Creamy, smooth vanilla soft serve in a crispy cone. A sweet, simple treat at a great price. The perfect way to end a meal or enjoy as a snack.",
                     "origin": "McDonald's Menu",
                     "popularity": "Value Pick",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_VanillaCone_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_VanillaCone_832x472",
+                    "calories": 200,
+                    "allergens": "Milk"
                 },
                 {
                     "name": "Hot Fudge Sundae",
@@ -791,7 +883,9 @@
                     "longDescription": "Creamy vanilla soft serve topped with hot, rich fudge sauce. A warm-and-cold combination that's pure indulgence. A McDonald's dessert classic.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotFudgeSundae_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_HotFudgeSundae_832x472",
+                    "calories": 330,
+                    "allergens": "Milk, Soy"
                 },
                 {
                     "name": "Hot Caramel Sundae",
@@ -805,7 +899,9 @@
                     "longDescription": "Creamy vanilla soft serve drizzled with warm, buttery caramel sauce. Sweet, smooth, and utterly satisfying. A dessert you'll crave again and again.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelSundae_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_CaramelSundae_832x472",
+                    "calories": 340,
+                    "allergens": "Milk, Soy"
                 },
                 {
                     "name": "Baked Apple Pie",
@@ -819,7 +915,9 @@
                     "longDescription": "A flaky, baked crust filled with sweet, cinnamon-spiced apples. A warm, satisfying dessert at a great value. A McDonald's classic since the early days.",
                     "origin": "McDonald's Menu",
                     "popularity": "Value Pick",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ApplePie_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ApplePie_832x472",
+                    "calories": 230,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 },
                 {
                     "name": "Chocolate Chip Cookie",
@@ -833,7 +931,9 @@
                     "longDescription": "A warm, soft-baked chocolate chip cookie made with semi-sweet chocolate chips. Freshly baked and delicious. The perfect grab-and-go treat.",
                     "origin": "McDonald's Menu",
                     "popularity": "",
-                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ChocChipCookie_832x472"
+                    "image": "https://s7d1.scene7.com/is/image/mcdonalds/Header_ChocChipCookie_832x472",
+                    "calories": 170,
+                    "allergens": "Wheat, Milk, Egg, Soy"
                 }
             ]
         }
