@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -75,6 +76,65 @@ MOCK_MACHINE_STATUS = {
 
 # OOS keywords — items that depend on the ice cream machine
 _ICE_CREAM_MACHINE_KEYWORDS = ("shake", "blast", "sundae", "ice cream")
+
+
+# ---------------------------------------------------------------------------
+# Extra Value Meal number mapping — allows "number 1" → "Big Mac Meal" etc.
+# ---------------------------------------------------------------------------
+MEAL_NUMBER_MAP = {
+    "1": "Big Mac Meal",
+    "2": "Quarter Pounder with Cheese Meal",
+    "3": "Quarter Pounder with Cheese Deluxe Meal",
+    "4": "Bacon Quarter Pounder with Cheese Meal",
+    "5": "Double Quarter Pounder with Cheese Meal",
+    "6": "10 Piece McNuggets Meal",
+    "7": "McCrispy Meal",
+    "8": "Filet-O-Fish Meal",
+    "9": "2 Cheeseburger Meal",
+    "10": "McChicken Meal",
+}
+
+BREAKFAST_MEAL_NUMBER_MAP = {
+    "1": "Egg McMuffin Meal",
+    "2": "Sausage McMuffin with Egg Meal",
+    "3": "Sausage Biscuit Meal",
+    "4": "Bacon Egg Cheese Biscuit Meal",
+    "5": "Sausage Egg Cheese McGriddles Meal",
+}
+
+# Written-out number words → digit strings
+_NUMBER_WORDS = {
+    "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+    "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+}
+
+_MEAL_NUMBER_RE = re.compile(
+    r"(?:number|#|meal\s*#?|combo\s*#?)\s*(\d{1,2})\b",
+    re.IGNORECASE,
+)
+_MEAL_WORD_RE = re.compile(
+    r"(?:number|#|meal|combo)\s+(one|two|three|four|five|six|seven|eight|nine|ten)\b",
+    re.IGNORECASE,
+)
+
+
+def _expand_meal_number_query(query: str) -> str:
+    """If the query looks like a meal-number reference, expand it to the meal name."""
+    m = _MEAL_NUMBER_RE.search(query)
+    if m:
+        num = m.group(1)
+        meal_name = MEAL_NUMBER_MAP.get(num)
+        if meal_name:
+            return f"{meal_name} (Extra Value Meal #{num})"
+    m = _MEAL_WORD_RE.search(query)
+    if m:
+        word = m.group(1).lower()
+        num = _NUMBER_WORDS.get(word)
+        if num:
+            meal_name = MEAL_NUMBER_MAP.get(num)
+            if meal_name:
+                return f"{meal_name} (Extra Value Meal #{num})"
+    return query
 
 
 # Extras may only be applied to specific beverage categories.
@@ -227,6 +287,12 @@ async def search(
 
     query = args["query"]
     logger.info("Knowledge search requested for query '%s'", query)
+
+    # Expand meal number references (e.g. "number 1" → "Big Mac Meal")
+    expanded_query = _expand_meal_number_query(query)
+    if expanded_query != query:
+        logger.info("Expanded meal number query '%s' → '%s'", query, expanded_query)
+        query = expanded_query
 
     # Check cache first — repeated questions about the same menu item are common
     cache_key = query.strip().lower()
