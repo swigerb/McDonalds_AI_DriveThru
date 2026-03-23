@@ -118,7 +118,7 @@ async def create_app() -> web.Application:
         credentials=llm_credential,
         endpoint=llm_endpoint,
         deployment=llm_deployment,
-        voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or "coral"
+        voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or "shimmer"
     )
     if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
         rtmt.api_version = api_version
