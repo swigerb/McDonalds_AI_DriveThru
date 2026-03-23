@@ -27,7 +27,7 @@ import { AuthProvider, useAuth } from "@/context/auth-context";
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
 import azureLogo from "@/assets/azurelogo.svg";
-import mcdonaldsLogo from "@/assets/mcdonalds-logo.svg";
+import mcdonaldsLogo from "@/assets/mcdonalds-logo.png";
 
 type HighlightTone = "red" | "blue" | "yellow";
 
