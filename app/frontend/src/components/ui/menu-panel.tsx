@@ -12,6 +12,8 @@ interface MenuItem {
     name: string;
     sizes: Size[];
     description: string;
+    mealNumber?: number | null;
+    calories?: number;
 }
 
 interface MenuCategory {
@@ -20,15 +22,41 @@ interface MenuCategory {
 }
 
 const categoryIcons: Record<string, string> = {
+    "Extra Value Meals": "🏷️",
     "Burgers & Sandwiches": "🍔",
-    "Shakes & Ice Cream": "🥤",
-    "Slushes & Drinks": "🧊",
-    "Hot Dogs & Tots": "🌭",
-    "Combos": "🍟",
-    Extras: "✨"
+    "Chicken & McNuggets®": "🍗",
+    "Breakfast": "🥞",
+    "Fries, Sides & Drinks": "🍟",
+    "Sweets & Treats": "🍦",
+    "McCafé® Coffees": "☕",
+    "Beverages": "🥤",
+    "Happy Meal®": "😊",
+    "Meals & Combos": "🍟",
+    "McNuggets® & Tenders": "🍗",
 };
 
-const menuItems = menuItemsData.menuItems as MenuCategory[];
+const allCategories = menuItemsData.menuItems as MenuCategory[];
+
+// Build a dedicated Extra Value Meals section from items with mealNumber
+const valueMealItems: MenuItem[] = [];
+for (const cat of allCategories) {
+    for (const item of cat.items) {
+        if ((item as MenuItem).mealNumber) {
+            valueMealItems.push(item as MenuItem);
+        }
+    }
+}
+valueMealItems.sort((a, b) => (a.mealNumber ?? 99) - (b.mealNumber ?? 99));
+
+const valueMealsCategory: MenuCategory = {
+    category: "Extra Value Meals",
+    items: valueMealItems,
+};
+
+// Prepend Extra Value Meals as the first category if there are any
+const menuItems: MenuCategory[] = valueMealItems.length > 0
+    ? [valueMealsCategory, ...allCategories]
+    : allCategories;
 
 // All categories expanded by default
 const initialExpanded = new Set<string>(menuItems.map(c => c.category));
@@ -52,10 +80,15 @@ export default memo(function MenuPanel() {
         <div className="space-y-4">
             {menuItems.map(category => {
                 const isOpen = expanded.has(category.category);
+                const isValueMeals = category.category === "Extra Value Meals";
                 return (
                     <div
                         key={category.category}
-                        className="rounded-3xl border border-primary/10 bg-white/80 shadow-[0_15px_35px_rgba(39,37,31,0.08)] dark:border-white/10 dark:bg-[#1a1812]/95 dark:shadow-[0_25px_55px_rgba(0,0,0,0.65)]"
+                        className={`rounded-3xl border shadow-[0_15px_35px_rgba(39,37,31,0.08)] dark:shadow-[0_25px_55px_rgba(0,0,0,0.65)] ${
+                            isValueMeals
+                                ? "border-[#FFBC0D]/40 bg-gradient-to-br from-[#FFBC0D]/10 to-white/80 dark:from-[#FFBC0D]/10 dark:to-[#1a1812]/95 dark:border-[#FFBC0D]/30"
+                                : "border-primary/10 bg-white/80 dark:border-white/10 dark:bg-[#1a1812]/95"
+                        }`}
                     >
                         <button
                             type="button"
@@ -65,9 +98,11 @@ export default memo(function MenuPanel() {
                         >
                             <div className="flex items-center gap-2 sm:gap-3">
                                 <span className="text-2xl" aria-hidden>
-                                    {categoryIcons[category.category] ?? "🍹"}
+                                    {categoryIcons[category.category] ?? "🍽️"}
                                 </span>
-                                <h3 className="break-keep text-left font-semibold uppercase tracking-wide text-primary dark:text-primary">
+                                <h3 className={`break-keep text-left font-semibold uppercase tracking-wide ${
+                                    isValueMeals ? "text-[#DB0007] dark:text-[#FFBC0D]" : "text-primary dark:text-primary"
+                                }`}>
                                     {category.category}
                                 </h3>
                             </div>
@@ -97,18 +132,32 @@ export default memo(function MenuPanel() {
                                     <div className="space-y-4 px-4 pb-4">
                                         {category.items.map(item => (
                                             <div
-                                                key={item.name}
-                                                className="rounded-2xl border border-dashed border-primary/20 bg-white/70 p-3 transition-colors dark:border-white/10 dark:bg-white/5"
+                                                key={`${category.category}-${item.name}`}
+                                                className={`rounded-2xl border border-dashed p-3 transition-colors ${
+                                                    (item as MenuItem).mealNumber && isValueMeals
+                                                        ? "border-[#FFBC0D]/30 bg-[#FFBC0D]/5 dark:border-[#FFBC0D]/20 dark:bg-[#FFBC0D]/5"
+                                                        : "border-primary/20 bg-white/70 dark:border-white/10 dark:bg-white/5"
+                                                }`}
                                             >
                                                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                                                     <div className="pr-1">
-                                                        <span className="font-semibold text-foreground dark:text-white">{item.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            {(item as MenuItem).mealNumber && (
+                                                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#DB0007] text-xs font-bold text-white">
+                                                                    {(item as MenuItem).mealNumber}
+                                                                </span>
+                                                            )}
+                                                            <span className="font-semibold text-foreground dark:text-white">{item.name}</span>
+                                                        </div>
                                                         <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                        {(item as MenuItem).calories ? (
+                                                            <p className="mt-0.5 text-xs text-muted-foreground/70">{(item as MenuItem).calories} Cal</p>
+                                                        ) : null}
                                                     </div>
                                                     <div className="text-right">
                                                         {item.sizes.map(({ size, price }) => (
                                                             <div key={size} className="font-mono text-sm text-foreground/80 dark:text-white/80">
-                                                                {size !== "standard" ? <span className="capitalize">{`${size}: `}</span> : null}
+                                                                {size !== "standard" && size !== "Standard" ? <span className="capitalize">{`${size}: `}</span> : null}
                                                                 <span>${price.toFixed(2)}</span>
                                                             </div>
                                                         ))}
