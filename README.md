@@ -45,6 +45,7 @@ Beyond the drive-thru experience, this sample demonstrates how Microsoft’s Res
     - [Option 1: Direct Local Execution (Recommended for Development)](#option-1-direct-local-execution-recommended-for-development)
     - [Option 2: Docker-based Local Execution](#option-2-docker-based-local-execution)
   - [Deploying to Azure](#deploying-to-azure)
+  - [🍔 Built with Squad](#-built-with-squad)
   - [Contributing](#contributing)
   - [Resources](#resources)
 
@@ -417,6 +418,28 @@ To deploy the demo app to Azure:
    ```
 
 4. After deployment completes, your app will be available at the URL displayed in the console.
+
+## 🍔 Built with Squad
+
+This project was built by an AI development team powered by [**Squad**](https://github.com/bradygaster/squad) — a [GitHub Copilot](https://github.com/features/copilot) agent created by [Brady Gaster](https://github.com/bradygaster) that assembles AI dev teams with persistent memory, shared decision-tracking, and orchestrated workflows.
+
+Here's the best part: **Squad's casting algorithm analyzed this project's context and auto-selected the McDonald's universe for the team.** That's right — an AI drive-thru for McDonald's was built by AI agents named after McDonald's characters. You can't make this stuff up. 🎤⬇️
+
+### 🍟 Meet the Crew
+
+| | Agent | Role | What They Do |
+|---|---|---|---|
+| 🏗️ | **Ronald** | Lead | Architecture, decisions, code review — sees the whole system, makes the call |
+| ⚛️ | **Birdie** | Frontend Dev | React, TypeScript, UI components, audio client, real-time WebSocket integration |
+| 🔧 | **Grimace** | Backend Dev | Python, Azure OpenAI Realtime API, WebSockets, AI Search, tool routing |
+| 🧪 | **Hamburglar** | Tester | pytest, edge cases, quality gates, performance test harness |
+| ⚙️ | **Mayor McCheese** | DevOps | Bicep, Docker, Azure Container Apps, health probes, scaling |
+| 🤖 | **Mac Tonight** | AI/Realtime Expert | GPT-4o Realtime tuning, voice AI, system prompts, demo readiness |
+| 📋 | **Scribe** | Session Logger | Memory, decisions, orchestration logs — the team's shared brain |
+
+Every architectural decision, performance optimization, and bug fix in this repo was discussed, debated, and implemented by this crew — with a human ([Brian](https://github.com/brswig)) steering the ship. 🚢
+
+> **Want your own AI dev team?** Check out [Squad](https://github.com/bradygaster/squad) and let it cast the perfect crew for your project. Who knows what universe you'll get. 🎲
 
 ## License
 

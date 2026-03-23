@@ -23,6 +23,7 @@ import { ThemeProvider, useTheme } from "./context/theme-context";
 import { DummyDataProvider, useDummyDataContext } from "@/context/dummy-data-context";
 import { AzureSpeechProvider, useAzureSpeechOnContext } from "@/context/azure-speech-context";
 import { AuthProvider, useAuth } from "@/context/auth-context";
+import { MenuModeProvider } from "@/context/menu-mode-context";
 
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
@@ -703,7 +704,9 @@ export default function RootApp() {
             <ThemeProvider>
                 <DummyDataProvider>
                     <AzureSpeechProvider>
-                        <App />
+                        <MenuModeProvider>
+                            <App />
+                        </MenuModeProvider>
                     </AzureSpeechProvider>
                 </DummyDataProvider>
             </ThemeProvider>

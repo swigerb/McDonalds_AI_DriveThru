@@ -1,7 +1,8 @@
 import menuItemsData from "@/data/menuItems.json";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { useMenuModeContext } from "@/context/menu-mode-context";
 
 interface Size {
     size: string;
@@ -14,6 +15,7 @@ interface MenuItem {
     description: string;
     mealNumber?: number | null;
     calories?: number;
+    menuPeriod?: "breakfast" | "lunch" | "allDay";
 }
 
 interface MenuCategory {
@@ -37,32 +39,45 @@ const categoryIcons: Record<string, string> = {
 
 const allCategories = menuItemsData.menuItems as MenuCategory[];
 
-// Build a dedicated Extra Value Meals section from items with mealNumber
-const valueMealItems: MenuItem[] = [];
-for (const cat of allCategories) {
-    for (const item of cat.items) {
-        if ((item as MenuItem).mealNumber) {
-            valueMealItems.push(item as MenuItem);
-        }
-    }
+function isItemVisible(item: MenuItem, menuMode: "breakfast" | "lunch"): boolean {
+    if (!item.menuPeriod || item.menuPeriod === "allDay") return true;
+    return item.menuPeriod === menuMode;
 }
-valueMealItems.sort((a, b) => (a.mealNumber ?? 99) - (b.mealNumber ?? 99));
-
-const valueMealsCategory: MenuCategory = {
-    category: "Extra Value Meals",
-    items: valueMealItems,
-};
-
-// Prepend Extra Value Meals as the first category if there are any
-const menuItems: MenuCategory[] = valueMealItems.length > 0
-    ? [valueMealsCategory, ...allCategories]
-    : allCategories;
-
-// All categories expanded by default
-const initialExpanded = new Set<string>(menuItems.map(c => c.category));
 
 export default memo(function MenuPanel() {
-    const [expanded, setExpanded] = useState<Set<string>>(() => new Set(initialExpanded));
+    const { menuMode } = useMenuModeContext();
+
+    const menuItems = useMemo(() => {
+        // Build filtered Extra Value Meals from items with mealNumber matching current mode
+        const valueMealItems: MenuItem[] = [];
+        for (const cat of allCategories) {
+            for (const item of cat.items) {
+                if ((item as MenuItem).mealNumber && isItemVisible(item as MenuItem, menuMode)) {
+                    valueMealItems.push(item as MenuItem);
+                }
+            }
+        }
+        valueMealItems.sort((a, b) => (a.mealNumber ?? 99) - (b.mealNumber ?? 99));
+
+        const valueMealsCategory: MenuCategory = {
+            category: "Extra Value Meals",
+            items: valueMealItems,
+        };
+
+        // Filter regular categories
+        const filteredCategories: MenuCategory[] = allCategories
+            .map(cat => ({
+                ...cat,
+                items: (cat.items as MenuItem[]).filter(item => isItemVisible(item, menuMode) && !(item as MenuItem).mealNumber),
+            }))
+            .filter(cat => cat.items.length > 0);
+
+        return valueMealItems.length > 0
+            ? [valueMealsCategory, ...filteredCategories]
+            : filteredCategories;
+    }, [menuMode]);
+
+    const [expanded, setExpanded] = useState<Set<string>>(() => new Set(menuItems.map(c => c.category)));
 
     const toggle = useCallback((category: string) => {
         setExpanded(prev => {

@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useDummyDataContext } from "@/context/dummy-data-context";
 import { useAzureSpeechOnContext } from "@/context/azure-speech-context";
+import { useMenuModeContext } from "@/context/menu-mode-context";
 import { Tooltip } from "@/components/ui/tooltip";
 
 interface SettingsProps {
@@ -27,6 +28,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
     });
     const { useAzureSpeechOn, setUseAzureSpeechOn } = useAzureSpeechOnContext();
     const { useDummyData, setUseDummyData } = useDummyDataContext();
+    const { menuMode, setMenuMode } = useMenuModeContext();
 
     useEffect(() => {
         localStorage.setItem("isDarkMode", isDarkMode.toString());
@@ -63,6 +65,45 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
 
     const SettingsContent = () => (
         <div className="space-y-6">
+            <div className="flex items-start justify-between">
+                <div className="flex-1 space-y-0.5">
+                    <Label htmlFor="menu-mode" className="text-gray-900 dark:text-gray-100">
+                        Menu Mode
+                    </Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Switch between breakfast and lunch menus</p>
+                </div>
+                <div className="ml-4 flex flex-col items-end">
+                    <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden" role="radiogroup" aria-label="Menu mode">
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={menuMode === "breakfast"}
+                            onClick={() => setMenuMode("breakfast")}
+                            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                                menuMode === "breakfast"
+                                    ? "bg-[#FFBC0D] text-[#27251F]"
+                                    : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                            }`}
+                        >
+                            ☀️ Breakfast
+                        </button>
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={menuMode === "lunch"}
+                            onClick={() => setMenuMode("lunch")}
+                            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                                menuMode === "lunch"
+                                    ? "bg-[#FFBC0D] text-[#27251F]"
+                                    : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                            }`}
+                        >
+                            🍔 Lunch
+                        </button>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{menuMode === "breakfast" ? "Breakfast Menu" : "Lunch Menu"}</span>
+                </div>
+            </div>
             <div className="flex items-start justify-between">
                 <div className="flex-1 space-y-0.5">
                     <Label htmlFor="dark-mode" className="text-gray-900 dark:text-gray-100">
