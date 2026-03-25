@@ -349,6 +349,7 @@ class RTMiddleTier:
                                 updated_message = None
 
                 case "response.done":
+                    fn_calls = []
                     if tools_pending:
                         tools_pending.clear()
                         await server_ws.send_str(_RESPONSE_CREATE_MSG)
@@ -367,7 +368,7 @@ class RTMiddleTier:
                         if len(filtered) != len(output):
                             message["response"]["output"] = filtered
                             updated_message = json.dumps(message)
-                    if session_id is not None:
+                    if session_id is not None and not fn_calls:
                         identifiers = order_state_singleton.advance_round_trip(session_id)
                         await self._sessions.emit_session_identifiers(client_ws, "extension.round_trip_token", identifiers)
                         _vlog(verbose, "─── [ROUND TRIP] #%d ───\n"
