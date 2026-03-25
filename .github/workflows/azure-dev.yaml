@@ -2,10 +2,10 @@ name: Deploy to Azure with azd
 
 on:
   workflow_dispatch:
-  push:
-    # Run when commits are pushed to mainline branch
-    branches:
-      - main
+  # push trigger removed — deploy manually via workflow_dispatch only
+  # push:
+  #   branches:
+  #     - main
 
 # GitHub Actions workflow to deploy to Azure using azd
 # To configure required secrets for connecting to Azure, run `azd pipeline config`
