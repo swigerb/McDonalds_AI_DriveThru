@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import unittest
@@ -60,7 +61,7 @@ class CreateAppConfigTests(unittest.IsolatedAsyncioTestCase):
     async def test_default_voice_is_coral(self):
         mock_cls, _ = await self._run_create_app()
         _, kwargs = mock_cls.call_args
-        self.assertEqual(kwargs["voice_choice"], "shimmer")
+        self.assertEqual(kwargs["voice_choice"], "coral")
 
     async def test_system_prompt_contains_mcdonalds_closing(self):
         _, mock_instance = await self._run_create_app()
@@ -72,6 +73,87 @@ class CreateAppConfigTests(unittest.IsolatedAsyncioTestCase):
     async def test_system_prompt_contains_get_order_tool_instruction(self):
         _, mock_instance = await self._run_create_app()
         self.assertIn("get_order", mock_instance.system_message)
+
+
+class PromptLoaderIntegrationTests(unittest.TestCase):
+    """Verify system prompt is externalized via PromptLoader, not hardcoded."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from prompt_loader import PromptLoader
+            cls.loader = PromptLoader(brand="mcdonalds")
+            cls.skip_reason = None
+        except ImportError:
+            cls.loader = None
+            cls.skip_reason = "prompt_loader not yet available"
+
+    def test_prompt_loader_importable(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        self.assertIsNotNone(self.loader)
+
+    def test_system_prompt_from_loader_contains_mcdonalds(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        prompt = self.loader.get_system_prompt()
+        self.assertIn("McDonald's", prompt)
+
+    def test_system_prompt_from_loader_has_crew_member(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        prompt = self.loader.get_system_prompt()
+        self.assertIn("crew member", prompt.lower())
+
+    def test_system_prompt_from_loader_mentions_fries(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        prompt = self.loader.get_system_prompt()
+        self.assertIn("World Famous Fries", prompt)
+
+    def test_tool_schemas_match_expected_tools(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        schemas = self.loader.get_tool_schemas()
+        names = {s["name"] for s in schemas}
+        self.assertIn("search", names)
+        self.assertIn("update_order", names)
+        self.assertIn("get_order", names)
+        self.assertIn("reset_order", names)
+
+
+class ConfigLoaderIntegrationTests(unittest.TestCase):
+    """Verify config_loader.get_config() is usable from app context."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from config_loader import get_config
+            cls.config = get_config()
+            cls.skip_reason = None
+        except ImportError:
+            cls.config = None
+            cls.skip_reason = "config_loader not yet available"
+
+    def test_config_loader_importable(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        self.assertIsNotNone(self.config)
+
+    def test_config_has_model_section(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        self.assertIn("model", self.config)
+
+    def test_config_has_business_rules(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        self.assertIn("business_rules", self.config)
+
+    def test_config_temperature_is_correct(self):
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        self.assertAlmostEqual(self.config["model"]["temperature"], 0.6, places=2)
 
 
 if __name__ == "__main__":

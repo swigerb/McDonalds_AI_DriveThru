@@ -1,19 +1,30 @@
 import logging
+import os
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
+from config_loader import get_config
 from models import OrderItem, OrderSummary
 
 __all__ = ["OrderState", "SessionIdentifiers", "order_state_singleton", "is_happy_hour"]
 
 logger = logging.getLogger("order_state")
 
+_cfg = get_config()
+_business_cfg = _cfg.get("business_rules", {})
+_STORE_TZ = ZoneInfo(os.environ.get("STORE_TIMEZONE", "America/Chicago"))
+_HAPPY_HOUR_START = _business_cfg.get("happy_hour_start", 14)
+_HAPPY_HOUR_END = _business_cfg.get("happy_hour_end", 16)
+_HAPPY_HOUR_DISCOUNT = _business_cfg.get("happy_hour_discount", 0.5)
+_TAX_RATE = _business_cfg.get("tax_rate", 0.08)
+
 
 def is_happy_hour() -> bool:
-    """Check if the current time is between 2:00 PM and 4:00 PM local time."""
-    now = datetime.now()
-    return 14 <= now.hour < 16
+    """Check if the current time is within happy hour (store timezone)."""
+    now = datetime.now(_STORE_TZ)
+    return _HAPPY_HOUR_START <= now.hour < _HAPPY_HOUR_END
 
 
 def _infer_combo_component(item_name: str) -> str:
@@ -50,9 +61,9 @@ class OrderState:
         for item in order_items:
             item_total = item.price * item.quantity
             if happy_hour and _infer_combo_component(item.item) == "drinks":
-                item_total *= 0.5  # Happy Hour: 50% off drinks and slushes
+                item_total *= _HAPPY_HOUR_DISCOUNT  # Happy Hour discount on drinks
             total += item_total
-        tax = total * 0.08  # 8% tax
+        tax = total * _TAX_RATE
         finalTotal = total + tax
         summary = OrderSummary(items=order_items, total=total, tax=tax, finalTotal=finalTotal)
         session["order_summary"] = summary

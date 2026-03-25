@@ -9,3 +9,5 @@ openai==1.109.1
 pydantic>=2,<3
 python-dotenv==1.0.1
 rich==13.9.4
+PyYAML>=6,<7
+Jinja2>=3,<4

@@ -12,6 +12,7 @@ from azure.identity import DefaultAzureCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.models import VectorizableTextQuery
 
+from config_loader import get_config
 from order_state import order_state_singleton, is_happy_hour
 from rtmt import RTMiddleTier, Tool, ToolResult, ToolResultDirection
 
@@ -19,12 +20,21 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["attach_tools_rtmt"]
 
+# Load centralized config
+_cfg = get_config()
+_cache_cfg = _cfg.get("cache", {})
+_search_cfg = _cfg.get("search", {})
+_business_cfg = _cfg.get("business_rules", {})
+
+# Module-level prompt loader — set by attach_tools_rtmt()
+_prompt_loader = None
+
 # ---------------------------------------------------------------------------
 # Search result cache — avoids redundant Azure AI Search round-trips for
 # repeated menu queries within a short window (e.g. "what sizes do you have?").
 # ---------------------------------------------------------------------------
-_SEARCH_CACHE_TTL_SEC = 60.0
-_SEARCH_CACHE_MAX_SIZE = 128
+_SEARCH_CACHE_TTL_SEC = _cache_cfg.get("search_ttl_seconds", 60.0)
+_SEARCH_CACHE_MAX_SIZE = _cache_cfg.get("search_max_size", 128)
 
 class _SearchCache:
     """Simple TTL cache for search results. Not thread-safe, but fine for
@@ -61,8 +71,8 @@ _search_cache = _SearchCache()
 # Order quantity limits — prevents abuse (e.g. ordering 100 burgers) while
 # staying realistic for a drive-thru window.
 # ---------------------------------------------------------------------------
-MAX_QUANTITY_PER_ITEM = 10   # max of any single item (name+size combo)
-MAX_TOTAL_ITEMS = 25         # max total items across the entire order
+MAX_QUANTITY_PER_ITEM = _business_cfg.get("max_item_quantity", 10)
+MAX_TOTAL_ITEMS = _business_cfg.get("max_order_items", 25)
 
 
 # ---------------------------------------------------------------------------
@@ -308,7 +318,7 @@ async def search(
 
     vector_queries = []
     if use_vector_query and embedding_field:
-        vector_queries.append(VectorizableTextQuery(text=query, k_nearest_neighbors=15, fields=embedding_field))
+        vector_queries.append(VectorizableTextQuery(text=query, k_nearest_neighbors=_search_cfg.get("k_nearest_neighbors", 15), fields=embedding_field))
 
     # Only request fields we actually format into the result string
     select_fields = [
@@ -324,7 +334,7 @@ async def search(
             search_text=query,
             query_type="semantic",
             semantic_configuration_name=semantic_configuration,
-            top=3,
+            top=_search_cfg.get("top_results", 3),
             vector_queries=vector_queries or None,
             select=select_fields,
         )
@@ -432,10 +442,11 @@ async def update_order(args, session_id: str) -> ToolResult:
     price = args.get("price", 0.0)
     if args["action"] == "add" and price <= 0.0:
         logger.warning("Model attempted to add item %s with invalid price $%.2f (rejecting $0 items)", item_name, price)
-        return ToolResult(
-            "I'm sorry, I had a glitch with the pricing for that. Could you say that again?",
-            ToolResultDirection.TO_SERVER,
-        )
+        if _prompt_loader is not None:
+            error_msg = _prompt_loader.render_error("invalid_price", item_name=item_name, price=price)
+        else:
+            error_msg = "I'm sorry, I had a glitch with the pricing for that. Could you say that again?"
+        return ToolResult(error_msg, ToolResultDirection.TO_SERVER)
 
     if args["action"] == "add" and _is_extra_item(item_name):
         current_items = order_state_singleton.get_order_items(session_id)
@@ -529,10 +540,14 @@ async def update_order(args, session_id: str) -> ToolResult:
     action = args["action"]
     display_size = size if size and size.lower() not in {"", "standard", "n/a", "na", "none", "n.a."} else ""
     display_name = f"{display_size.capitalize() + ' ' if display_size else ''}{item_name}"
-    if action == "add":
-        delta_text = f"Added {quantity} {display_name} — your total is now ${summary.finalTotal:.2f}"
+    if _prompt_loader is not None:
+        template_str = _prompt_loader.get_delta_template(action)
+        delta_text = _prompt_loader.render_template(template_str, quantity=quantity, display_name=display_name, total=f"{summary.finalTotal:.2f}")
     else:
-        delta_text = f"Removed {quantity} {display_name} — your total is now ${summary.finalTotal:.2f}"
+        if action == "add":
+            delta_text = f"Added {quantity} {display_name} — your total is now ${summary.finalTotal:.2f}"
+        else:
+            delta_text = f"Removed {quantity} {display_name} — your total is now ${summary.finalTotal:.2f}"
 
     # ── Combo validation: flag missing components ──
     validation = order_state_singleton.get_combo_requirements(session_id)
@@ -543,18 +558,23 @@ async def update_order(args, session_id: str) -> ToolResult:
     elif action == "add":
         # ── Category-aware upsell hints (only when combo requirements are met) ──
         category = _infer_category(item_name)
-        if category == "combos":
-            delta_text += " (UPSELL HINT: Combos are a great base! Ask if they want to upgrade to a Large size, or add a delicious McFlurry or Dessert!)"
-        elif category in ("burgers", "burgers & sandwiches"):
-            delta_text += " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Fries and a refreshing Drink!)"
-        elif category in ("drinks", "slushes"):
-            delta_text += " (UPSELL HINT: Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!)"
-        elif category in ("shakes", "desserts", "shakes & ice cream"):
-            delta_text += " (UPSELL HINT: Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!)"
-        elif category in ("sides", "hot dogs", "hot dogs & tots"):
-            delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink to complete their meal!)"
+        if _prompt_loader is not None:
+            upsell = _prompt_loader.get_upsell_hint(category)
+            if upsell:
+                delta_text += upsell
         else:
-            delta_text += " (UPSELL HINT: Ask if they'd like to add anything else — maybe a drink, side, or dessert!)"
+            if category == "combos":
+                delta_text += " (UPSELL HINT: Combos are a great base! Ask if they want to upgrade to a Large size, or add a delicious McFlurry or Dessert!)"
+            elif category in ("burgers", "burgers & sandwiches"):
+                delta_text += " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Fries and a refreshing Drink!)"
+            elif category in ("drinks", "slushes"):
+                delta_text += " (UPSELL HINT: Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!)"
+            elif category in ("shakes", "desserts", "shakes & ice cream"):
+                delta_text += " (UPSELL HINT: Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!)"
+            elif category in ("sides", "hot dogs", "hot dogs & tots"):
+                delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink to complete their meal!)"
+            else:
+                delta_text += " (UPSELL HINT: Ask if they'd like to add anything else — maybe a drink, side, or dessert!)"
         logger.debug("Upsell hint for category '%s'", category)
 
     happy_hour_note = " [HAPPY HOUR ACTIVE: drinks and slushes are half-price!]" if is_happy_hour() else ""
@@ -614,16 +634,35 @@ def attach_tools_rtmt(
     embedding_field: str,
     title_field: str,
     use_vector_query: bool,
+    prompt_loader=None,
 ) -> None:
     """Attach search and order tools to the RTMiddleTier instance."""
+    global _prompt_loader
+    _prompt_loader = prompt_loader
+
+    # Use tool schemas from prompt loader if available, otherwise use hardcoded
+    if prompt_loader is not None:
+        try:
+            yaml_schemas = prompt_loader.get_tool_schemas()
+            schema_map = {s["name"]: s for s in yaml_schemas}
+        except Exception:
+            logger.warning("Failed to load tool schemas from prompt loader — using hardcoded schemas")
+            schema_map = {}
+    else:
+        schema_map = {}
+
+    _search_schema = schema_map.get("search", search_tool_schema)
+    _update_order_schema = schema_map.get("update_order", update_order_tool_schema)
+    _get_order_schema = schema_map.get("get_order", get_order_tool_schema)
+    _reset_order_schema = schema_map.get("reset_order", reset_order_tool_schema)
 
     if not isinstance(credentials, AzureKeyCredential):
         credentials.get_token("https://search.azure.com/.default")  # warm up prior to first call
     search_client = SearchClient(search_endpoint, search_index, credentials, user_agent="RTMiddleTier")
 
-    rtmt.tools["search"] = Tool(schema=search_tool_schema, target=lambda args: search(search_client, semantic_configuration, identifier_field, content_field, embedding_field, use_vector_query, args))
-    rtmt.tools["update_order"] = Tool(schema=update_order_tool_schema, target=lambda args, session_id: update_order(args, session_id))
-    rtmt.tools["get_order"] = Tool(schema=get_order_tool_schema, target=lambda args, session_id: get_order(args, session_id))
-    rtmt.tools["reset_order"] = Tool(schema=reset_order_tool_schema, target=lambda args, session_id: reset_order(args, session_id))
+    rtmt.tools["search"] = Tool(schema=_search_schema, target=lambda args: search(search_client, semantic_configuration, identifier_field, content_field, embedding_field, use_vector_query, args))
+    rtmt.tools["update_order"] = Tool(schema=_update_order_schema, target=lambda args, session_id: update_order(args, session_id))
+    rtmt.tools["get_order"] = Tool(schema=_get_order_schema, target=lambda args, session_id: get_order(args, session_id))
+    rtmt.tools["reset_order"] = Tool(schema=_reset_order_schema, target=lambda args, session_id: reset_order(args, session_id))
 
 

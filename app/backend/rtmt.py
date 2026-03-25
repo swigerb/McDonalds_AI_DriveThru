@@ -14,6 +14,7 @@ from aiohttp import web
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
+from config_loader import get_config
 from order_state import SessionIdentifiers, order_state_singleton
 
 logger = logging.getLogger("mcdonalds-drive-thru")
@@ -77,7 +78,11 @@ if _VERBOSE_LOG_FILE_GLOBAL:
     vlogger.addHandler(_global_file_handler)
 
 # Max characters of tool result text to log (prevents terminal flooding)
-_VERBOSE_RESULT_TRUNCATE = 500
+_cfg = get_config()
+_audio_cfg = _cfg.get("audio", {})
+_conn_cfg = _cfg.get("connection", {})
+_logging_cfg = _cfg.get("logging", {})
+_VERBOSE_RESULT_TRUNCATE = _logging_cfg.get("verbose_result_truncate", 500)
 
 __all__ = ["RTMiddleTier", "RTToolCall", "Tool", "ToolResult", "ToolResultDirection"]
 
@@ -118,7 +123,7 @@ _INPUT_AUDIO_CLEAR_MSG = json.dumps({"type": "input_audio_buffer.clear"})
 
 # Cooldown period (seconds) after AI audio ends before accepting user audio.
 # Covers timing gap between server sending last audio delta and speakers finishing.
-_ECHO_COOLDOWN_SEC = 1.5
+_ECHO_COOLDOWN_SEC = _audio_cfg.get("echo_cooldown_seconds", 1.5)
 
 # Fast substring markers for echo suppression (avoids regex/JSON parse overhead)
 _MARKER_AUDIO_APPEND = '"input_audio_buffer.append"'
@@ -133,8 +138,11 @@ _MARKER_LOG_TO_FILE = '"extension.set_log_to_file"'
 _MARKER_SET_VOICE = '"extension.set_voice"'
 
 # Connection tuning constants
-_WS_HEARTBEAT_SEC = 15.0
-_WS_CONNECT_TIMEOUT = aiohttp.ClientTimeout(total=30, connect=10)
+_WS_HEARTBEAT_SEC = _conn_cfg.get("ws_heartbeat_seconds", 15.0)
+_WS_CONNECT_TIMEOUT = aiohttp.ClientTimeout(
+    total=_conn_cfg.get("ws_connect_timeout_total", 30),
+    connect=_conn_cfg.get("ws_connect_timeout_connect", 10),
+)
 
 # Pre-serialized greeting to avoid json.dumps at connection time.
 # IMPORTANT: This must be a direct command — NOT "how would you greet" or the AI
@@ -214,7 +222,7 @@ class RTMiddleTier:
     voice_choice: str | None = None
     api_version: str = "2024-10-01-preview"
 
-    def __init__(self, endpoint: str, deployment: str, credentials: AzureKeyCredential | DefaultAzureCredential, voice_choice: str | None = None):
+    def __init__(self, endpoint: str, deployment: str, credentials: AzureKeyCredential | DefaultAzureCredential, voice_choice: str | None = None, prompt_loader=None):
         self.endpoint = endpoint
         self.deployment = deployment
         self.voice_choice = voice_choice
@@ -222,6 +230,12 @@ class RTMiddleTier:
         self._token_provider = None
         self._session_map: dict[web.WebSocketResponse, str] = {}
         self._sent_greeting: set[str] = set()
+        self._prompt_loader = prompt_loader
+        # Use prompt loader for greeting if available, otherwise keep hardcoded fallback
+        if prompt_loader is not None:
+            self._greeting_msg = prompt_loader.get_greeting_json_str()
+        else:
+            self._greeting_msg = _GREETING_MSG
         if voice_choice is not None:
             logger.info("Realtime voice choice set to %s", voice_choice)
         if isinstance(credentials, AzureKeyCredential):
@@ -533,7 +547,7 @@ class RTMiddleTier:
                     _vlog(verbose, "  Echo suppression: ai_speaking=True (pre-set for greeting)")
                     # Flush any stale audio that arrived before session was configured
                     await target_ws.send_str(_INPUT_AUDIO_CLEAR_MSG)
-                    await target_ws.send_str(_GREETING_MSG)
+                    await target_ws.send_str(self._greeting_msg)
                     await target_ws.send_str(_RESPONSE_CREATE_MSG)
                     greeting_sent = True
                     if session_id is not None:
