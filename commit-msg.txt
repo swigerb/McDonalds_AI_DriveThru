@@ -1,0 +1,13 @@
+chore: upgrade Squad v0.8.25 → v0.9.1 + fix casting registry
+
+- Upgraded Squad agent framework to v0.9.1 via squad upgrade CLI
+- Fixed casting registry.json, history.json, and policy.json to use
+  McDonald's universe (was incorrectly set to Rick and Morty)
+- Updated templates to latest Squad version
+- Migrated 5 skills to .copilot/skills/ (echo-suppression,
+  gpt-realtime-expert, mcdonalds-menu-parsing, project-conventions,
+  squad-conventions)
+- Added 7 new GitHub workflow files for Squad CI/CD
+- Refreshed 28 skill definitions
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

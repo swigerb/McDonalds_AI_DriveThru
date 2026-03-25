@@ -1,51 +1,51 @@
 {
   "agents": {
-    "rick": {
-      "persistent_name": "Rick",
-      "universe": "Rick and Morty",
+    "ronald": {
+      "persistent_name": "Ronald",
+      "universe": "McDonald's",
       "role": "Lead",
-      "created_at": "2026-03-19T03:45:33Z",
-      "legacy_named": false,
+      "created_at": "2026-03-23T00:00:00Z",
+      "legacy_named": true,
       "status": "active"
     },
-    "morty": {
-      "persistent_name": "Morty",
-      "universe": "Rick and Morty",
+    "birdie": {
+      "persistent_name": "Birdie",
+      "universe": "McDonald's",
       "role": "Frontend Dev",
-      "created_at": "2026-03-19T03:45:33Z",
-      "legacy_named": false,
+      "created_at": "2026-03-23T00:00:00Z",
+      "legacy_named": true,
       "status": "active"
     },
-    "summer": {
-      "persistent_name": "Summer",
-      "universe": "Rick and Morty",
+    "grimace": {
+      "persistent_name": "Grimace",
+      "universe": "McDonald's",
       "role": "Backend Dev",
-      "created_at": "2026-03-19T03:45:33Z",
-      "legacy_named": false,
+      "created_at": "2026-03-23T00:00:00Z",
+      "legacy_named": true,
       "status": "active"
     },
-    "birdperson": {
-      "persistent_name": "Birdperson",
-      "universe": "Rick and Morty",
+    "hamburglar": {
+      "persistent_name": "Hamburglar",
+      "universe": "McDonald's",
       "role": "Tester",
-      "created_at": "2026-03-19T03:45:33Z",
-      "legacy_named": false,
+      "created_at": "2026-03-23T00:00:00Z",
+      "legacy_named": true,
       "status": "active"
     },
-    "squanchy": {
-      "persistent_name": "Squanchy",
-      "universe": "Rick and Morty",
+    "mayor-mccheese": {
+      "persistent_name": "Mayor McCheese",
+      "universe": "McDonald's",
       "role": "DevOps",
-      "created_at": "2026-03-19T03:45:33Z",
-      "legacy_named": false,
+      "created_at": "2026-03-23T00:00:00Z",
+      "legacy_named": true,
       "status": "active"
     },
-    "unity": {
-      "persistent_name": "Unity",
-      "universe": "Rick and Morty",
+    "mac-tonight": {
+      "persistent_name": "Mac Tonight",
+      "universe": "McDonald's",
       "role": "AI / Realtime Expert",
-      "created_at": "2026-03-21T19:32:07Z",
-      "legacy_named": false,
+      "created_at": "2026-03-23T00:00:00Z",
+      "legacy_named": true,
       "status": "active"
     }
   }
