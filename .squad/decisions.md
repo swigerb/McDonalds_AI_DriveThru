@@ -191,6 +191,52 @@
 - **Implementation:** Addressed by Decisions #26 (TO_BOTH routing for conversation flow) and #27 (suggestive selling + technical guardrails).
 - **Impact:** Enables demo to showcase both conversational quality (no dead silence) and revenue impact (ACV-driving prompts).
 
+#### 29. Prompt Externalization to YAML (Mac Tonight — AI Expert, 2026-03-25)
+- **Decision:** Externalize all system prompt content and voice AI configuration from hardcoded Python into 6 structured YAML files under `app/backend/prompts/mcdonalds/`.
+- **Files Created:**
+  1. `manifest.yaml` — Brand metadata, file registry, model configuration
+  2. `system_prompt.yaml` — 22 prioritized behavioral sections (exact content from app.py lines 127-273)
+  3. `greeting.yaml` — Standardized greeting event configuration
+  4. `tool_schemas.yaml` — 4 tool definitions with McDonald's-specific descriptions
+  5. `error_messages.yaml` — 12 error templates with Jinja2 variable support
+  6. `hints.yaml` — Upsell hints, system hints, delta templates
+- **Rationale:** Hardcoded prompts blocked brand customization, prevented multi-brand support, and mixed brand voice with application logic.
+- **Architecture:** Matches proven Sonic AI Drive-Thru reference implementation.
+- **Impact:** Enables brand switching without code changes. Prompt tuning becomes a YAML edit, not a code deploy.
+- **Trade-off:** Requires loader infrastructure (implemented by Grimace) to parse and apply YAML at runtime.
+
+#### 30. Prompt Loader & Config Architecture (Grimace — Backend Dev, 2026-03-25)
+- **Decision:** Implement brand-parameterized YAML loaders and centralized config management. Wire integration across all backend modules.
+- **New Components:**
+  1. `prompt_loader.py` — Discovers prompts from `prompts/{brand}/`, loads and validates YAML. DEV_MODE hot-reload for rapid iteration.
+  2. `config_loader.py` — Singleton that reads `config.yaml` once, caches, validates required sections.
+  3. `config.yaml` — Centralized configuration covering: model settings, VAD thresholds, business rules (tax, discounts), cache TTL, audio processing, search parameters, connection timeouts, compression, logging levels.
+  4. `menu_utils.py` — Canonical size mappings (Small, Medium, Large) and category inference keywords for McDonald's menu.
+- **Integration Points:**
+  - `app.py` — Uses config for compression/connection settings. Loads PromptLoader with graceful fallback.
+  - `rtmt.py` — Config-driven echo cooldown, WebSocket heartbeat, verbose truncation. Greeting loaded from YAML.
+  - `tools.py` — Config-driven cache TTL, search KNN/top values, quantity limits. Error messages and upsell hints from loader.
+  - `order_state.py` — Fixed timezone bug (`datetime.now()` → `datetime.now(ZoneInfo(...))`). Config-driven tax rate, happy hour window, discount factor.
+- **Dependencies:** Added `PyYAML>=6,<7` and `Jinja2>=3,<4`.
+- **Key Design:** Fallback everywhere. Every config/prompt access has hardcoded default so app runs without YAML (critical for tests/minimal deploys).
+- **Impact:** Complete prompt/config infrastructure deployed. Ready for multi-brand expansion.
+- **Files Changed:** 22 total (+1623/-201 lines)
+
+#### 31. Prompt Externalization Test Strategy (Hamburglar — Tester, 2026-03-25)
+- **Decision:** Create comprehensive test suite for prompt externalization covering PromptLoader, ConfigLoader, menu_utils, and app integration before modules land in production.
+- **Test Coverage:** 47 new tests across 4 files:
+  1. `test_prompt_loader.py` — 14 tests (init, system prompt content, greeting, tools, errors, hints, templates, error paths)
+  2. `test_config_loader.py` — 11 tests (loading, sections, values, types, reload)
+  3. `test_menu_utils.py` — 13 tests (size normalization, category inference, edge cases)
+  4. `test_app.py` — 9 new integration tests
+- **Key Design Choices:**
+  - `pytest.importorskip` — Tests skip gracefully when modules don't exist yet, enabling parallel development.
+  - Content assertions — System prompt tests verify McDonald's brand terms (not just "non-empty"), catching branding regressions.
+  - Jinja2 render tests — Error templates tested with actual variable substitution (e.g., `render_error("invalid_mod", forbidden_item="mustard", base_name="McFlurry")`).
+  - Malformed YAML test — Creates/cleans up temporary brand dir to test error path without polluting prompts/.
+- **Results:** 202 total tests (47 new + 155 existing), all passing. Zero regressions.
+- **Impact:** Quality gate fully operational. Matches Sonic reference architecture.
+
 ## Governance
 
 - All meaningful changes require team consensus
