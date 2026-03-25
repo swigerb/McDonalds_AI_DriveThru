@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 
+import aiohttp
 from aiohttp import web
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import AzureDeveloperCliCredential, DefaultAzureCredential
@@ -11,7 +12,7 @@ from dotenv import load_dotenv
 
 from config_loader import get_config
 from prompt_loader import PromptLoader
-from rtmt import RTMiddleTier
+from rtmt import RTMiddleTier, create_hmac_token
 from tools import attach_tools_rtmt
 
 # Production: INFO; override with LOG_LEVEL env var for debugging
@@ -31,6 +32,24 @@ _STATIC_IMMUTABLE_MAX_AGE = _compression.get("static_immutable_max_age", 31_536_
 _STATIC_DEFAULT_MAX_AGE = _compression.get("static_default_max_age", 3600)  # 1 hour
 # Compressible content-type substrings
 _COMPRESSIBLE_TYPES = ("text/", "application/json", "application/javascript", "image/svg")
+
+# App version — exposed via /health endpoint
+_APP_VERSION = "1.0.0"
+
+# Required environment variables for the app to function
+_REQUIRED_ENV_VARS = [
+    "AZURE_OPENAI_EASTUS2_ENDPOINT",
+    "AZURE_OPENAI_REALTIME_DEPLOYMENT",
+    "AZURE_SEARCH_ENDPOINT",
+    "AZURE_SEARCH_INDEX",
+]
+
+# Startup validation state — read by /health endpoint
+_startup_checks = {
+    "prompts_loaded": False,
+    "config_loaded": True,  # validated at module load by get_config()
+    "env_vars": False,
+}
 
 # Load prompt loader — fail fast if prompt YAML files are missing
 try:
@@ -93,7 +112,36 @@ async def _index_handler(_request: web.Request) -> web.FileResponse:
 
 
 async def _health_handler(_request: web.Request) -> web.Response:
-    return web.json_response({"status": "healthy"})
+    all_ok = all(_startup_checks.values())
+    return web.json_response(
+        {
+            "status": "healthy" if all_ok else "unhealthy",
+            "version": _APP_VERSION,
+            "checks": _startup_checks,
+        },
+        status=200 if all_ok else 503,
+    )
+
+
+async def _check_service_connectivity() -> None:
+    """Verify Azure service endpoints are reachable. Non-blocking — logs warnings only."""
+    endpoints = {
+        "Azure OpenAI": os.environ.get("AZURE_OPENAI_EASTUS2_ENDPOINT"),
+        "Azure Search": os.environ.get("AZURE_SEARCH_ENDPOINT"),
+    }
+    timeout = aiohttp.ClientTimeout(total=5)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            for name, url in endpoints.items():
+                if not url:
+                    continue
+                try:
+                    async with session.get(url, ssl=True) as resp:
+                        logger.info("✅ %s reachable (HTTP %d)", name, resp.status)
+                except Exception as exc:
+                    logger.warning("⚠️ %s unreachable at %s — %s (non-fatal)", name, url, exc)
+    except Exception as exc:
+        logger.warning("⚠️ Service connectivity check failed — %s (non-fatal)", exc)
 
 
 async def create_app() -> web.Application:
@@ -103,10 +151,35 @@ async def create_app() -> web.Application:
         logger.info("Running in development mode; loading values from .env")
         load_dotenv()
 
+    # ── Startup Validation ────────────────────────────────────────────────
+
+    # 1. Validate required environment variables
+    missing_vars = [v for v in _REQUIRED_ENV_VARS if not os.environ.get(v)]
+    if missing_vars:
+        logger.critical(
+            "FATAL: Missing required environment variables: %s", ", ".join(missing_vars)
+        )
+        sys.exit(1)
+    _startup_checks["env_vars"] = True
+
+    # 2. Mark prompts loaded if prompt_loader succeeded at module init
+    if prompt_loader is not None:
+        _startup_checks["prompts_loaded"] = True
+
+    # 3. Optional: verify Azure service connectivity (non-blocking)
+    await _check_service_connectivity()
+
+    env_count = len(_REQUIRED_ENV_VARS)
+    logger.info(
+        "✅ Startup validation passed: config valid, %d/%d env vars set",
+        env_count,
+        env_count,
+    )
+
+    # ── App Configuration ─────────────────────────────────────────────────
+
     llm_endpoint = os.environ.get("AZURE_OPENAI_EASTUS2_ENDPOINT")
     llm_deployment = os.environ.get("AZURE_OPENAI_REALTIME_DEPLOYMENT")
-    if not llm_endpoint or not llm_deployment:
-        raise RuntimeError("Azure OpenAI realtime endpoint and deployment must be configured.")
 
     llm_key = os.environ.get("AZURE_OPENAI_EASTUS2_API_KEY")
     search_key = os.environ.get("AZURE_SEARCH_API_KEY")
@@ -123,23 +196,30 @@ async def create_app() -> web.Application:
     llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
     search_credential = AzureKeyCredential(search_key) if search_key else credential
 
+    conn_cfg = _cfg.get("connection", {})
+
     app = web.Application(
         middlewares=[_compression_middleware],
-        client_max_size=_cfg["connection"].get("client_max_size_bytes", 4 * 1024 * 1024),
+        client_max_size=conn_cfg.get("client_max_size_bytes", 4 * 1024 * 1024),
     )
 
-    _model_cfg = _cfg.get("model", {})
+    model_cfg = _cfg.get("model", {})
     rtmt = RTMiddleTier(
         credentials=llm_credential,
         endpoint=llm_endpoint,
         deployment=llm_deployment,
-        voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or _model_cfg.get("default_voice", "shimmer"),
+        voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
         prompt_loader=prompt_loader,
     )
+    # Generate a random secret for HMAC session tokens
+    app_secret = os.urandom(32)
+    rtmt.app_secret = app_secret
     if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
         rtmt.api_version = api_version
-    rtmt.temperature = _model_cfg.get("temperature", 0.6)
-    rtmt.max_tokens = _model_cfg.get("max_response_output_tokens", 4096)
+    else:
+        rtmt.api_version = model_cfg.get("api_version", "2024-10-01-preview")
+    rtmt.temperature = model_cfg.get("temperature", 0.6)
+    rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
 
     # System message: prefer externalized YAML prompt, fall back to hardcoded
     if prompt_loader is not None:
@@ -172,10 +252,16 @@ async def create_app() -> web.Application:
 
     rtmt.attach_to_app(app, "/realtime")
 
+    # ── HMAC Session Token Endpoint ──
+    async def get_session_token(_request: web.Request) -> web.Response:
+        token = create_hmac_token(app_secret, expiry_seconds=900)
+        return web.json_response({"token": token})
+
     current_directory = Path(__file__).parent
     app.add_routes([
         web.get('/', _index_handler),
         web.get('/health', _health_handler),
+        web.get('/api/auth/session', get_session_token),
     ])
     app.router.add_static(
         '/',
@@ -184,9 +270,15 @@ async def create_app() -> web.Application:
         append_version=True,
     )
 
+    async def _on_startup(app: web.Application):
+        rtmt.start_background_tasks()
+        logger.info("Background tasks started (token refresh, idle checker)")
+
     async def _on_shutdown(app: web.Application):
         logger.info("Graceful shutdown initiated — cleaning up active sessions")
+        rtmt.stop_background_tasks()
 
+    app.on_startup.append(_on_startup)
     app.on_shutdown.append(_on_shutdown)
 
     return app

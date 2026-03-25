@@ -361,6 +361,7 @@ class AppStartupTests(unittest.IsolatedAsyncioTestCase):
     async def test_create_app_succeeds_in_production_mode(self):
         with patch("app.RTMiddleTier") as mock_rt, \
              patch("app.attach_tools_rtmt"), \
+             patch("app._check_service_connectivity", return_value=None), \
              patch.dict(os.environ, {
                  "RUNNING_IN_PRODUCTION": "1",
                  "AZURE_OPENAI_EASTUS2_ENDPOINT": "https://fake.openai.azure.com",
@@ -376,12 +377,12 @@ class AppStartupTests(unittest.IsolatedAsyncioTestCase):
             app = await create_app()
             self.assertIsNotNone(app)
 
-    async def test_create_app_raises_without_required_env(self):
+    async def test_create_app_exits_without_required_env(self):
         with patch.dict(os.environ, {
             "RUNNING_IN_PRODUCTION": "1",
         }, clear=True):
             from app import create_app
-            with self.assertRaises(RuntimeError):
+            with self.assertRaises(SystemExit):
                 await create_app()
 
 
@@ -407,6 +408,7 @@ class HealthEndpointTests(unittest.IsolatedAsyncioTestCase):
     async def test_root_serves_index_html(self):
         with patch("app.RTMiddleTier") as mock_rt, \
              patch("app.attach_tools_rtmt"), \
+             patch("app._check_service_connectivity", return_value=None), \
              patch.dict(os.environ, {
                  "RUNNING_IN_PRODUCTION": "1",
                  "AZURE_OPENAI_EASTUS2_ENDPOINT": "https://fake.openai.azure.com",
@@ -437,6 +439,7 @@ class CorsConfigTests(unittest.IsolatedAsyncioTestCase):
         """Verify the app doesn't set Access-Control-Allow-Origin: *."""
         with patch("app.RTMiddleTier") as mock_rt, \
              patch("app.attach_tools_rtmt"), \
+             patch("app._check_service_connectivity", return_value=None), \
              patch.dict(os.environ, {
                  "RUNNING_IN_PRODUCTION": "1",
                  "AZURE_OPENAI_EASTUS2_ENDPOINT": "https://fake.openai.azure.com",

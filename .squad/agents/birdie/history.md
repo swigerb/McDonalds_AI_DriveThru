@@ -14,3 +14,11 @@ _No sessions yet._
 - **Settings placement:** Menu Mode toggle placed FIRST (before Dark Mode) as requested — most operationally relevant for demo.
 - **Styling:** Used McDonald's yellow `#FFBC0D` for active segment state, dark brown `#27251F` for text, consistent with existing branding.
 - ✅ Merged to decisions.md.
+
+### 2026-07-17: Session Token Support for WebSocket
+- **What:** Added `fetchSessionToken()` and token-aware WebSocket URL construction to `useRealtime.tsx`. Ported from Sonic project's equivalent hook.
+- **Changes:** (1) `fetchSessionToken()` calls `/api/auth/session` on mount, (2) appends `?token=...` to `/realtime` WS endpoint when token exists, (3) auto-refreshes token on WebSocket close with code 4001 or "expired" reason.
+- **Backward compatible:** If `/api/auth/session` doesn't exist (404, network error), token is null and WS connects without it — identical to previous behavior.
+- **Pattern:** `useState<string | null>` for token, `useEffect` on mount for fetch, `buildWsEndpoint()` helper replaces inline ternary. Matches Sonic implementation exactly.
+- **Key detail:** `encodeURIComponent` on token in query string to handle special characters safely.
+- **Build:** TypeScript clean — `tsc --noEmit` passes with zero errors.

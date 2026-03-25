@@ -44,12 +44,15 @@ class CreateAppConfigTests(unittest.IsolatedAsyncioTestCase):
         """Run create_app with mocked Azure services; return (class_mock, instance_mock)."""
         with patch("app.RTMiddleTier") as mock_cls, \
              patch("app.attach_tools_rtmt"), \
+             patch("app._check_service_connectivity", return_value=None), \
              patch.dict(os.environ, {
                  "RUNNING_IN_PRODUCTION": "1",
                  "AZURE_OPENAI_EASTUS2_ENDPOINT": "https://fake.openai.azure.com",
                  "AZURE_OPENAI_REALTIME_DEPLOYMENT": "gpt-4o-realtime",
                  "AZURE_OPENAI_EASTUS2_API_KEY": "fake-key",
                  "AZURE_SEARCH_API_KEY": "fake-search-key",
+                 "AZURE_SEARCH_ENDPOINT": "https://fake.search.azure.com",
+                 "AZURE_SEARCH_INDEX": "fake-index",
                  "AZURE_OPENAI_REALTIME_VOICE_CHOICE": "",
              }):
             mock_instance = MagicMock()

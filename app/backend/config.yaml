@@ -49,3 +49,14 @@ compression:
 
 logging:
   verbose_result_truncate: 500
+
+context:
+  max_tokens: 128000
+  warning_threshold_pct: 80
+  critical_threshold_pct: 95
+
+security:
+  max_concurrent_sessions: 10
+  idle_timeout_seconds: 300
+  allowed_origins: []
+  require_session_token: false
