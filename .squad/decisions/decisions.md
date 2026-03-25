@@ -637,3 +637,135 @@ AI generates 4+ unsolicited patience responses after speaking because:
 ### Trade-offs
 - 1.5s cooldown adds slight delay before user can speak after AI finishes
 - Removing patience instruction means AI won't proactively comfort hesitant users (correct for demo)
+
+---
+
+## Phase 3 — Code Organization (2026-03-25)
+
+**Author:** Grimace (Backend Developer)  
+**Status:** Implemented  
+**Tests:** 202 passing
+
+### Summary
+
+Split the monolithic `rtmt.py` (778 lines) into 3 focused modules and added startup validation to `app.py`. Ported from the Sonic project's Phase 3, adapted for McDonald's brand and existing codebase.
+
+### Changes
+
+**New Files:**
+1. **`app/backend/session_manager.py`** — SessionManager (session lifecycle, greeting state, concurrency limits, idle timeout) + ContextMonitor (token usage estimation, threshold warnings at 80%/95%)
+2. **`app/backend/audio_pipeline.py`** — EchoSuppressor class, verbose logging infrastructure (vlogger, file handler functions), audio marker constants, passthrough type sets, TYPE_RE regex, pre-serialized messages
+
+**Modified Files:**
+3. **`app/backend/rtmt.py`** — Removed extracted code, imports from session_manager and audio_pipeline. RTMiddleTier now delegates to `self._sessions` (SessionManager) instead of inline `_session_map`/`_sent_greeting`. Uses EchoSuppressor instance per connection. Added `_get_auth_token()`, `_refresh_token_loop()`, `start_background_tasks()`, `stop_background_tasks()`.
+4. **`app/backend/app.py`** — Added startup validation: required env vars check (sys.exit(1) on missing), _startup_checks dict, enhanced /health endpoint (returns version + checks status), _check_service_connectivity(), on_startup/on_shutdown hooks for background tasks.
+5. **`app/backend/config.yaml`** — Added `context` section (max_tokens, warning/critical thresholds) and `security` section (max_concurrent_sessions, idle_timeout, allowed_origins, require_session_token).
+6. **`app/backend/tests/test_app.py`** — Updated _run_create_app to include required AZURE_SEARCH_* env vars and mock _check_service_connectivity.
+7. **`app/backend/tests/test_performance.py`** — Updated test_create_app to expect SystemExit instead of RuntimeError; added _check_service_connectivity mock to all create_app test paths.
+
+### Rationale
+- rtmt.py was accumulating too many responsibilities (session management, echo suppression, audio constants, verbose logging, WebSocket routing). Splitting makes each module testable and reviewable in isolation.
+- Startup validation prevents silent runtime failures from missing env vars.
+- ContextMonitor prepares for context window management in Phase 4.
+- SecurityManager config prepares for origin validation and session tokens in Phase 4.
+
+---
+
+## Phase 4 Frontend — Session Token Support (2026-03-25)
+
+**Author:** Birdie (Frontend Developer)  
+**Status:** Implemented
+
+### Decision
+
+Added session token fetch and inclusion in `useRealtime.tsx`:
+
+1. **`fetchSessionToken()`** — calls `GET /api/auth/session`, returns `data.token` or null on any failure
+2. **Token in WS URL** — appends `?token=<encoded_token>` to `/realtime` when token is available
+3. **Auto-refresh on auth failure** — WebSocket close with code `4001` or reason containing "expired" triggers a token refetch
+4. **Graceful fallback** — if the auth endpoint doesn't exist or errors, the connection proceeds without a token (backward compatible)
+
+### Impact
+- No breaking changes — existing deployments without `/api/auth/session` continue to work identically
+- Backend agents (Ronald/Grimace) can independently add the `/api/auth/session` endpoint and WebSocket token validation
+- Token is URI-encoded to handle special characters safely
+
+### File Changed
+- `app/frontend/src/hooks/useRealtime.tsx`
+
+---
+
+## Phase 4 Backend — Security Features (2026-03-25)
+
+**Author:** Mac Tonight (AI / Realtime Expert)  
+**Status:** Implemented  
+**Tests:** 202 passing
+
+### Decision
+
+Ported Phase 4 security features from Sonic project into McDonald's backend. All security features are **disabled by default** (`require_session_token: false`, `allowed_origins: []`) to keep demos safe.
+
+### Changes
+
+**1. HMAC Session Token Utilities (`rtmt.py`)**
+- Added `create_hmac_token()` and `validate_hmac_token()` — HMAC-SHA256 signed tokens with base64-encoded JSON payloads containing expiry timestamps.
+- Tokens default to 15-minute expiry (900 seconds).
+
+**2. WebSocket Handler Security Gates (`rtmt.py` → `_websocket_handler`)**
+Three pre-connection checks added before WebSocket upgrade:
+- **Origin validation** — rejects connections from disallowed origins (checks `Host` header match or explicit allowlist).
+- **HMAC token validation** — when `require_session_token: true`, requires valid unexpired token in query string.
+- **Concurrency limit** — enforces `max_concurrent_sessions` cap, returns friendly JSON error to over-limit clients.
+
+**3. Session Token Endpoint (`app.py`)**
+- `GET /api/auth/session` — returns a fresh 15-minute HMAC token.
+- `app_secret` generated via `os.urandom(32)` at startup — unique per process instance.
+
+**4. App Secret Lifecycle**
+- `rtmt.app_secret` initialized as empty bytes in `__init__`, set by `app.py` at startup.
+- Secret is ephemeral (in-memory only) — rotates on every server restart.
+
+### What Already Existed (Not Duplicated)
+- Token refresh loop, background task management, startup/shutdown hooks
+- SessionManager idle checker, activity tracking, concurrency checks
+- `config.yaml` security section
+
+### Trade-offs
+- HMAC tokens are stateless — no server-side revocation (acceptable for drive-thru sessions < 15 min).
+- Origin check uses `endswith(host)` which is permissive for subdomains — tighten for production.
+- `app_secret` rotates on restart, invalidating in-flight tokens — acceptable for deployment model.
+
+### Risk
+- None for demos (everything disabled by default).
+- Production: enable `require_session_token: true` and populate `allowed_origins` list.
+
+---
+
+## Phase 5 — RTMT Lifecycle, Security & Tool Calling Tests (2026-03-25)
+
+**Author:** Hamburglar (Tester)  
+**Status:** Complete  
+**Tests:** 423 total (202 baseline + 221 new)
+
+### Summary
+
+Created 221 new tests across 3 files covering the Phase 3 refactored modules (session_manager, audio_pipeline, rtmt) and Phase 4 security interfaces. All 423 total tests pass.
+
+### Files Created
+
+- `app/backend/tests/test_rtmt.py` — 102 tests covering SessionManager, ContextMonitor, EchoSuppressor, audio pipeline utilities, RTMT core classes, and RTMiddleTier initialization.
+- `app/backend/tests/test_security.py` — 40 tests covering session limits, origin validation, HMAC tokens, and security config validation. Uses stub implementations for Phase 4 interfaces not yet merged.
+- `app/backend/tests/test_tool_calling.py` — 79 tests covering search pipeline, order CRUD, quantity limits, customization validation, upsell hints, happy hour, extras validation, and edge cases.
+
+### Key Decisions
+
+1. **Security stubs over importorskip:** Used self-contained stub implementations (_StubSessionLimiter, _validate_origin, _generate_hmac_token) instead of pytest.importorskip for security tests. This allows tests to validate expected behaviour even before Phase 4 source lands. Once real security modules merge, swap stubs for imports.
+
+2. **MENU_CATEGORY_MAP awareness:** Tests that exercise `_infer_category` keyword paths use synthetic item names (e.g., "Test Shake Special") to avoid MENU_CATEGORY_MAP overriding keyword inference. Tests that need real categories use exact menu keys (e.g., "Big Mac®").
+
+3. **Happy hour mock target:** Patching `tools.is_happy_hour` (not `order_state.is_happy_hour`) since tools.py imports the function at module level.
+
+### Risk Notes
+
+- McFlurry items are NOT flagged OOS when ice cream machine is down — the keyword list doesn't include "mcflurry". Consider adding it in a future PR.
+- Security tests use stubs. Once Phase 4 source merges, these should be updated to import real implementations.
