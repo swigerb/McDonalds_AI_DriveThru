@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
 
 interface LocalModeContextProps {
     localMode: boolean;
@@ -17,7 +17,9 @@ export const LocalModeProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("localMode", localMode.toString());
     }, [localMode]);
 
-    return <LocalModeContext.Provider value={{ localMode, setLocalMode }}>{children}</LocalModeContext.Provider>;
+    const value = useMemo(() => ({ localMode, setLocalMode }), [localMode]);
+
+    return <LocalModeContext.Provider value={value}>{children}</LocalModeContext.Provider>;
 };
 
 export const useLocalMode = () => {

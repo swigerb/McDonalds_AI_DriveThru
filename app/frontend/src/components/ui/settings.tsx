@@ -205,7 +205,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                 </div>
             )}
             {localMode && (
-                <div className="flex items-start justify-between transition-all duration-300 ease-in-out animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-start justify-between transition-all duration-300 ease-in-out">
                     <div className="flex-1 space-y-0.5">
                         <Label htmlFor="piper-voice" className="text-gray-900 dark:text-gray-100">
                             🎙️ Local Voice
