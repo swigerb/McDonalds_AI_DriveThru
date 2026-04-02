@@ -28,6 +28,7 @@ def is_happy_hour() -> bool:
 
 
 _BREAKFAST_KEYWORDS = ("mcmuffin", "biscuit", "mcgriddle", "hotcake", "big breakfast")
+_SIZE_PREFIXES = ("Small ", "Medium ", "Large ", "Route 44 ")
 
 
 def _infer_combo_component(item_name: str) -> str:
@@ -82,6 +83,26 @@ def _get_default_side(meal_name: str, size: str) -> str:
     if not size or size.lower() in ("standard", "n/a", "na", "none", ""):
         size = "Medium"
     return f"{size} Fries"
+
+
+def _update_component_size(component: str, new_size: str) -> str:
+    """Update the size prefix on a meal component (fries/drink).
+
+    Entrees and unsized items (Hash Browns) are returned unchanged.
+    """
+    comp_type = _infer_combo_component(component)
+    if comp_type not in ("sides", "drinks"):
+        return component
+    if "hash brown" in component.lower():
+        return component
+    # Strip any existing size prefix
+    base = component
+    for prefix in _SIZE_PREFIXES:
+        if component.startswith(prefix):
+            base = component[len(prefix):]
+            break
+    new_prefix = f"{new_size.capitalize()} " if new_size and new_size.lower() not in ("", "standard", "n/a", "na", "none") else ""
+    return f"{new_prefix}{base}".strip()
 
 
 @dataclass
@@ -296,6 +317,30 @@ class OrderState:
                     session["absorbed_sides"] += 1
                 if absorbed_drink:
                     session["absorbed_drinks"] += 1
+
+        elif action == "modify":
+            # ── In-place size change — preserves all meal components ──
+            existing_item_index = next(
+                (index for index, order_item in enumerate(order_state) if order_item.item == item_name),
+                -1
+            )
+            if existing_item_index != -1:
+                item = order_state[existing_item_index]
+                old_size = item.size
+                item.size = size
+                item.price = price
+                item.display = display
+                # Update size prefix on meal components (fries, drink)
+                if _is_meal_or_combo(item_name) and item.components:
+                    new_size_label = formatted_size.strip() if formatted_size.strip() else ""
+                    item.components = [
+                        _update_component_size(c, new_size_label) for c in item.components
+                    ]
+                result_info["size_changed_from"] = old_size
+                result_info["size_changed_to"] = size
+                logger.info("Modified '%s' size from '%s' to '%s' in session %s", item_name, old_size, size, session_id)
+            else:
+                logger.warning("Modify failed — item '%s' not found in session %s", item_name, session_id)
 
         elif action == "remove":
             existing_item_index = next((index for index, order_item in enumerate(order_state) if order_item.item == item_name and order_item.size == size), -1)

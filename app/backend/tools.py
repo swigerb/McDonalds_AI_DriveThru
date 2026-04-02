@@ -393,14 +393,14 @@ async def search(
 update_order_tool_schema = {
     "type": "function",
     "name": "update_order",
-    "description": "Update the current order by adding or removing items.",
+    "description": "Update the current order by adding, removing, or modifying items. Use 'modify' to change a meal's size in place (preserves all components).",
     "parameters": {
         "type": "object",
         "properties": {
             "action": { 
                 "type": "string", 
-                "description": "Action to perform: 'add' or 'remove'.", 
-                "enum": ["add", "remove"]
+                "description": "Action to perform: 'add', 'remove', or 'modify'. Use 'modify' to change the size of an existing meal without losing its drink or other components.", 
+                "enum": ["add", "remove", "modify"]
             },
             "item_name": { 
                 "type": "string", 
@@ -438,10 +438,10 @@ async def update_order(args, session_id: str) -> ToolResult:
         if error:
             return ToolResult(error, ToolResultDirection.TO_SERVER)
 
-    # ── Hardened price validation (add only) ──
+    # ── Hardened price validation (add and modify) ──
     price = args.get("price", 0.0)
-    if args["action"] == "add" and price <= 0.0:
-        logger.warning("Model attempted to add item %s with invalid price $%.2f (rejecting $0 items)", item_name, price)
+    if args["action"] in ("add", "modify") and price <= 0.0:
+        logger.warning("Model attempted to %s item %s with invalid price $%.2f (rejecting $0 items)", args["action"], item_name, price)
         if _prompt_loader is not None:
             error_msg = _prompt_loader.render_error("invalid_price", item_name=item_name, price=price)
         else:
@@ -545,6 +545,10 @@ async def update_order(args, session_id: str) -> ToolResult:
     if result_info and result_info.get("absorbed_into_meal"):
         meal_display = result_info.get("meal_name", "your meal")
         delta_text = f"{display_name} added to {meal_display} — your total is ${summary.finalTotal:.2f}"
+    elif result_info and result_info.get("size_changed_from"):
+        old_sz = result_info["size_changed_from"] or "Standard"
+        new_sz = result_info["size_changed_to"] or "Standard"
+        delta_text = f"Upgraded {item_name} from {old_sz.capitalize()} to {new_sz.capitalize()} — your total is now ${summary.finalTotal:.2f}"
     elif _prompt_loader is not None:
         template_str = _prompt_loader.get_delta_template(action)
         delta_text = _prompt_loader.render_template(template_str, quantity=quantity, display_name=display_name, total=f"{summary.finalTotal:.2f}")

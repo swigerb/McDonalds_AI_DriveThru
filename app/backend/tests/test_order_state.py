@@ -534,6 +534,98 @@ class OrderStateTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertIn("Medium Diet Coke", items[0].components)
 
+    # ── Meal size upgrade tests ──
+
+    def test_meal_size_upgrade_preserves_all_components(self):
+        """Upgrading a meal from Medium to Large must keep entree, fries, AND drink."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "McCrispy Meal", "medium", 1, 9.99)
+        order_state_singleton.handle_order_update(session_id, "add", "Diet Coke", "medium", 1, 1.99)
+        # Verify drink absorbed into meal
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(len(items[0].components), 3)
+        # Now upgrade to Large
+        result = order_state_singleton.handle_order_update(session_id, "modify", "McCrispy Meal", "large", 1, 11.69)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)  # Still one item
+        meal = items[0]
+        self.assertEqual(meal.size, "large")
+        self.assertEqual(meal.price, 11.69)
+        self.assertEqual(meal.display, "Large McCrispy Meal")
+        # All three components preserved with updated sizes
+        self.assertIn("McCrispy", meal.components)
+        self.assertIn("Large Fries", meal.components)
+        self.assertIn("Large Diet Coke", meal.components)
+        self.assertEqual(len(meal.components), 3)
+        self.assertEqual(result.get("size_changed_from"), "medium")
+        self.assertEqual(result.get("size_changed_to"), "large")
+
+    def test_meal_size_upgrade_no_separate_drink_charge(self):
+        """After size upgrade, drink stays inside meal — no extra line item."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "McCrispy Meal", "medium", 1, 9.99)
+        order_state_singleton.handle_order_update(session_id, "add", "Diet Coke", "medium", 1, 1.99)
+        order_state_singleton.handle_order_update(session_id, "modify", "McCrispy Meal", "large", 1, 11.69)
+        summary = order_state_singleton.get_order_summary(session_id)
+        # Only the meal price — no separate drink charge
+        self.assertAlmostEqual(summary.total, 11.69, places=2)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)  # No ejected drink
+
+    def test_meal_size_upgrade_updates_fries_and_drink_sizes(self):
+        """Fries and drink size prefixes must update to match the new meal size."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Meal", "medium", 1, 9.99)
+        order_state_singleton.handle_order_update(session_id, "add", "Sprite", "medium", 1, 1.79)
+        # Upgrade to Large
+        order_state_singleton.handle_order_update(session_id, "modify", "Big Mac Meal", "large", 1, 11.29)
+        items = order_state_singleton.get_order_items(session_id)
+        meal = items[0]
+        self.assertIn("Large Fries", meal.components)
+        self.assertIn("Large Sprite", meal.components)
+        self.assertNotIn("Medium Fries", meal.components)
+        self.assertNotIn("Medium Sprite", meal.components)
+
+    def test_meal_size_downgrade_updates_components(self):
+        """Downgrading from Large to Medium also updates component sizes."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Meal", "large", 1, 11.29)
+        order_state_singleton.handle_order_update(session_id, "add", "Coca-Cola", "large", 1, 2.19)
+        # Downgrade to Medium
+        order_state_singleton.handle_order_update(session_id, "modify", "Big Mac Meal", "medium", 1, 9.99)
+        items = order_state_singleton.get_order_items(session_id)
+        meal = items[0]
+        self.assertEqual(meal.display, "Medium Big Mac Meal")
+        self.assertIn("Medium Fries", meal.components)
+        self.assertIn("Medium Coca-Cola", meal.components)
+
+    def test_meal_size_upgrade_breakfast_preserves_hash_browns(self):
+        """Breakfast meal size upgrade should keep Hash Browns unchanged (no size prefix)."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Egg McMuffin Meal", "standard", 1, 5.99)
+        order_state_singleton.handle_order_update(session_id, "add", "Coffee", "medium", 1, 1.49)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertIn("Hash Browns", items[0].components)
+        # Upgrade to large
+        order_state_singleton.handle_order_update(session_id, "modify", "Egg McMuffin Meal", "large", 1, 7.49)
+        items = order_state_singleton.get_order_items(session_id)
+        meal = items[0]
+        self.assertIn("Hash Browns", meal.components)
+        self.assertIn("Large Coffee", meal.components)
+
+    def test_meal_size_upgrade_combo_synonym(self):
+        """Size upgrade should also work on items using 'Combo' terminology."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "medium", 1, 9.99)
+        order_state_singleton.handle_order_update(session_id, "add", "Sprite", "medium", 1, 1.79)
+        order_state_singleton.handle_order_update(session_id, "modify", "Big Mac Combo", "large", 1, 11.29)
+        items = order_state_singleton.get_order_items(session_id)
+        meal = items[0]
+        self.assertEqual(meal.display, "Large Big Mac Combo")
+        self.assertIn("Large Fries", meal.components)
+        self.assertIn("Large Sprite", meal.components)
+
 
 if __name__ == "__main__":
     unittest.main()

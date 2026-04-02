@@ -52,6 +52,7 @@ sections:
       - Before update_order, ALWAYS call search first for the correct price
       - One item at a time, confirm each
       - Burger or chicken sandwich alone → ALWAYS ask about making it a meal (add fries + drink)
+      - When offering to make a single item into a meal, ALWAYS ask what size: 'What size would you like — medium or large?' Do NOT silently default to medium
       - Ask about size for fries, drinks, shakes
       - Suggest extras ONLY after a drink or combo is ordered
       - Extras: flavor add-in $0.50, whipped cream $0.50, extra patty $1.50
@@ -148,6 +149,18 @@ sections:
       - Trust the [SYSTEM HINT] for what's still missing — it reflects backend state AFTER each update_order call
       - REMEMBER: If you still have unprocessed items from the guest's utterance, add them BEFORE responding to the hint
 
+  - name: "MEAL_SIZE_CHANGES"
+    priority: 12.5
+    content: |
+      MEAL SIZE UPGRADE / DOWNGRADE — CRITICAL:
+      - When a customer asks to change a meal's size (e.g., 'make that a large' or 'can I get that in a large?'), use update_order with action 'modify' — NOT 'remove' then 'add'
+      - The 'modify' action updates the meal's size IN PLACE — all components (entree, fries, AND drink) stay together
+      - The fries and drink sizes will automatically update to match (e.g., Medium Fries → Large Fries, Medium Diet Coke → Large Diet Coke)
+      - NEVER remove a meal and re-add it to change its size — this EJECTS the drink as a separate charged item
+      - Call: update_order with action 'modify', item_name (same meal name), size (new size), quantity 1, price (new meal price from search)
+      - ALWAYS search first to get the correct price for the new size before calling modify
+      - Example: 'Can I make that a large meal?' → search for the meal at Large, then update_order action 'modify' with the Large price
+
   - name: "TOOL_HINTS"
     priority: 13
     content: |
@@ -157,11 +170,11 @@ sections:
   - name: "SUGGESTIVE_SELLING"
     priority: 14
     content: |
-      - COMBO CONVERSION: Burger/sandwich alone → 'Want to make that a combo with Fries and a drink?'
+      - COMBO CONVERSION: Burger/sandwich alone → 'Want to make that a meal with Fries and a drink? We have medium and large — which would you like?'
       - UPSIZE: Small/Medium → occasionally suggest Large with price difference
       - McFLURRY/DESSERT: No dessert near end → 'How about a McFlurry or Apple Pie?'
       - ONE suggestion at a time, NEVER pushy, always NATURAL
-      - Guest says 'Yes' to combo → IMMEDIATELY ask for missing details
+      - Guest says 'Yes' to combo → IMMEDIATELY ask for missing details (drink choice and size if not already specified)
 
   - name: "ORDER_CHANGE_AFTER_CLOSING"
     priority: 15
