@@ -11,6 +11,8 @@ import StatusMessage from "@/components/ui/status-message";
 import MenuPanel from "@/components/ui/menu-panel";
 import OrderSummary, { calculateOrderSummary, OrderSummaryProps } from "@/components/ui/order-summary";
 import TranscriptPanel from "@/components/ui/transcript-panel";
+import { Toaster } from "@/components/ui/toaster";
+import { toast, dismissAllToasts } from "@/components/ui/use-toast";
 const Settings = lazy(() => import("@/components/ui/settings"));
 import useRealTime from "@/hooks/useRealtime";
 import { ReadyState } from "react-use-websocket";
@@ -111,24 +113,6 @@ function McDonaldsApp() {
     const [piperVoice, setPiperVoice] = useState<string>(() => {
         return localStorage.getItem("piperVoice") || "en_US-amy-medium";
     });
-    const [connectionError, setConnectionError] = useState<string | null>(null);
-    const connectionErrorSetAtRef = useRef<number>(0);
-
-    const setConnectionErrorWithMinDisplay = (msg: string) => {
-        connectionErrorSetAtRef.current = Date.now();
-        setConnectionError(msg);
-    };
-
-    const clearConnectionError = () => {
-        const elapsed = Date.now() - connectionErrorSetAtRef.current;
-        const MIN_DISPLAY_MS = 5000;
-        if (elapsed >= MIN_DISPLAY_MS) {
-            setConnectionError(null);
-        } else {
-            setTimeout(() => setConnectionError(null), MIN_DISPLAY_MS - elapsed);
-        }
-    };
-
     useEffect(() => {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
     }, [showSessionTokens]);
@@ -170,7 +154,7 @@ function McDonaldsApp() {
         enableInputAudioTranscription: true,
         onWebSocketOpen: () => {
             console.log("[WS] WebSocket connection opened");
-            clearConnectionError();
+            dismissAllToasts();
         },
         onWebSocketClose: () => {
             console.log("[WS] WebSocket connection closed");
@@ -178,7 +162,7 @@ function McDonaldsApp() {
         onWebSocketError: event => {
             console.error("[WS] WebSocket error:", event);
             if (localMode) {
-                setConnectionErrorWithMinDisplay("Cannot connect to local server. Is the backend running?");
+                toast("Cannot connect to local server. Is the backend running?");
             }
         },
         onReceivedError: message => console.error("error", message),
@@ -330,12 +314,12 @@ function McDonaldsApp() {
                     ? "Cannot connect to local server. Is the backend running?"
                     : "WebSocket not connected. Please check your connection and try again.";
                 console.error("[MIC] WebSocket not connected! readyState:", realtime.readyState);
-                setConnectionError(errorMsg);
+                toast(errorMsg);
                 return;
             }
 
             console.log("[MIC] Starting session...", localMode ? "(local mode)" : "(cloud mode)");
-            setConnectionError(null);
+            dismissAllToasts();
             setSessionIdentifiers(null);
 
             // Start session and playback immediately, but delay mic capture until the greeting finishes.
@@ -523,11 +507,6 @@ function McDonaldsApp() {
                                     )}
                                 </Button>
                                 <StatusMessage isRecording={isRecording} />
-                                {connectionError && (
-                                    <p className="mt-2 max-w-xs text-center text-sm font-medium text-red-600 dark:text-red-400" role="alert">
-                                        ⚠️ {connectionError}
-                                    </p>
-                                )}
                             </div>
                         </div>
                     </Card>
@@ -785,6 +764,7 @@ export default function RootApp() {
                         <MenuModeProvider>
                             <LocalModeProvider>
                                 <App />
+                                <Toaster />
                             </LocalModeProvider>
                         </MenuModeProvider>
                     </AzureSpeechProvider>

@@ -659,7 +659,35 @@ class RTMiddleTier:
 
         self._sessions.create_session(ws)
 
-        await self._forward_messages(ws)
+        try:
+            await self._forward_messages(ws)
+        except (aiohttp.ClientConnectorError, aiohttp.WSServerHandshakeError,
+                asyncio.TimeoutError, OSError) as exc:
+            logger.error("Failed to connect to Azure OpenAI Realtime: %s", exc)
+            if not ws.closed:
+                try:
+                    await ws.send_json({
+                        "type": "error",
+                        "error": {
+                            "message": (
+                                "Cloud service unreachable — the backend cannot reach Azure OpenAI. "
+                                "Switch to local mode or check your network connection."
+                            ),
+                            "code": "cloud_unreachable",
+                        },
+                    })
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.exception("Unexpected error in cloud WebSocket handler: %s", exc)
+            if not ws.closed:
+                try:
+                    await ws.send_json({
+                        "type": "error",
+                        "error": {"message": f"Unexpected backend error: {exc}"},
+                    })
+                except Exception:
+                    pass
         return ws
     
     def attach_to_app(self, app: web.Application, path: str) -> None:

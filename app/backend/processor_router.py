@@ -51,6 +51,13 @@ class ProcessorRouter:
         dependencies are not installed.
     """
 
+    # Cache TTL for cloud reachability probe (seconds)
+    _CLOUD_CHECK_CACHE_TTL: float = 30.0
+    # Short timeout for the cloud probe (seconds) — must be fast enough
+    # that a WebSocket handshake doesn't visibly stall.
+    _CLOUD_CHECK_TIMEOUT_TOTAL: float = 1.0
+    _CLOUD_CHECK_TIMEOUT_CONNECT: float = 0.5
+
     def __init__(
         self,
         cloud_processor: RTMiddleTier | None,
@@ -67,6 +74,10 @@ class ProcessorRouter:
             self._default_mode = "local"
         # Runtime-togglable mode (updated via /api/local-mode/toggle)
         self._runtime_mode: str | None = None
+        # Cloud reachability cache — avoids repeating network probes on
+        # every WebSocket connection.  ``None`` means "not yet checked".
+        self._cloud_reachable: bool | None = None
+        self._last_cloud_check: float = 0.0
         # Diagnostics counters
         self._ws_connection_count: int = 0
         self._active_connections: int = 0
@@ -166,25 +177,82 @@ class ProcessorRouter:
             return self._runtime_mode
         return self._default_mode
 
-    async def _check_cloud_reachable(self) -> bool:
-        """Quick connectivity check to the Azure OpenAI endpoint.
+    def invalidate_cloud_cache(self) -> None:
+        """Mark the cached cloud reachability as stale.
 
-        Returns True if the endpoint responds within 3 seconds,
-        False otherwise.  Used for auto-fallback when offline.
+        Called when a cloud connection actually fails so the next
+        WebSocket connection immediately falls back to local.
         """
+        self._cloud_reachable = False
+        self._last_cloud_check = time.time()
+        pipeline_logger.info("Cloud reachability cache invalidated → unreachable")
+
+    async def _check_cloud_reachable(self) -> bool:
+        """Cached connectivity probe to the Azure OpenAI endpoint.
+
+        Uses a short timeout (1s total / 500ms connect) and caches the
+        result for ``_CLOUD_CHECK_CACHE_TTL`` seconds so that subsequent
+        WebSocket connections don't repeat the probe.  This means the
+        *first* offline connection waits ≤1s instead of 3s, and every
+        connection after that is instant.
+        """
+        now = time.time()
+        if (
+            self._cloud_reachable is not None
+            and (now - self._last_cloud_check) < self._CLOUD_CHECK_CACHE_TTL
+        ):
+            pipeline_logger.debug(
+                "Cloud reachability (cached, age=%.1fs): %s",
+                now - self._last_cloud_check,
+                self._cloud_reachable,
+            )
+            return self._cloud_reachable
+
         endpoint = getattr(self._cloud, "endpoint", None)
         if not endpoint:
+            self._cloud_reachable = False
+            self._last_cloud_check = now
             return False
         try:
-            timeout = aiohttp.ClientTimeout(total=3, connect=2)
+            timeout = aiohttp.ClientTimeout(
+                total=self._CLOUD_CHECK_TIMEOUT_TOTAL,
+                connect=self._CLOUD_CHECK_TIMEOUT_CONNECT,
+            )
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(endpoint, ssl=True) as resp:
+                    self._cloud_reachable = True
+                    self._last_cloud_check = now
+                    pipeline_logger.info("Cloud reachability probe: REACHABLE")
                     return True
-        except Exception:
+        except Exception as exc:
+            self._cloud_reachable = False
+            self._last_cloud_check = now
+            pipeline_logger.info("Cloud reachability probe: UNREACHABLE (%s)", exc)
             return False
+
+    async def probe_cloud_at_startup(self) -> None:
+        """Run one cloud reachability check so the first WS connection is instant."""
+        if self._cloud is not None:
+            reachable = await self._check_cloud_reachable()
+            pipeline_logger.info(
+                "Startup cloud probe complete — reachable=%s", reachable
+            )
+        else:
+            self._cloud_reachable = False
+            self._last_cloud_check = time.time()
+            pipeline_logger.info("Startup cloud probe skipped — no cloud processor")
 
     async def _websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
         """Main WebSocket entry point — delegates to the active processor.
+
+        Routing priority:
+        1. **Explicit local** — ``?mode=local`` or runtime toggle to local:
+           accept WebSocket immediately, zero cloud dependency.
+        2. **Cloud with auto-fallback** — default when ``local_mode.enabled``
+           is false: uses a *cached* reachability probe (≤1s on first hit,
+           instant thereafter) and falls back to local if offline.
+        3. **Explicit cloud** — ``?mode=cloud`` with no local available:
+           delegates to RTMiddleTier directly.
 
         When mode is ``cloud``, the request is forwarded **directly** to
         ``RTMiddleTier._websocket_handler`` so all security checks,
@@ -192,10 +260,6 @@ class ProcessorRouter:
 
         When mode is ``local``, the router performs minimal WebSocket
         setup and hands off to ``LocalPhi4Processor.handle_websocket()``.
-
-        Auto-fallback: if mode resolves to ``cloud`` but the Azure
-        endpoint is unreachable and a local processor is available,
-        automatically routes to local mode instead of hanging.
         """
         self._ws_connection_count += 1
         self._active_connections += 1
@@ -203,10 +267,41 @@ class ProcessorRouter:
 
         mode = self._resolve_mode(request)
         pipeline_logger.info(
-            "[conn-%d] WebSocket connection accepted — resolved mode=%s", conn_id, mode
+            "[conn-%d] WebSocket connection — resolved mode=%s (default=%s, runtime=%s, query=%s)",
+            conn_id,
+            mode,
+            self._default_mode,
+            self._runtime_mode,
+            request.query.get("mode", "<none>"),
         )
 
         try:
+            # ── FAST PATH: explicit local mode ─────────────────────────
+            # When mode is "local" and a local processor is available,
+            # accept the WebSocket immediately with ZERO cloud dependency.
+            if mode == "local" and self._local is not None:
+                pipeline_logger.info(
+                    "[conn-%d] FAST PATH — direct local routing, no cloud check", conn_id
+                )
+                ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True)
+                await ws.prepare(request)
+                try:
+                    await self._local.handle_websocket(ws, request)
+                except Exception as exc:
+                    err_msg = f"Local processor error: {exc}"
+                    pipeline_logger.error("[conn-%d] %s", conn_id, err_msg, exc_info=True)
+                    self._last_error = err_msg
+                    self._last_error_time = time.time()
+                    if not ws.closed:
+                        try:
+                            await ws.send_json({
+                                "type": "error",
+                                "error": {"message": f"Local processing failed: {exc}"},
+                            })
+                        except Exception:
+                            pass
+                return ws
+
             # ── Auto-fallback: cloud → local when offline ───────────────
             if mode == "cloud" and self._local is not None:
                 if self._cloud is None:
@@ -219,10 +314,15 @@ class ProcessorRouter:
                     cloud_ok = await self._check_cloud_reachable()
                     if not cloud_ok:
                         pipeline_logger.warning(
-                            "[conn-%d] Cloud endpoint unreachable — auto-falling back to local mode",
+                            "[conn-%d] Cloud endpoint unreachable (cached probe) — auto-falling back to local mode",
                             conn_id,
                         )
                         mode = "local"
+                    else:
+                        pipeline_logger.info(
+                            "[conn-%d] Cloud endpoint reachable — proceeding with cloud mode",
+                            conn_id,
+                        )
 
             # ── Cloud mode — full pass-through to RTMiddleTier ──────────
             if mode == "cloud" or self._local is None:
@@ -245,7 +345,7 @@ class ProcessorRouter:
                 pipeline_logger.info("[conn-%d] Routing to cloud processor (RTMiddleTier)", conn_id)
                 return await self._cloud._websocket_handler(request)
 
-            # ── Local mode ──────────────────────────────────────────────
+            # ── Local mode (after auto-fallback or explicit) ────────────
             pipeline_logger.info(
                 "[conn-%d] Routing to local processor (Phi-4 ONNX)", conn_id
             )

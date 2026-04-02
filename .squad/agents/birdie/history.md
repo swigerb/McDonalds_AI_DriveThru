@@ -80,3 +80,15 @@ _No sessions yet._
 - **Session & Orchestration logs:** Written to .squad/ with full context and next actions
 - **Test status:** 632 backend tests passing, zero regressions in cloud mode. Frontend TypeScript clean, all tests pass.
 - **Next:** Wire frontend toggle to `/api/local-mode/toggle` endpoint. Monitor console logs during offline testing. Verify auto-fallback behavior with `local-pipeline` logger filtering.
+
+### 2025-07-24: Toast Notification System for Connection Errors
+- **What:** Replaced inline red error text below mic button with a persistent toast notification system. Toasts stay until user clicks X — no auto-dismiss.
+- **Root cause:** Inline `connectionError` paragraph auto-cleared after 5s via `clearConnectionError()` with `MIN_DISPLAY_MS` timer, or flashed too briefly. Users missed the error message.
+- **Files created:** `components/ui/use-toast.ts` (global toast state with listener pattern), `components/ui/toaster.tsx` (animated toast renderer with framer-motion).
+- **Files modified:** `App.tsx` — removed `connectionError` state, `connectionErrorSetAtRef`, `setConnectionErrorWithMinDisplay`, `clearConnectionError`. Replaced with `toast()` and `dismissAllToasts()` calls. Added `<Toaster />` to `RootApp`.
+- **Pattern:** Module-level global state + listener array (same pattern shadcn/ui uses for toasts). `toast()` is a standalone function callable from any event handler. Deduplicates by message — calling `toast()` with an identical message is a no-op.
+- **Styling:** McDonald's red `#DB0007` for error variant, amber for warning. Positioned top-right (`fixed top-4 right-4 z-[100]`). Spring animation via framer-motion.
+- **Behavior:** Toasts persist until X clicked. `dismissAllToasts()` on successful WS open or session start clears stale errors automatically.
+- **console.error preserved:** All `console.error("[MIC]", ...)` and `console.error("[WS]", ...)` lines untouched — developer logging intact.
+- ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
+- ✅ All 13 tests pass (`vitest run`)

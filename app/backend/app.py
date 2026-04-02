@@ -2,6 +2,7 @@ import gzip
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 import aiohttp
@@ -426,6 +427,11 @@ async def create_app() -> web.Application:
             "current_mode": router.active_mode,
             "config_default_mode": router._default_mode,
             "runtime_mode_override": router._runtime_mode,
+            "cloud_reachable": router._cloud_reachable,
+            "cloud_reachable_cache_age_s": (
+                round(time.time() - router._last_cloud_check, 1)
+                if router._last_cloud_check > 0 else None
+            ),
             "local_model_status": "not available",
             "gpu_provider": _detected_device,
             "tts_engine_status": "not available",
@@ -504,6 +510,9 @@ async def create_app() -> web.Application:
 
     async def _on_startup(app: web.Application):
         router.start_background_tasks()
+        # Pre-populate cloud reachability cache so the first WebSocket
+        # connection doesn't stall on a network probe.
+        await router.probe_cloud_at_startup()
         logger.info("Background tasks started (token refresh, idle checker)")
 
     async def _on_shutdown(app: web.Application):

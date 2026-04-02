@@ -49,3 +49,7 @@ _No sessions yet._
 - **Session & Orchestration logs:** Written with full root cause analysis, fixes, and next actions
 - **Test status:** 632 backend tests passing (baseline maintained), zero regressions. Frontend TypeScript clean, all 13 tests pass.
 - **Next:** Birdie wires frontend toggle to `/api/local-mode/toggle`. Team monitors offline scenario with `local-pipeline` logger. Verify console logs show full diagnostic trace.
+
+## Learnings (continued 2)
+
+- **WebSocket Offline Fix — Three-Bug Root Cause (2026-07-20):** The /realtime WebSocket still failed offline despite auto-fallback because of three compounding bugs: (1) `_check_cloud_reachable()` had a 3s timeout and NO caching — every single WS connection repeated the slow network probe; (2) `RTMiddleTier._websocket_handler` called `_forward_messages()` with zero error handling — when `session.ws_connect()` to Azure failed (10-30s timeout), the exception propagated unhandled and the client WS closed with no error message; (3) Frontend never passes `?mode=local` in the WS URL, so the router always defaulted to "cloud" mode and hit the auto-fallback path. Fix: added cached cloud reachability (30s TTL, 1s/500ms timeout vs 3s/2s), startup probe so first WS is instant, explicit "local" fast-path in router that bypasses all cloud checks, and try/except in RTMiddleTier._websocket_handler around `_forward_messages()` that sends a structured error JSON to the client before closing. Diagnostics endpoint now shows `cloud_reachable` and `cloud_reachable_cache_age_s`. All 630+ tests pass unchanged.
