@@ -1,5 +1,81 @@
 # Team Decisions
 
+## WebSocket Offline & Toast Notifications (2026-04-02)
+
+### Offline Auto-Fallback and Diagnostics Pipeline (Grimace)
+**Date:** 2026-07-19 | **Status:** Implemented
+
+When offline with local mode toggled, the backend now auto-detects cloud unreachability and falls back to local mode. Three-layer fix:
+
+1. **Auto-Fallback (processor_router.py)** — 3s connectivity check to Azure. If unreachable, falls back to local mode with warning.
+2. **Runtime Mode Toggle (app.py)** — `POST /api/local-mode/toggle` endpoint lets frontend signal mode preference before WS connect.
+3. **Graceful Offline Startup (app.py)** — Missing Azure env vars log warning instead of exit. Cloud RTMiddleTier skipped if unavailable.
+4. **Diagnostics Endpoint (app.py)** — `GET /api/diagnostics` returns mode, model status, GPU, TTS/STT, last error, WS counts.
+5. **Pipeline Logging** — `local-pipeline` logger added across all modules for session tracking.
+
+**Impact:** No regressions (632 tests baseline preserved). Birdie to wire `/api/local-mode/toggle` to frontend toggle.
+
+---
+
+### WebSocket Offline Fix — Cached Cloud Probe + Error Handling (Grimace)
+**Date:** 2026-07-20 | **Status:** Implemented
+
+Three compounding bugs fixed:
+
+1. **Cached Cloud Reachability Probe (processor_router.py)**
+   - Cloud reachability cached for 30 seconds (first WS connection now instant)
+   - Probe timeout: 3s → 1s total, 2s → 500ms connect
+   - Startup probe in `_on_startup` prevents first WS stall
+   - `invalidate_cloud_cache()` marks cloud unreachable on real failure
+
+2. **RTMiddleTier Error Handling (rtmt.py)**
+   - `_websocket_handler` wraps `_forward_messages()` in try/except
+   - Sends structured error JSON (`type: "error"`, `code: "cloud_unreachable"`) to client before closing
+   - Previously: exception propagated unhandled → WS closed silently
+
+3. **Explicit Local Mode Fast Path (processor_router.py)**
+   - Mode="local" + local processor exists = immediate WS accept (zero cloud dependency)
+   - Auto-fallback only runs when mode="cloud"
+
+**Frontend Action:** Pass `?mode=local` in WS URL when local mode enabled, or call `/api/local-mode/toggle` first.
+
+---
+
+### Local Mode WebSocket Direct Connection (Birdie)
+**Date:** 2025-07-23 | **Status:** Implemented
+
+Offline mic clicks produced silence. Three root causes fixed:
+
+1. WebSocket URL was relative (`/realtime`), resolving to remote Azure host instead of localhost
+2. `react-use-websocket`'s `sendJsonMessage` silently drops messages when connection not OPEN
+3. Local mode state wasn't synced to backend at session start
+
+**Decision:**
+- When `localMode=true`, connect WebSocket directly to `ws://localhost:8000/realtime`
+- Always check `readyState === OPEN` before session start; show error if not connected
+- Sync local mode state to backend at every session start
+- Skip Azure session token fetch in local mode
+
+**Impact:** `useRealtime.tsx` accepts `localMode` parameter and returns `readyState`. `App.tsx` gates mic on WebSocket readyState. User sees ⚠️ error if connection fails.
+
+---
+
+### Toast Notifications for Connection Errors (Birdie)
+**Date:** 2025-07-24 | **Status:** Implemented
+
+Inline error text (`<p>` below mic button) was missed by users and auto-cleared after 5s.
+
+**Decision:**
+- **Toast module:** `components/ui/use-toast.ts` exports standalone `toast()`, `dismissToast()`, `dismissAllToasts()`
+- **Toaster component:** `components/ui/toaster.tsx` renders top-right with spring animations, X dismiss button
+- **Persistence:** Toasts persist until user dismisses or programmatic clear on reconnect/success
+- **Deduplication:** Same message = no-op (prevents duplicate error stacking)
+- **Variants:** `"error"` (McDonald's red #DB0007) and `"warning"` (amber)
+
+**Impact:** All user-facing errors should use `toast()` instead of inline state. Console logging remains separate for dev debugging.
+
+---
+
 ## Sonic Rebrand — Scope & Implementation (2026-03-19/20)
 
 ### Analysis & Scope (Rick)
