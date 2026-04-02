@@ -19,6 +19,7 @@ from typing import Any
 import numpy as np
 
 logger = logging.getLogger("mcdonalds-drive-thru.phi4")
+pipeline_logger = logging.getLogger("local-pipeline")
 
 # ── Optional runtime imports (GPU variants tried in priority order) ─────────
 _og: Any = None
@@ -108,12 +109,14 @@ class Phi4ModelManager:
             device = _OG_PROVIDER
 
         logger.info("Loading Phi-4 model from %s (device=%s)", self._model_path, device)
+        pipeline_logger.info("Phi-4 ONNX model loading from %s (device=%s)...", self._model_path, device)
         self._model = _og.Model(self._model_path)
         self._processor = _og.MultiModalProcessor(self._model)
         self._tokenizer = self._processor.tokenizer if hasattr(self._processor, "tokenizer") else _og.Tokenizer(self._model)
         self._device_name = device
         self._loaded = True
         logger.info("Phi-4 model loaded successfully (device=%s)", device)
+        pipeline_logger.info("Phi-4 model loaded successfully (device=%s)", device)
 
     async def unload(self) -> None:
         """Unload the model from memory."""
@@ -177,6 +180,7 @@ class Phi4ModelManager:
                         loop.call_soon_threadsafe(queue.put_nowait, token_text)
             except Exception as exc:
                 logger.error("Phi-4 inference error: %s", exc)
+                pipeline_logger.error("Phi-4 inference error: %s", exc)
                 loop.call_soon_threadsafe(
                     queue.put_nowait, f"[inference error: {exc}]"
                 )

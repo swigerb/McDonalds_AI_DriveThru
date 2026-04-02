@@ -55,3 +55,30 @@ Use `asyncio.Lock` to prevent overlapping inference on the same model instance.
 - **Don't** accumulate all tokens before sending — defeats streaming latency benefit
 - **Don't** assume Piper sample rate matches frontend — always resample
 - **Don't** load models at import time — use lazy loading for shared environments
+- **Don't** route WebSocket connections to cloud without a connectivity check when a local fallback exists — causes silent hangs offline
+- **Don't** require cloud credentials at startup when a local processor is available — prevents offline startup
+
+### 6. Cloud-to-Local Auto-Fallback
+When a cloud/local routing layer exists, always check cloud reachability before routing to cloud when a local alternative is available:
+```python
+async def _check_cloud_reachable(self) -> bool:
+    try:
+        timeout = aiohttp.ClientTimeout(total=3, connect=2)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(endpoint, ssl=True):
+                return True
+    except Exception:
+        return False
+```
+Keep the timeout short (2-3s) so the fallback is fast.
+
+### 7. Pipeline Diagnostic Logging
+Use a dedicated logger name (e.g., `local-pipeline`) across all modules in the pipeline. Log every step with session IDs and timing:
+- Connection accepted / mode resolved
+- Model loading (with device info)
+- Audio received (byte count)
+- VAD speech/silence detection (with energy values)
+- Inference start/complete (with timing)
+- Tool execution (with timing)
+- TTS synthesis (with chunk count)
+- Response completion

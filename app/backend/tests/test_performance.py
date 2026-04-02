@@ -382,8 +382,10 @@ class AppStartupTests(unittest.IsolatedAsyncioTestCase):
             "RUNNING_IN_PRODUCTION": "1",
         }, clear=True):
             from app import create_app
-            with self.assertRaises(SystemExit):
-                await create_app()
+            # Mock local mode as unavailable so missing Azure env vars are fatal
+            with patch("local_processor.LOCAL_MODE_AVAILABLE", False):
+                with self.assertRaises(SystemExit):
+                    await create_app()
 
 
 class StaticFileTests(unittest.TestCase):

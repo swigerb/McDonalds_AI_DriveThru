@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 
 logger = logging.getLogger("mcdonalds-drive-thru.tts")
+pipeline_logger = logging.getLogger("local-pipeline")
 
 # ── Optional dependency guard ───────────────────────────────────────────────
 _PiperVoice: Any = None
@@ -153,6 +154,10 @@ class PiperTTSEngine:
             self._target_rate,
             self._length_scale,
         )
+        pipeline_logger.info(
+            "Piper TTS loaded: voice=%s, rate=%d→%d, length_scale=%.2f",
+            self._model_name, self._native_rate, self._target_rate, self._length_scale,
+        )
 
     async def unload(self) -> None:
         """Unload the voice model and free memory."""
@@ -266,6 +271,7 @@ class PiperTTSEngine:
                 return b""
         except Exception as exc:
             logger.error("Piper synthesis failed: %s", exc)
+            pipeline_logger.error("Piper TTS synthesis failed: %s", exc)
             return b""
 
         raw_pcm = audio_buffer.getvalue()

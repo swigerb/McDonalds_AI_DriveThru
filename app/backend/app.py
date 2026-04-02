@@ -160,27 +160,57 @@ async def create_app() -> web.Application:
 
     # ── Startup Validation ────────────────────────────────────────────────
 
+    # Check local mode availability FIRST (before requiring Azure env vars)
+    local_config = get_local_mode_config()
+    local_processor = None
+    local_mode_available = False
+    try:
+        from local_processor import LocalPhi4Processor, LOCAL_MODE_AVAILABLE
+        if LOCAL_MODE_AVAILABLE:
+            local_processor = LocalPhi4Processor(config=local_config)
+            attach_local_tools(local_processor, prompt_loader=prompt_loader)
+            local_mode_available = True
+            logger.info("Local Phi-4 processor created (device=%s)", local_processor.device)
+        else:
+            logger.info("Local mode: not available (onnxruntime-genai not installed)")
+    except Exception as exc:
+        logger.info("Local processor unavailable: %s — cloud-only mode", exc)
+
     # 1. Validate required environment variables
+    #    Non-fatal when local mode is available — allows fully offline startup
     missing_vars = [v for v in _REQUIRED_ENV_VARS if not os.environ.get(v)]
     if missing_vars:
-        logger.critical(
-            "FATAL: Missing required environment variables: %s", ", ".join(missing_vars)
-        )
-        sys.exit(1)
-    _startup_checks["env_vars"] = True
+        if local_mode_available:
+            logger.warning(
+                "Missing Azure environment variables: %s — cloud mode unavailable, running local-only",
+                ", ".join(missing_vars),
+            )
+            _startup_checks["env_vars"] = False
+        else:
+            logger.critical(
+                "FATAL: Missing required environment variables: %s", ", ".join(missing_vars)
+            )
+            sys.exit(1)
+    else:
+        _startup_checks["env_vars"] = True
 
     # 2. Mark prompts loaded if prompt_loader succeeded at module init
     if prompt_loader is not None:
         _startup_checks["prompts_loaded"] = True
 
     # 3. Optional: verify Azure service connectivity (non-blocking)
-    await _check_service_connectivity()
+    if not missing_vars:
+        await _check_service_connectivity()
+    else:
+        logger.info("Skipping Azure service connectivity check (env vars missing)")
 
     env_count = len(_REQUIRED_ENV_VARS)
+    env_set = env_count - len(missing_vars)
     logger.info(
-        "✅ Startup validation passed: config valid, %d/%d env vars set",
+        "✅ Startup validation passed: config valid, %d/%d env vars set%s",
+        env_set,
         env_count,
-        env_count,
+        " (local-only mode)" if missing_vars else "",
     )
 
     # ── App Configuration ─────────────────────────────────────────────────
@@ -191,91 +221,92 @@ async def create_app() -> web.Application:
     llm_key = os.environ.get("AZURE_OPENAI_EASTUS2_API_KEY")
     search_key = os.environ.get("AZURE_SEARCH_API_KEY")
 
-    credential = None
-    if not llm_key or not search_key:
-        if tenant_id := os.environ.get("AZURE_TENANT_ID"):
-            logger.info("Using AzureDeveloperCliCredential with tenant_id %s", tenant_id)
-            credential = AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
+    # Cloud processor setup — skip when running in local-only mode
+    rtmt = None
+    if not missing_vars:
+        credential = None
+        if not llm_key or not search_key:
+            if tenant_id := os.environ.get("AZURE_TENANT_ID"):
+                logger.info("Using AzureDeveloperCliCredential with tenant_id %s", tenant_id)
+                credential = AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
+            else:
+                logger.info("Using DefaultAzureCredential")
+                credential = DefaultAzureCredential()
+
+        llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
+        search_credential = AzureKeyCredential(search_key) if search_key else credential
+
+        conn_cfg = _cfg.get("connection", {})
+
+        model_cfg = _cfg.get("model", {})
+        rtmt = RTMiddleTier(
+            credentials=llm_credential,
+            endpoint=llm_endpoint,
+            deployment=llm_deployment,
+            voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
+            prompt_loader=prompt_loader,
+        )
+        # Generate a random secret for HMAC session tokens
+        app_secret = os.urandom(32)
+        rtmt.app_secret = app_secret
+        if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
+            rtmt.api_version = api_version
         else:
-            logger.info("Using DefaultAzureCredential")
-            credential = DefaultAzureCredential()
+            rtmt.api_version = model_cfg.get("api_version", "2024-10-01-preview")
+        rtmt.temperature = model_cfg.get("temperature", 0.6)
+        rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
 
-    llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
-    search_credential = AzureKeyCredential(search_key) if search_key else credential
+        # System message: prefer externalized YAML prompt, fall back to hardcoded
+        if prompt_loader is not None:
+            rtmt.system_message = prompt_loader.get_system_prompt()
+        else:
+            rtmt.system_message = (
+                "You are a McDonald's crew member — friendly, efficient, and FAST. You take drive-thru orders at the world's most famous restaurant.\n\n"
+                "GREETING:\n"
+                "- Welcome to McDonald's! I'm your digital assistant. What can I get started for you today?\n\n"
+                "VOICE STYLE:\n"
+                "- You ARE the crew member — NEVER explain what you would say. Just SAY it directly.\n"
+                "- Warm, upbeat, efficient — the 'I'm Lovin' It' energy\n"
+                "- ONE or TWO short sentences max per response\n"
+            )
 
-    conn_cfg = _cfg.get("connection", {})
+        attach_tools_rtmt(
+            rtmt,
+            credentials=search_credential,
+            search_endpoint=os.environ.get("AZURE_SEARCH_ENDPOINT"),
+            search_index=os.environ.get("AZURE_SEARCH_INDEX"),
+            semantic_configuration=os.environ.get("AZURE_SEARCH_SEMANTIC_CONFIGURATION") or "menuSemanticConfig",
+            identifier_field=os.environ.get("AZURE_SEARCH_IDENTIFIER_FIELD") or "id",
+            content_field=os.environ.get("AZURE_SEARCH_CONTENT_FIELD") or "description",
+            embedding_field=os.environ.get("AZURE_SEARCH_EMBEDDING_FIELD") or "embedding",
+            title_field=os.environ.get("AZURE_SEARCH_TITLE_FIELD") or "name",
+            use_vector_query=_get_bool_env("AZURE_SEARCH_USE_VECTOR_QUERY", True),
+            prompt_loader=prompt_loader,
+        )
+    else:
+        conn_cfg = _cfg.get("connection", {})
+        model_cfg = _cfg.get("model", {})
+        app_secret = os.urandom(32)
+        logger.info("Cloud processor (RTMiddleTier) skipped — Azure env vars not set")
 
     app = web.Application(
         middlewares=[_compression_middleware],
         client_max_size=conn_cfg.get("client_max_size_bytes", 4 * 1024 * 1024),
     )
 
-    model_cfg = _cfg.get("model", {})
-    rtmt = RTMiddleTier(
-        credentials=llm_credential,
-        endpoint=llm_endpoint,
-        deployment=llm_deployment,
-        voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
-        prompt_loader=prompt_loader,
-    )
-    # Generate a random secret for HMAC session tokens
-    app_secret = os.urandom(32)
-    rtmt.app_secret = app_secret
-    if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
-        rtmt.api_version = api_version
-    else:
-        rtmt.api_version = model_cfg.get("api_version", "2024-10-01-preview")
-    rtmt.temperature = model_cfg.get("temperature", 0.6)
-    rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
-
-    # System message: prefer externalized YAML prompt, fall back to hardcoded
-    if prompt_loader is not None:
-        rtmt.system_message = prompt_loader.get_system_prompt()
-    else:
-        rtmt.system_message = (
-            "You are a McDonald's crew member — friendly, efficient, and FAST. You take drive-thru orders at the world's most famous restaurant.\n\n"
-            "GREETING:\n"
-            "- Welcome to McDonald's! I'm your digital assistant. What can I get started for you today?\n\n"
-            "VOICE STYLE:\n"
-            "- You ARE the crew member — NEVER explain what you would say. Just SAY it directly.\n"
-            "- Warm, upbeat, efficient — the 'I'm Lovin' It' energy\n"
-            "- ONE or TWO short sentences max per response\n"
-        )
-
-    attach_tools_rtmt(
-        rtmt,
-        credentials=search_credential,
-        search_endpoint=os.environ.get("AZURE_SEARCH_ENDPOINT"),
-        search_index=os.environ.get("AZURE_SEARCH_INDEX"),
-        # Defaults aligned with the menu ingestion index schema; override via env vars as needed.
-        semantic_configuration=os.environ.get("AZURE_SEARCH_SEMANTIC_CONFIGURATION") or "menuSemanticConfig",
-        identifier_field=os.environ.get("AZURE_SEARCH_IDENTIFIER_FIELD") or "id",
-        content_field=os.environ.get("AZURE_SEARCH_CONTENT_FIELD") or "description",
-        embedding_field=os.environ.get("AZURE_SEARCH_EMBEDDING_FIELD") or "embedding",
-        title_field=os.environ.get("AZURE_SEARCH_TITLE_FIELD") or "name",
-        use_vector_query=_get_bool_env("AZURE_SEARCH_USE_VECTOR_QUERY", True),
-        prompt_loader=prompt_loader,
-    )
-
-    # ── Processor Router (cloud ↔ local mode switching) ──
-    local_config = get_local_mode_config()
-    local_processor = None
-    local_mode_available = False
-    try:
-        from local_processor import LocalPhi4Processor, LOCAL_MODE_AVAILABLE
-        if LOCAL_MODE_AVAILABLE:
-            local_processor = LocalPhi4Processor(config=local_config)
-            attach_local_tools(local_processor, prompt_loader=prompt_loader)
+    # Set system message on local processor (from prompt loader or fallback)
+    if local_processor is not None:
+        if rtmt is not None:
             local_processor.system_message = rtmt.system_message
-            local_mode_available = True
-            logger.info("Local Phi-4 processor created (device=%s)", local_processor.device)
+        elif prompt_loader is not None:
+            local_processor.system_message = prompt_loader.get_system_prompt()
         else:
-            logger.info("Local mode: not available (onnxruntime-genai not installed)")
-    except Exception as exc:
-        logger.info("Local processor unavailable: %s — cloud-only mode", exc)
+            local_processor.system_message = (
+                "You are a McDonald's crew member — friendly, efficient, and FAST. "
+                "You take drive-thru orders at the world's most famous restaurant."
+            )
 
     # Check model files at startup — warn but don't block
-    # Resolve paths relative to repo root (2 levels up from app/backend/)
     _repo_root = Path(__file__).resolve().parent.parent.parent
     model_path_raw = local_config.get("model_path", "./models/phi4-multimodal")
     tts_model_path_raw = local_config.get("tts_model_path", "./models/piper")
@@ -291,7 +322,6 @@ async def create_app() -> web.Application:
                 model_path,
             )
         else:
-            # Log model size if available
             try:
                 total_bytes = sum(f.stat().st_size for f in model_path.rglob("*") if f.is_file())
                 size_gb = total_bytes / (1024 ** 3)
@@ -307,7 +337,6 @@ async def create_app() -> web.Application:
         else:
             logger.info("Local mode: TTS model %s ready", local_config.get("tts_default_voice", local_config.get("tts_model", "unknown")))
 
-        # Detect GPU — use onnxruntime's provider list (same logic as phi4_model.py)
         _detected_device = local_config.get("device", "auto")
         if _detected_device == "auto":
             _detected_device = "cpu"
@@ -322,6 +351,7 @@ async def create_app() -> web.Application:
                 pass
         logger.info("Local mode: available (%s)", _detected_device.upper() if _detected_device != "cpu" else "CPU only")
     else:
+        _detected_device = None
         logger.info("Local mode: not available (dependencies not installed)")
 
     # Populate health endpoint info
@@ -360,6 +390,74 @@ async def create_app() -> web.Application:
             "tts_available": False,
         })
 
+    # ── Local Mode Toggle Endpoint ──
+    async def local_mode_toggle(request: web.Request) -> web.Response:
+        """Toggle local/cloud mode at runtime.
+
+        POST /api/local-mode/toggle  { "mode": "local" | "cloud" | "auto" }
+        Called by the frontend when the user toggles local mode in the UI.
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"error": "Invalid JSON"}, status=400)
+
+        mode = body.get("mode", "").lower()
+        if mode not in ("local", "cloud", "auto"):
+            return web.json_response(
+                {"error": "mode must be 'local', 'cloud', or 'auto'"}, status=400
+            )
+
+        if mode == "local" and not local_mode_available:
+            return web.json_response(
+                {"error": "Local mode not available (dependencies not installed)"}, status=400
+            )
+
+        router.set_runtime_mode(mode)
+        return web.json_response({
+            "mode": router.active_mode,
+            "local_available": local_mode_available,
+        })
+
+    # ── Diagnostics Endpoint ──
+    async def diagnostics_handler(_request: web.Request) -> web.Response:
+        """Return comprehensive diagnostic info for debugging."""
+        diag: dict = {
+            "current_mode": router.active_mode,
+            "config_default_mode": router._default_mode,
+            "runtime_mode_override": router._runtime_mode,
+            "local_model_status": "not available",
+            "gpu_provider": _detected_device,
+            "tts_engine_status": "not available",
+            "stt_engine_status": "not available",
+            "last_error": router.last_error,
+            "websocket_total_connections": router.ws_connection_count,
+            "websocket_active_connections": router.active_connections,
+            "cloud_processor": "configured" if rtmt is not None else "not configured (Azure env vars missing)",
+        }
+
+        if local_processor is not None:
+            if local_processor.model_loaded:
+                diag["local_model_status"] = "loaded"
+            elif local_processor._loading:
+                diag["local_model_status"] = "loading"
+            elif local_processor.available:
+                diag["local_model_status"] = "not loaded (lazy load — waiting for first connection)"
+            else:
+                diag["local_model_status"] = "not available"
+
+            if local_processor._tts:
+                diag["tts_engine_status"] = "loaded" if local_processor._tts.is_loaded else "not loaded"
+            elif local_mode_available:
+                diag["tts_engine_status"] = "not initialized"
+
+            if local_processor._stt:
+                diag["stt_engine_status"] = "loaded" if local_processor._stt.is_loaded else "not loaded"
+            elif local_mode_available:
+                diag["stt_engine_status"] = "not initialized"
+
+        return web.json_response(diag)
+
     # ── Local Mode Voices Endpoint ──
     async def local_mode_voices(_request: web.Request) -> web.Response:
         from piper_tts import PIPER_VOICES
@@ -367,7 +465,6 @@ async def create_app() -> web.Application:
         current = local_config.get("tts_default_voice", local_config.get("tts_model", "en_US-amy-medium"))
         ls = local_config.get("tts_length_scale", 0.9)
 
-        # If processor has a live TTS engine, use its runtime state
         if local_processor and hasattr(local_processor, "_tts") and local_processor._tts:
             current = local_processor._tts.current_voice
             ls = local_processor._tts.length_scale
@@ -395,6 +492,8 @@ async def create_app() -> web.Application:
         web.get('/api/auth/session', get_session_token),
         web.get('/api/local-mode/status', local_mode_status),
         web.get('/api/local-mode/voices', local_mode_voices),
+        web.post('/api/local-mode/toggle', local_mode_toggle),
+        web.get('/api/diagnostics', diagnostics_handler),
     ])
     app.router.add_static(
         '/',

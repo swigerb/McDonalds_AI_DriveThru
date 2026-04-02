@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 
 logger = logging.getLogger("mcdonalds-drive-thru.stt")
+pipeline_logger = logging.getLogger("local-pipeline")
 
 # ── Optional dependency guard ───────────────────────────────────────────────
 _WhisperModel: Any = None
@@ -112,6 +113,10 @@ class WhisperSTTEngine:
             "Faster-Whisper loaded: model=%s, device=%s",
             self._model_size, device,
         )
+        pipeline_logger.info(
+            "Whisper STT loaded: model=%s, device=%s",
+            self._model_size, device,
+        )
 
     @staticmethod
     def _detect_device(fallback_compute: str) -> tuple[str, str]:
@@ -176,6 +181,7 @@ class WhisperSTTEngine:
             return await loop.run_in_executor(None, self._sync_transcribe, audio_pcm)
         except Exception as exc:
             logger.warning("Whisper transcription failed: %s", exc)
+            pipeline_logger.warning("Whisper STT transcription failed: %s", exc)
             return ""
 
     def _sync_transcribe(self, audio_pcm: bytes) -> str:

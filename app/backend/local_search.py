@@ -37,6 +37,7 @@ from tools import (
 )
 
 logger = logging.getLogger("mcdonalds-drive-thru.local-search")
+pipeline_logger = logging.getLogger("local-pipeline")
 
 __all__ = ["local_search", "attach_local_tools"]
 
@@ -311,6 +312,7 @@ async def local_search(args: Any) -> ToolResult:
     """
     query = args["query"]
     logger.info("Local search requested for query '%s'", query)
+    pipeline_logger.info("Local search query: '%s'", query)
 
     # Expand meal number references (reuse tools.py logic exactly)
     expanded_query = _expand_meal_number_query(query)
@@ -373,7 +375,7 @@ async def local_search(args: Any) -> ToolResult:
         results.append(summary)
 
     joined_results = "\n-----\n".join(results)
-    logger.debug("Local search returned %d results", len(results))
+    pipeline_logger.info("Local search returned %d results for '%s'", len(results), query)
     result = ToolResult(
         joined_results or "No matching menu entries found.",
         ToolResultDirection.TO_SERVER,

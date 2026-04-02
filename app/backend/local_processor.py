@@ -27,6 +27,7 @@ from processor_base import AbstractProcessor
 from rtmt import Tool, ToolResult, ToolResultDirection
 
 logger = logging.getLogger("mcdonalds-drive-thru.local")
+pipeline_logger = logging.getLogger("local-pipeline")
 
 # ── Optional dependency guards ──────────────────────────────────────────────
 
@@ -139,14 +140,23 @@ class LocalPhi4Processor(AbstractProcessor):
         audio deltas back to client.
         """
         session_id = f"local-{uuid.uuid4().hex[:8]}"
-        logger.info("Local processor handling WebSocket (session=%s)", session_id)
+        pipeline_logger.info("[%s] Local processor handling WebSocket connection", session_id)
+        pipeline_logger.info(
+            "[%s] Pipeline status: model_loaded=%s, tts=%s, stt=%s",
+            session_id,
+            self._model_loaded,
+            "loaded" if (self._tts and self._tts.is_loaded) else "not loaded",
+            "loaded" if (self._stt and self._stt.is_loaded) else "not loaded",
+        )
 
         # Lazy-load models on first connection if not already loaded
         if not self._model_loaded and not self._loading:
             try:
+                pipeline_logger.info("[%s] Lazy-loading local models (first connection)...", session_id)
                 await self._ensure_models_loaded()
+                pipeline_logger.info("[%s] Local models loaded successfully", session_id)
             except Exception as exc:
-                logger.error("Failed to load local models: %s", exc)
+                pipeline_logger.error("[%s] Failed to load local models: %s", session_id, exc, exc_info=True)
                 await ws.send_json({
                     "type": _MSG_SESSION_CREATED,
                     "session": {"id": session_id, "model": "phi-4-onnx", "voice": "unavailable"},
@@ -159,6 +169,13 @@ class LocalPhi4Processor(AbstractProcessor):
 
         # Send session.created
         tool_names = list(self.tools.keys())
+        pipeline_logger.info(
+            "[%s] Sending session.created (model=%s, voice=%s, tools=%s)",
+            session_id,
+            f"phi-4-onnx ({self._model.device_name})" if self._model else "phi-4-onnx",
+            self.voice_choice or "local",
+            tool_names,
+        )
         await ws.send_json({
             "type": _MSG_SESSION_CREATED,
             "session": {
@@ -203,6 +220,8 @@ class LocalPhi4Processor(AbstractProcessor):
                     # Simple energy-based VAD
                     chunk_energy = _compute_energy(chunk)
                     if chunk_energy > self._silence_threshold * 1000:
+                        if not is_speaking:
+                            pipeline_logger.info("[%s] VAD: speech detected (energy=%.1f)", session_id, chunk_energy)
                         is_speaking = True
                         silence_samples = 0
                     else:
@@ -214,6 +233,11 @@ class LocalPhi4Processor(AbstractProcessor):
                         and silence_samples >= silence_sample_threshold
                         and len(audio_buffer) > _FRONTEND_SAMPLE_RATE * _BYTES_PER_SAMPLE  # At least 1s of audio
                     ):
+                        duration_s = len(audio_buffer) / (_FRONTEND_SAMPLE_RATE * _BYTES_PER_SAMPLE)
+                        pipeline_logger.info(
+                            "[%s] VAD: silence detected after speech — processing %.1fs utterance (%d bytes)",
+                            session_id, duration_s, len(audio_buffer),
+                        )
                         utterance = bytes(audio_buffer)
                         audio_buffer.clear()
                         silence_samples = 0
@@ -304,7 +328,7 @@ class LocalPhi4Processor(AbstractProcessor):
                 break
 
         cancel_event.set()
-        logger.info("Local processor WebSocket closed (session=%s)", session_id)
+        pipeline_logger.info("[%s] Local processor WebSocket closed", session_id)
 
     async def start_background_tasks(self) -> None:
         """Pre-load models if lazy_load is disabled."""
@@ -350,11 +374,20 @@ class LocalPhi4Processor(AbstractProcessor):
 
         self._loading = True
         try:
+            pipeline_logger.info("Loading Phi-4 ONNX model...")
             await self._load_phi4()
+            pipeline_logger.info("Phi-4 model loaded (device=%s)", self._model.device_name if self._model else "unknown")
+
+            pipeline_logger.info("Loading Piper TTS engine...")
             await self._load_tts()
+            pipeline_logger.info("TTS status: %s", "loaded" if (self._tts and self._tts.is_loaded) else "unavailable")
+
+            pipeline_logger.info("Loading Whisper STT engine...")
             await self._load_stt()
+            pipeline_logger.info("STT status: %s", "loaded" if (self._stt and self._stt.is_loaded) else "unavailable")
+
             self._model_loaded = True
-            logger.info("All local models loaded successfully")
+            pipeline_logger.info("All local models loaded successfully")
         finally:
             self._loading = False
 
@@ -441,11 +474,19 @@ class LocalPhi4Processor(AbstractProcessor):
             try:
                 await self._process_utterance(audio, ws, session_id, cancel_event)
             except Exception as exc:
-                logger.error("Utterance processing error: %s", exc, exc_info=True)
-                await self._send_text_response(
-                    ws,
-                    "I'm sorry, I had trouble processing that. Could you repeat your order?",
-                )
+                pipeline_logger.error("[%s] Utterance processing error: %s", session_id, exc, exc_info=True)
+                try:
+                    if not ws.closed:
+                        await ws.send_json({
+                            "type": "error",
+                            "error": {"message": f"Processing error: {exc}"},
+                        })
+                        await self._send_text_response(
+                            ws,
+                            "I'm sorry, I had trouble processing that. Could you repeat your order?",
+                        )
+                except Exception:
+                    pipeline_logger.error("[%s] Failed to send error response to client", session_id)
 
     async def _process_utterance(
         self,
@@ -456,13 +497,16 @@ class LocalPhi4Processor(AbstractProcessor):
     ) -> None:
         """Full pipeline: audio → Phi-4 → tools → Piper TTS → audio deltas."""
         response_id = f"resp-{uuid.uuid4().hex[:8]}"
+        pipeline_logger.info("[%s] Processing utterance (response=%s, %d bytes audio)", session_id, response_id, len(audio))
 
         # Downsample 24 kHz → 16 kHz for Phi-4 and Whisper
         audio_16k = _downsample_24k_to_16k(audio)
+        pipeline_logger.debug("[%s] Downsampled 24kHz→16kHz: %d→%d bytes", session_id, len(audio), len(audio_16k))
 
         # Start Whisper transcription in parallel (non-blocking)
         transcription_task: asyncio.Task | None = None
         if self._stt:
+            pipeline_logger.info("[%s] Starting Whisper STT transcription (parallel)", session_id)
             transcription_task = asyncio.create_task(self._stt.transcribe(audio_16k))
 
         # 1. Send response.created
@@ -472,6 +516,7 @@ class LocalPhi4Processor(AbstractProcessor):
         })
 
         if not self._model or not self._model.is_loaded:
+            pipeline_logger.error("[%s] Model not loaded — cannot process utterance", session_id)
             if transcription_task:
                 transcription_task.cancel()
             await self._send_transcript_and_done(ws, response_id,
@@ -482,16 +527,21 @@ class LocalPhi4Processor(AbstractProcessor):
         system_prompt = self.system_message or "You are a helpful McDonald's drive-thru assistant."
         tool_schemas = self._get_tool_schemas()
 
+        pipeline_logger.info("[%s] Starting Phi-4 inference...", session_id)
+        t0 = time.monotonic()
         full_text = ""
         async for token in self._model.process_audio(audio_16k, system_prompt, tool_schemas):
             if cancel_event.is_set():
-                logger.info("Response cancelled (response=%s)", response_id)
+                pipeline_logger.info("[%s] Response cancelled (response=%s)", session_id, response_id)
                 break
             full_text += token
             await ws.send_json({
                 "type": _MSG_TRANSCRIPT_DELTA,
                 "delta": token,
             })
+
+        inference_ms = (time.monotonic() - t0) * 1000
+        pipeline_logger.info("[%s] Phi-4 inference completed in %.0fms (%d chars)", session_id, inference_ms, len(full_text))
 
         if cancel_event.is_set():
             if transcription_task:
@@ -507,12 +557,15 @@ class LocalPhi4Processor(AbstractProcessor):
             try:
                 customer_text = await transcription_task
                 if customer_text:
+                    pipeline_logger.info("[%s] Whisper STT transcription: '%s'", session_id, customer_text[:100])
                     await ws.send_json({
                         "type": "conversation.item.input_audio_transcription.completed",
                         "transcript": customer_text,
                     })
+                else:
+                    pipeline_logger.debug("[%s] Whisper STT returned empty transcription", session_id)
             except Exception as exc:
-                logger.warning("Customer transcription failed: %s", exc)
+                pipeline_logger.warning("[%s] Customer transcription failed: %s", session_id, exc)
 
         # 4. Check for tool calls in the response
         from phi4_model import Phi4ModelManager
@@ -520,6 +573,9 @@ class LocalPhi4Processor(AbstractProcessor):
 
         speech_text = full_text
         if tool_calls:
+            pipeline_logger.info(
+                "[%s] Tool calls detected: %s", session_id, [c.get("name") for c in tool_calls]
+            )
             tool_result_text = await self._execute_tool_calls(
                 tool_calls, ws, session_id
             )
@@ -538,15 +594,25 @@ class LocalPhi4Processor(AbstractProcessor):
 
         # 6. Synthesize speech from text (if TTS available)
         if self._tts and self._tts.is_loaded and speech_text:
+            pipeline_logger.info("[%s] Starting Piper TTS synthesis (%d chars)", session_id, len(speech_text))
+            tts_t0 = time.monotonic()
+            chunk_count = 0
             async for audio_chunk in self._tts.synthesize_streaming(speech_text):
                 if cancel_event.is_set():
+                    pipeline_logger.info("[%s] TTS synthesis cancelled", session_id)
                     break
+                chunk_count += 1
                 await ws.send_json({
                     "type": _MSG_AUDIO_DELTA,
                     "delta": base64.b64encode(audio_chunk).decode(),
                 })
+            tts_ms = (time.monotonic() - tts_t0) * 1000
+            pipeline_logger.info("[%s] Piper TTS completed in %.0fms (%d chunks)", session_id, tts_ms, chunk_count)
+        elif speech_text:
+            pipeline_logger.warning("[%s] TTS unavailable — text-only response", session_id)
 
         # 7. Send response.done
+        pipeline_logger.info("[%s] Response complete (response=%s)", session_id, response_id)
         await ws.send_json({
             "type": _MSG_RESPONSE_DONE,
             "response": {
@@ -595,9 +661,9 @@ class LocalPhi4Processor(AbstractProcessor):
                     result: ToolResult = await tool.target(args)
 
                 elapsed = time.monotonic() - t0
-                logger.info(
-                    "Tool '%s' executed in %.1fms (direction=%s)",
-                    name, elapsed * 1000, result.destination,
+                pipeline_logger.info(
+                    "[%s] Tool '%s' executed in %.1fms (direction=%s)",
+                    session_id, name, elapsed * 1000, result.destination,
                 )
 
                 # Send result to client if direction allows
