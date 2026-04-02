@@ -41,3 +41,12 @@
 - **Docker strategy:** `docker-compose.local.yml` is dev-only with NVIDIA GPU pass-through. Production Dockerfile untouched — no local mode deps in production image.
 - **Key paths:** `models/phi4-multimodal/` (Phi-4 ONNX), `models/piper/` (Piper TTS). Both gitignored.
 - **Constraint:** azure.yaml, infra/main.bicep, and app/Dockerfile were NOT modified — cloud deployment is unchanged.
+
+## Team Updates (2026-04-02T16:30Z)
+
+### Offline Mode Phase Completion
+- ✅ **Phase 4 (Mayor McCheese):** Model asset management complete — download script (Python + PowerShell), docker-compose local, config defaults
+- ✅ **Piper Voices (Mayor McCheese):** Voice download automation — all 4 voices via `--voices` flag, skip-if-exists logic
+- **Decisions Merged:** #38 captured (local model asset management)
+- **Tests:** All 423 passing, zero regressions, zero production image impact
+- **Next:** Models ready for on-demand download, ready for developer setup

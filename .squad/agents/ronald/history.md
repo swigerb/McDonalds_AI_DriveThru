@@ -28,3 +28,12 @@ _No sessions yet._
 - ✅ Session log created for menu expansion & README work
 - ✅ Task outcome verified: SUCCESS
 - **Pending:** Decision merge, git commit, history summarization check
+
+## Team Updates (2026-04-02T16:30Z)
+
+### Offline Mode Phase Completion
+- ✅ **Documentation (Ronald):** README updated with 80+ lines of offline mode content across 6 sections
+- **Sections Added:** What is Local Mode, Prerequisites, Setup, Features, Configuration, Troubleshooting
+- **Decisions Merged:** #40–#41 captured (offline mode documentation, user directives)
+- **Links:** Piper voices reference (huggingface.co/rhasspy/piper-voices), Azure Local compatibility callout
+- **Next:** Documentation complete, ready for user guidance and deployment guides

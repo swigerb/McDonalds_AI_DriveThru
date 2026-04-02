@@ -237,6 +237,126 @@
 - **Results:** 202 total tests (47 new + 155 existing), all passing. Zero regressions.
 - **Impact:** Quality gate fully operational. Matches Sonic reference architecture.
 
+#### 32. Processor Abstraction Layer for Offline Mode (Grimace — Backend Dev, 2026-04-02)
+- **Decision:** Create abstract processor interface supporting both cloud (Azure OpenAI) and local (Phi-4) inference.
+- **Components:**
+  - `processor_base.py` — ProcessorBase abstract class defining unified interface for `process_audio()`, `get_status()`, etc.
+  - `local_processor.py` — LocalProcessor stub implementing interface for offline pipeline
+  - `processor_router.py` — Router selects cloud or local based on config
+  - `app.py` — Integrated ProcessorRouter into FastAPI pipeline
+- **Key Design:** Cloud path unchanged; local mode is additive. Router toggles path without touching core inference logic.
+- **Impact:** Clean separation enabling independent cloud/local optimization. Foundation for multi-processor strategy.
+
+#### 33. Local Mode Config Integration Pattern (Grimace — Backend Dev, 2026-04-02)
+- **Decision:** Environment variables override config.yaml in three-tier priority chain: `ENV VARS > config.yaml > built-in defaults`.
+- **Three Env Vars:**
+  - `LOCAL_MODE_ENABLED` → boolean override for `local_mode.enabled`
+  - `LOCAL_MODE_MODEL_PATH` → string override for `local_mode.model_path`
+  - `LOCAL_MODE_DEVICE` → string override for `local_mode.device`
+- **Rationale:** Operators need to toggle local mode without editing files (Docker/Azure deployments). Three-tier fallback ensures graceful startup even with no `local_mode` section in config.yaml.
+- **Validation:** `/health` endpoint returns `local_mode.available` and `local_mode.device`. Startup logs clearly report model path/size, TTS readiness, GPU detection.
+- **Impact:** Operational flexibility while maintaining cloud-first default behavior.
+
+#### 34. Phi-4 Local Pipeline Architecture (Mac Tonight — AI Expert, 2026-04-02)
+- **Decision:** Full offline AI inference pipeline: ONNX Phi-4 multimodal → queue-based async streaming → Piper TTS synthesis.
+- **Key Choices:**
+  1. **Queue-based async streaming** — Bridge sync ONNX to async via executor thread + asyncio.Queue for true streaming
+  2. **Energy-based VAD** — RMS thresholding instead of silero-vad (avoids ~200MB model)
+  3. **Linear interpolation resampling** — numpy `np.interp` instead of scipy (avoids ~150MB dependency)
+  4. **Lazy model loading** — Load on first WebSocket connection, not startup (saves RAM for cloud-only deploys)
+  5. **XML-tagged tool calls** — `<tool_call>` tags instead of JSON (more robust for Phi-4)
+- **Files:** `phi4_model.py`, `piper_tts.py`, rewritten `local_processor.py`
+- **Rationale:** Minimize dependencies, enable CPU-based inference, stream tokens for real-time feel
+- **Impact:** 560 tests passing (137 new), zero regressions. Full offline capability ready.
+
+#### 35. Multi-Voice Piper TTS with One-at-a-Time Loading (Mac Tonight — AI Expert, 2026-04-02)
+- **Decision:** Lazy one-at-a-time voice loading — only active voice in memory (~60MB per voice, not ~240MB for all 4).
+- **Four Voices:**
+  - `en_US-amy-medium` (default) — Friendly & Conversational
+  - `en_GB-jenny_dioco-medium` — Expressive & Upbeat
+  - `en_US-lessac-medium` — Warm & Professional
+  - `en_US-kristin-medium` — Neutral & Clear
+- **Key Features:**
+  - `length_scale=0.9` default for drive-thru energy
+  - `set_voice()` unloads previous before loading new
+  - Pre-flight file check prevents broken state
+  - `extension.set_piper_voice` WebSocket message for runtime switching
+  - `/api/local-mode/voices` endpoint returns live voice metadata
+- **Backward Compatibility:** `model_name` kwarg still accepted; config loader falls back from `tts_default_voice` to `tts_model`
+- **Impact:** Users can select voices in UI; memory footprint scales with active voice only.
+
+#### 36. Local Mode UI Architecture (Birdie — Frontend Dev, 2026-04-02)
+- **Decision:** React Context Provider for offline mode state, following existing `menu-mode-context.tsx` pattern.
+- **Components:**
+  - `LocalModeProvider` with localStorage key `localMode` (default: `false`)
+  - Settings toggle with status check (`/api/local-mode/status` endpoint)
+  - Visual indicators: yellow dot on mic button, "🔌 Local" / "☁️ Cloud" pill badge
+  - WebSocket message: `{ type: "extension.set_local_mode", enabled: boolean }`
+- **Status Display:** Loading → Ready → Unavailable states based on `/api/local-mode/status` response
+- **Impact:** Clean toggle for users; backend completely decoupled from frontend UI state.
+
+#### 37. Piper Voice Selection UI (Birdie — Frontend Dev, 2026-04-02)
+- **Decision:** Conditional Piper voice dropdown when local mode is active (not disabled/grayed-out).
+- **Key Design:**
+  - Separate localStorage key `piperVoice` (independent from cloud `voiceChoice`)
+  - Conditional render: `{!localMode && AzureVoiceSelector} {localMode && PiperVoiceSelector}`
+  - Same `<select>` styling as Azure selector for visual consistency
+  - WebSocket message: `{ type: "extension.set_piper_voice", voice: string }`
+- **Voice Labels:** Amy, Jenny, Lessac, Kristin with descriptions
+- **Impact:** Users seamlessly switch between cloud/local voice systems with independent state.
+
+#### 38. Local Model Asset Management Strategy (Mayor McCheese — DevOps, 2026-04-02)
+- **Decision:** On-demand model downloading via scripts (not Git LFS or baked into Docker).
+- **Components:**
+  - `scripts/download_local_models.py` — Python downloader with skip-if-exists, progress tracking
+  - `scripts/download_local_models.ps1` — PowerShell wrapper for Windows dev
+  - `docker-compose.local.yml` — dev-only with NVIDIA GPU reservation
+  - `.gitignore` — added `models/` directory
+  - `requirements.txt` — added `onnxruntime-genai`, `piper-tts`
+  - `config.yaml` — added `local_mode` section (disabled by default)
+  - `.env-sample` — added `LOCAL_MODE_*` variables
+- **Key Choices:**
+  1. Download script over Git LFS (model size + infrequent changes)
+  2. Config-driven local mode (disabled by default)
+  3. GPU opt-in via separate CUDA/DirectML install
+  4. Separate docker-compose (dev-only, not production Dockerfile)
+  5. No production Dockerfile changes (cloud deployment zero-impact)
+- **Piper Voices:** `--voices` flag downloads all 4 Piper voice models
+- **Impact:** Cloud deployment unaffected. Dev setup automated with download script.
+
+#### 39. Offline Mode Test Patterns (Hamburglar — Tester, 2026-04-02)
+- **Decision:** Comprehensive test suite for offline modules without requiring ONNX Runtime or Piper TTS installed.
+- **Test Files Created:**
+  - `test_processor_router.py` — 23 tests for route selection, cloud/local toggling
+  - `test_phi4_model.py` — 31 tests for token streaming, memory management
+  - `test_piper_tts.py` — 42 tests for voice switching, lazy loading, RAM management
+  - `test_local_processor.py` — 41 tests for full pipeline, WebSocket integration
+- **Key Decisions:**
+  1. Custom `_AsyncIter` adapter for WebSocket async iteration (standard MagicMock.__aiter__ doesn't work)
+  2. Mock at module boundaries (patch `local_processor.LOCAL_MODE_AVAILABLE` directly)
+  3. No conftest.py (consistent with existing self-contained test structure)
+- **Results:** 137 new tests, 560 total passing, zero regressions, zero external dependencies in CI
+- **Impact:** Full test coverage for offline mode without blocking on GPU/model availability.
+
+#### 40. Offline Mode Documentation (Ronald — Documentation, 2026-04-02)
+- **Decision:** Add comprehensive offline mode section to README covering what, setup, features, config, troubleshooting.
+- **Content:** 80+ lines across 6 sections:
+  1. "What is Local Mode?" — Phi-4 ONNX + Piper TTS
+  2. "Prerequisites" — CPU baseline, GPU recommended
+  3. "Setup" — Model download, env vars, docker-compose local
+  4. "Features" — Offline inference, voice selection, no Azure deps
+  5. "Configuration" — Config.yaml overrides, env var precedence, device selection
+  6. "Troubleshooting" — Missing models, OOM, device detection
+- **Links:** Piper voices (huggingface.co/rhasspy/piper-voices)
+- **Context:** Azure Local compatibility for uninterrupted AI drive-thru
+- **Impact:** Clear documentation enabling users to understand and deploy offline mode.
+
+#### 41. User Directives: Offline Mode & Piper Voices (Brian Swiger via Copilot, 2026-04-02)
+- **Directive 1 (2026-04-02T15:45:00Z):** 4 Piper TTS voices with dropdown in settings panel. Voice models from huggingface.co/rhasspy/piper-voices. `length_scale 0.9-0.95` for drive-thru energy.
+- **Directive 2 (2026-04-02T16:00:00Z):** README documentation for offline mode: ONNX Runtime + Phi-4-multimodal, Piper TTS, online/offline toggle, CPU support with GPU/NPU recommended, Azure Local compatibility.
+- **Implementation:** All directives addressed by Decisions #34–40. Piper voices deployed with configurable energy tuning; README expanded with offline mode content.
+- **Impact:** User requirements captured for offline mode delivery and documentation.
+
 ## Governance
 
 - All meaningful changes require team consensus

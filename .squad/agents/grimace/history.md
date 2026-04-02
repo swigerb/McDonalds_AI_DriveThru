@@ -21,3 +21,12 @@ _No sessions yet._
 - ✅ Session log created for menu expansion & README work
 - ✅ Both agents' outcomes: SUCCESS
 - **Pending:** Decision merge, git commit, history summarization check
+
+## Team Updates (2026-04-02T16:30Z)
+
+### Offline Mode Phase Completion
+- ✅ **Phase 1 (Grimace):** Processor abstraction layer complete — cloud/local routing in place
+- ✅ **Phase 5 (Grimace):** Config integration finished — env var overrides, startup logging, health endpoint includes local mode telemetry
+- **Decisions Merged:** #32–#41 captured (processor abstraction, config chain, startup wiring)
+- **Tests:** All 423 passing, zero regressions in cloud mode
+- **Next:** Orchestration logs written, session log created, inbox merged to decisions.md

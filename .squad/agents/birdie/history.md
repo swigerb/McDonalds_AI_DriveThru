@@ -45,3 +45,12 @@ _No sessions yet._
 - **UI:** Conditional render (`{!localMode && ...}` / `{localMode && ...}`) with CSS transitions for smooth show/hide. Label uses 🎙️ icon, description says "Upbeat drive-thru voices — runs locally".
 - **localStorage key:** `piperVoice` (separate from `voiceChoice` to avoid conflicts).
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors).
+
+## Team Updates (2026-04-02T16:30Z)
+
+### Offline Mode Phase Completion
+- ✅ **Phase 3 (Birdie):** Local mode UI architecture complete — context provider, toggle, status indicators
+- ✅ **Piper Voices (Birdie):** Voice selection dropdown implemented — 4 voices, separate localStorage, conditional rendering
+- **Decisions Merged:** #36–#37 captured (local mode UI, piper voice UI)
+- **Tests:** TypeScript clean, no build errors
+- **Next:** Frontend integrated with backend voice endpoints, ready for user testing

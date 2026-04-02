@@ -54,3 +54,12 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - PiperTTSEngine.set_voice() calls unload→load internally — must patch both `Path.exists` and `_PIPER_AVAILABLE` + `_PiperVoice.load` for the full chain to succeed in tests
 - Phi4ModelManager._load_onnxruntime_genai() tries CUDA→DirectML→CPU import priority — mock with `builtins.__import__` side_effect that selectively raises ImportError
 - LocalPhi4Processor uses module-level `LOCAL_MODE_AVAILABLE` flag set at import time — patch `local_processor.LOCAL_MODE_AVAILABLE` at test time, not the import chain
+
+## Team Updates (2026-04-02T16:30Z)
+
+### Offline Mode Phase Completion
+- ✅ **Phase 6 (Hamburglar):** Test coverage complete — 137 new tests across 4 modules (processor router, phi4, piper, local processor)
+- **Decisions Merged:** #39 captured (offline mode test patterns)
+- **Tests:** 560 passing (137 new + 423 existing), zero regressions
+- **Key Patterns:** Custom `_AsyncIter` for WebSocket mocking, module-boundary patching, lazy import handling, state initialization guard
+- **Next:** Full test coverage validates offline mode architecture before demo

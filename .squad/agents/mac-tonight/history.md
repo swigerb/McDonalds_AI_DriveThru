@@ -57,3 +57,12 @@
 - Piper `synthesize()` accepts `length_scale` as a direct keyword argument — no need for SynthesisConfig object; fallback via TypeError catch for older piper-tts versions
 - Only one Piper voice model (~60 MB each) loaded in memory at a time — `set_voice()` unloads previous before loading new to keep RAM bounded
 - Config key renamed from `tts_model` → `tts_default_voice` with backward compat via `or self._config.get("tts_model")` fallback in local_processor.py
+
+## Team Updates (2026-04-02T16:30Z)
+
+### Offline Mode Phase Completion
+- ✅ **Phase 2 (Mac Tonight):** Phi-4 pipeline complete — ONNX streaming inference, queue-based async architecture, tool calling via XML tags
+- ✅ **Piper Voices (Mac Tonight):** Multi-voice TTS deployed — lazy one-at-a-time loading, 4 voices, configurable energy (length_scale), voice switching via WebSocket
+- **Decisions Merged:** #34–#35 captured (Phi-4 pipeline, multi-voice TTS)
+- **Tests:** All 423 passing, zero regressions
+- **Next:** Voice models available via download script, ready for demo deployment
