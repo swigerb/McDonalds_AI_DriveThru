@@ -307,19 +307,18 @@ async def create_app() -> web.Application:
         else:
             logger.info("Local mode: TTS model %s ready", local_config.get("tts_default_voice", local_config.get("tts_model", "unknown")))
 
-        # Detect GPU
+        # Detect GPU — use onnxruntime's provider list (same logic as phi4_model.py)
         _detected_device = local_config.get("device", "auto")
         if _detected_device == "auto":
+            _detected_device = "cpu"
             try:
-                import onnxruntime_genai  # noqa: F811
-                _detected_device = "cuda" if hasattr(onnxruntime_genai, "CudaExecutionProvider") else "cpu"
-            except ImportError:
-                _detected_device = "cpu"
-            try:
-                import torch
-                if torch.cuda.is_available():
+                import onnxruntime as _ort
+                eps = _ort.get_available_providers()
+                if "DmlExecutionProvider" in eps:
+                    _detected_device = "directml"
+                elif "CUDAExecutionProvider" in eps:
                     _detected_device = "cuda"
-            except ImportError:
+            except Exception:
                 pass
         logger.info("Local mode: available (%s)", _detected_device.upper() if _detected_device != "cpu" else "CPU only")
     else:
