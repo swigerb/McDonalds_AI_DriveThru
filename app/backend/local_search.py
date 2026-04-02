@@ -84,11 +84,38 @@ _local_search_cache = _SearchCache()
 
 
 # ---------------------------------------------------------------------------
-# Menu data loader — flattens nested menuItems.json into searchable list
+# Menu data loader — prefers offline_menu.json (134 items from Azure AI Search
+# export) and falls back to nested menuItems.json (71 items).
 # ---------------------------------------------------------------------------
 
-def _resolve_menu_path() -> Path | None:
-    """Find the menu JSON file using the same priority as tools.py."""
+_local_cfg = _cfg.get("local_mode", {})
+_OFFLINE_MENU_FILENAME = "offline_menu.json"
+_LEGACY_MENU_FILENAME = "menuItems.json"
+
+
+def _resolve_offline_menu_path() -> Path | None:
+    """Find offline_menu.json (flat export from Azure AI Search)."""
+    env_override = os.environ.get("MCDONALDS_OFFLINE_MENU_PATH")
+    if env_override:
+        p = Path(env_override)
+        if p.exists():
+            return p
+
+    cfg_path = _local_cfg.get("offline_menu_path")
+    if cfg_path:
+        p = Path(cfg_path)
+        if p.exists():
+            return p
+
+    candidates = [
+        Path(__file__).resolve().parent / "data" / _OFFLINE_MENU_FILENAME,
+        Path(__file__).resolve().parent.parent / "frontend" / "src" / "data" / _OFFLINE_MENU_FILENAME,
+    ]
+    return next((p for p in candidates if p.exists()), None)
+
+
+def _resolve_legacy_menu_path() -> Path | None:
+    """Find menuItems.json (nested legacy format) — same logic as tools.py."""
     env_override = (
         os.environ.get("MCDONALDS_MENU_ITEMS_PATH")
         or os.environ.get("MENU_ITEMS_PATH")
@@ -98,33 +125,47 @@ def _resolve_menu_path() -> Path | None:
     if env_override:
         candidate_paths.append(Path(env_override))
 
-    candidate_paths.append(Path(__file__).resolve().parent / "data" / "menuItems.json")
+    candidate_paths.append(Path(__file__).resolve().parent / "data" / _LEGACY_MENU_FILENAME)
     candidate_paths.append(
-        Path(__file__).resolve().parent.parent / "frontend" / "src" / "data" / "menuItems.json"
+        Path(__file__).resolve().parent.parent / "frontend" / "src" / "data" / _LEGACY_MENU_FILENAME
     )
 
     return next((p for p in candidate_paths if p.exists()), None)
 
 
-def _load_menu_items() -> list[dict[str, str]]:
-    """Load menu JSON and normalize into a flat list of dicts.
+def _load_flat_menu(path: Path) -> list[dict[str, str]]:
+    """Load a flat JSON array (offline_menu.json format).
 
-    Each dict has: id, name, category, description, sizes (JSON string).
+    Each object already has: id, name, category, description, sizes.
+    Azure Search metadata fields (@search.*) are stripped.
     """
-    menu_path = _resolve_menu_path()
-    if menu_path is None:
-        logger.warning(
-            "Menu JSON not found — local search will return empty results. "
-            "Searched: data/menuItems.json, frontend/src/data/menuItems.json"
-        )
-        return []
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
 
-    try:
-        with menu_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as exc:
-        logger.warning("Failed to parse menu JSON at %s: %s", menu_path, exc)
-        return []
+    if not isinstance(data, list):
+        raise ValueError(f"Expected a JSON array, got {type(data).__name__}")
+
+    items: list[dict[str, str]] = []
+    for raw in data:
+        entry: dict[str, str] = {
+            "id": str(raw.get("id", "")),
+            "name": raw.get("name", ""),
+            "category": raw.get("category", ""),
+            "description": raw.get("description", ""),
+            "sizes": raw.get("sizes", "[]"),
+        }
+        meal_number = raw.get("mealNumber")
+        if meal_number is not None:
+            entry["mealNumber"] = str(meal_number)
+        items.append(entry)
+
+    return items
+
+
+def _load_nested_menu(path: Path) -> list[dict[str, str]]:
+    """Load nested menuItems.json and flatten into the standard format."""
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
 
     items: list[dict[str, str]] = []
     item_counter = 0
@@ -138,7 +179,6 @@ def _load_menu_items() -> list[dict[str, str]]:
             sizes_raw = item.get("sizes", [])
             meal_number = item.get("mealNumber")
 
-            # Serialize sizes into the same JSON string format Azure Search stores
             sizes_json = json.dumps(sizes_raw) if sizes_raw else "[]"
 
             entry: dict[str, str] = {
@@ -153,8 +193,48 @@ def _load_menu_items() -> list[dict[str, str]]:
 
             items.append(entry)
 
-    logger.info("Local search: loaded %d menu items from %s", len(items), menu_path)
     return items
+
+
+def _load_menu_items() -> list[dict[str, str]]:
+    """Load menu data with priority: offline_menu.json → menuItems.json.
+
+    Each dict has: id, name, category, description, sizes (JSON string).
+    """
+    # --- Priority 1: offline_menu.json (134 items, Azure AI Search export) ---
+    offline_path = _resolve_offline_menu_path()
+    if offline_path is not None:
+        try:
+            items = _load_flat_menu(offline_path)
+            logger.info(
+                "Loaded %d items from %s (Azure AI Search export)",
+                len(items), offline_path.name,
+            )
+            return items
+        except Exception as exc:
+            logger.warning(
+                "Failed to parse %s: %s — falling back to %s",
+                _OFFLINE_MENU_FILENAME, exc, _LEGACY_MENU_FILENAME,
+            )
+
+    # --- Priority 2: menuItems.json (71 items, legacy nested format) ---
+    legacy_path = _resolve_legacy_menu_path()
+    if legacy_path is not None:
+        try:
+            items = _load_nested_menu(legacy_path)
+            logger.info(
+                "Loaded %d items from %s (%s not found)",
+                len(items), legacy_path.name, _OFFLINE_MENU_FILENAME,
+            )
+            return items
+        except Exception as exc:
+            logger.warning("Failed to parse %s: %s", _LEGACY_MENU_FILENAME, exc)
+
+    logger.warning(
+        "Menu JSON not found — local search will return empty results. "
+        "Searched: %s, %s", _OFFLINE_MENU_FILENAME, _LEGACY_MENU_FILENAME,
+    )
+    return []
 
 
 # Module-level menu data — loaded once at import time

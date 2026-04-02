@@ -57,8 +57,8 @@ class MenuLoadingTests(unittest.TestCase):
         self.assertGreater(len(_MENU_ITEMS), 0, "Menu items should be non-empty")
 
     def test_menu_item_count(self):
-        """The menu JSON contains 71 items across 5 categories."""
-        self.assertEqual(len(_MENU_ITEMS), 71)
+        """Menu loads 134 items from offline_menu.json or 71 from menuItems.json."""
+        self.assertIn(len(_MENU_ITEMS), (134, 71))
 
     def test_each_item_has_required_keys(self):
         """Every menu entry must have id, name, category, description, sizes."""
@@ -70,22 +70,22 @@ class MenuLoadingTests(unittest.TestCase):
                     f"Missing keys: {required_keys - item.keys()}"
                 )
 
-    def test_ids_are_sequential_strings(self):
-        """IDs should be sequential string numbers starting from 1."""
-        ids = [int(item["id"]) for item in _MENU_ITEMS]
-        self.assertEqual(ids, list(range(1, len(_MENU_ITEMS) + 1)))
+    def test_ids_are_non_empty_strings(self):
+        """Every item must have a non-empty string ID."""
+        for item in _MENU_ITEMS:
+            self.assertIsInstance(item["id"], str)
+            self.assertTrue(len(item["id"]) > 0, f"Empty ID for {item.get('name')}")
 
     def test_categories_present(self):
-        """All 5 menu categories must appear in loaded data."""
+        """Core menu categories must appear in loaded data."""
         categories = {item["category"] for item in _MENU_ITEMS}
-        expected = {
-            "Burgers & Sandwiches",
-            "Chicken & McNuggets®",
-            "Breakfast",
-            "Fries, Sides & Drinks",
-            "Sweets & Treats",
-        }
-        self.assertEqual(categories, expected)
+        # These categories exist in both offline_menu.json and menuItems.json
+        core_categories = {"Breakfast", "Sweets & Treats"}
+        self.assertTrue(
+            core_categories.issubset(categories),
+            f"Missing core categories: {core_categories - categories}",
+        )
+        self.assertGreaterEqual(len(categories), 5)
 
     def test_sizes_are_json_strings(self):
         """Sizes field should be a JSON-serialized string (not raw list)."""
@@ -280,7 +280,7 @@ class ResultFormatParityTests(unittest.TestCase):
         """Results must have [id]: prefix."""
         result = _run(local_search({"query": "Big Mac"}))
         import re
-        self.assertRegex(result.text, r"\[\d+\]:")
+        self.assertRegex(result.text, r"\[[^\]]+\]:")
 
     def test_result_contains_item_field(self):
         result = _run(local_search({"query": "Big Mac"}))
@@ -304,7 +304,7 @@ class ResultFormatParityTests(unittest.TestCase):
         """Verify the complete format: [id]: Item: name, Category: cat, Available Sizes: ..."""
         result = _run(local_search({"query": "Coca-Cola"}))
         import re
-        pattern = r"\[\d+\]: Item: .+, Category: .+, Available Sizes: .+"
+        pattern = r"\[[^\]]+\]: Item: .+, Category: .+, Available Sizes: .+"
         self.assertRegex(result.text, pattern)
 
 

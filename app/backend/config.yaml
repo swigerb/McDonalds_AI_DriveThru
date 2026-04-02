@@ -64,6 +64,7 @@ security:
 local_mode:
   enabled: false                          # Default: cloud mode
   model_path: "./models/phi4-multimodal"  # Phi-4 ONNX model directory
+  offline_menu_path: ""                   # Override path to offline_menu.json (leave empty for auto-detect)
   tts_default_voice: "en_US-amy-medium"   # Default Piper voice model
   tts_length_scale: 0.9                   # Speech tempo (< 1.0 = faster / more upbeat)
   tts_available_voices:                   # Voices from huggingface.co/rhasspy/piper-voices
