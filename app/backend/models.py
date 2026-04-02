@@ -9,6 +9,7 @@ class OrderItem(BaseModel):
     quantity: int
     price: float
     display: str
+    components: list[str] = []
 
 
 class OrderSummary(BaseModel):

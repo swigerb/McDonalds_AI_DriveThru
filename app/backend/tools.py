@@ -523,7 +523,7 @@ async def update_order(args, session_id: str) -> ToolResult:
             logger.info("Total order limit hit in session %s (would be %d items)", session_id, total_qty)
             return ToolResult(msg, ToolResultDirection.TO_SERVER)
 
-    order_state_singleton.handle_order_update(
+    result_info = order_state_singleton.handle_order_update(
         session_id,
         args["action"],
         item_name,
@@ -540,7 +540,12 @@ async def update_order(args, session_id: str) -> ToolResult:
     action = args["action"]
     display_size = size if size and size.lower() not in {"", "standard", "n/a", "na", "none", "n.a."} else ""
     display_name = f"{display_size.capitalize() + ' ' if display_size else ''}{item_name}"
-    if _prompt_loader is not None:
+
+    # Handle items absorbed into a meal (drink/side folded into combo)
+    if result_info and result_info.get("absorbed_into_meal"):
+        meal_display = result_info.get("meal_name", "your meal")
+        delta_text = f"{display_name} added to {meal_display} — your total is ${summary.finalTotal:.2f}"
+    elif _prompt_loader is not None:
         template_str = _prompt_loader.get_delta_template(action)
         delta_text = _prompt_loader.render_template(template_str, quantity=quantity, display_name=display_name, total=f"{summary.finalTotal:.2f}")
     else:

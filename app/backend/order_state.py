@@ -27,14 +27,56 @@ def is_happy_hour() -> bool:
     return _HAPPY_HOUR_START <= now.hour < _HAPPY_HOUR_END
 
 
+_BREAKFAST_KEYWORDS = ("mcmuffin", "biscuit", "mcgriddle", "hotcake", "big breakfast")
+
+
 def _infer_combo_component(item_name: str) -> str:
     """Lightweight category check for combo component validation (sides vs drinks)."""
     n = item_name.lower()
-    if "tot" in n or "fries" in n or "onion rings" in n:
+    if "tot" in n or "fries" in n or "onion rings" in n or "hash brown" in n:
         return "sides"
     if any(kw in n for kw in ("slush", "limeade", "ocean water", "drink", "tea", "lemonade", "shake", "blast", "malt", "coke", "coca", "sprite", "pepper", "root beer", "coffee", "mcflurry", "hi-c", "fanta", "mccaf")):
         return "drinks"
     return ""
+
+
+def _is_meal_or_combo(item_name: str) -> bool:
+    """Detect meal/combo items (both McDonald's 'Meal' and legacy 'Combo')."""
+    n = item_name.lower()
+    return "meal" in n or "combo" in n
+
+
+def _is_meal(item_name: str) -> bool:
+    """Specifically a McDonald's Meal (includes fries automatically)."""
+    return "meal" in item_name.lower()
+
+
+def _extract_meal_entree(meal_name: str) -> str:
+    """Extract entree name: 'Big Mac Meal (No Pickles)' → 'Big Mac (No Pickles)'."""
+    base = meal_name.strip()
+    mods = ""
+    if "(" in base:
+        idx = base.find("(")
+        mods = " " + base[idx:]
+        base = base[:idx].strip()
+    for suffix in (" Extra Value Meal", " Meal", " Combo"):
+        if base.lower().endswith(suffix.lower()):
+            base = base[:len(base) - len(suffix)].strip()
+            break
+    return f"{base}{mods}".strip()
+
+
+def _is_breakfast_meal(meal_name: str) -> bool:
+    return any(kw in meal_name.lower() for kw in _BREAKFAST_KEYWORDS)
+
+
+def _get_default_side(meal_name: str, size: str) -> str:
+    """Returns the default side for a meal (e.g., 'Large Fries' or 'Hash Browns')."""
+    if _is_breakfast_meal(meal_name):
+        return "Hash Browns"
+    if not size or size.lower() in ("standard", "n/a", "na", "none", ""):
+        size = "Medium"
+    return f"{size} Fries"
 
 
 @dataclass
@@ -84,6 +126,8 @@ class OrderState:
             "round_trip_token": self._format_round_trip_token(session_token, 0),
             "absorbed_sides": 0,
             "absorbed_drinks": 0,
+            "absorbed_side_display": "",
+            "absorbed_drink_display": "",
         }
         logger.info("Session created: %s", session_id)
         return session_id
@@ -95,9 +139,10 @@ class OrderState:
     def _format_round_trip_token(self, session_token: str, round_trip_index: int) -> str:
         return f"{session_token}-{round_trip_index:04d}"
 
-    def handle_order_update(self, session_id: str, action: str, item_name: str, size: str, quantity: int, price: float):
+    def handle_order_update(self, session_id: str, action: str, item_name: str, size: str, quantity: int, price: float) -> dict:
         session = self.sessions[session_id]
         order_state = session["order_state"]
+        result_info = {}
 
         normalized_size = (size or "").strip().lower()
         if normalized_size in {"", "standard", "n/a", "na", "none", "n.a."}:
@@ -111,34 +156,130 @@ class OrderState:
 
         display = f"{formatted_size}{item_name}".strip()
 
-        existing_item_index = next((index for index, order_item in enumerate(order_state) if order_item.item == item_name and order_item.size == size), -1)
-
         if action == "add":
+            is_meal_combo = _is_meal_or_combo(item_name)
+            is_meal_item = _is_meal(item_name)
+
+            # ── Combo conversion: auto-remove matching standalone entree ──
+            if is_meal_combo:
+                entree_name = _extract_meal_entree(item_name)
+                entree_base = entree_name.lower().replace("®", "").strip()
+                if "(" in entree_base:
+                    entree_base = entree_base[:entree_base.find("(")].strip()
+                for i, existing in enumerate(order_state):
+                    if _is_meal_or_combo(existing.item):
+                        continue
+                    existing_base = existing.item.split("(")[0].strip().lower().replace("®", "")
+                    if existing_base == entree_base:
+                        if "(" in existing.item and "(" not in item_name:
+                            mods = existing.item[existing.item.find("("):]
+                            item_name = f"{item_name} {mods}"
+                            display = f"{formatted_size}{item_name}".strip()
+                            result_info["mods_carried"] = mods
+                        result_info["meal_converted_from"] = existing.item
+                        if existing.quantity > 1:
+                            existing.quantity -= 1
+                        else:
+                            order_state.pop(i)
+                        logger.info("Meal conversion: removed standalone '%s' for meal '%s'", existing.item, item_name)
+                        break
+
+            # ── Post-meal absorption: side/drink fills an incomplete meal slot ──
+            if not is_meal_combo:
+                component = _infer_combo_component(item_name)
+                if component in ("sides", "drinks"):
+                    meal_count = sum(it.quantity for it in order_state if _is_meal_or_combo(it.item))
+                    if meal_count > 0:
+                        if component == "sides":
+                            filled = sum(it.quantity for it in order_state if _infer_combo_component(it.item) == "sides")
+                            filled += session.get("absorbed_sides", 0)
+                        else:
+                            filled = sum(it.quantity for it in order_state if _infer_combo_component(it.item) == "drinks")
+                            filled += session.get("absorbed_drinks", 0)
+
+                        slots_available = meal_count - filled
+                        if slots_available > 0:
+                            to_absorb = min(quantity, slots_available)
+                            if component == "sides":
+                                session["absorbed_sides"] += to_absorb
+                            else:
+                                session["absorbed_drinks"] += to_absorb
+                            remaining = quantity - to_absorb
+                            result_info["absorbed_into_meal"] = True
+                            result_info["absorbed_component"] = component
+                            result_info["absorbed_display"] = display
+
+                            # Add to the first incomplete meal's components
+                            for meal_item in order_state:
+                                if not _is_meal_or_combo(meal_item.item):
+                                    continue
+                                if component == "drinks":
+                                    has_comp = any(_infer_combo_component(c) == "drinks" for c in meal_item.components)
+                                else:
+                                    has_comp = any(_infer_combo_component(c) == "sides" for c in meal_item.components)
+                                if not has_comp:
+                                    meal_item.components.append(display)
+                                    result_info["meal_name"] = meal_item.display
+                                    break
+
+                            logger.info("Post-meal absorption: '%s' absorbed as meal %s", display, component)
+                            if remaining <= 0:
+                                self._update_summary(session_id)
+                                return result_info
+                            else:
+                                quantity = remaining
+
+            # ── Regular add ──
+            existing_item_index = next(
+                (index for index, order_item in enumerate(order_state) if order_item.item == item_name and order_item.size == size),
+                -1
+            )
+
             if existing_item_index != -1:
                 order_state[existing_item_index].quantity += quantity
                 logger.debug("Updated quantity for %s in session %s", display, session_id)
             else:
-                order_state.append(OrderItem(item=item_name, size=size, quantity=quantity, price=price, display=display))
+                # Build components for McDonald's Meal items
+                components = []
+                if is_meal_item:
+                    entree = _extract_meal_entree(item_name)
+                    size_for_side = formatted_size.strip() if formatted_size.strip() else ""
+                    default_side = _get_default_side(item_name, size_for_side)
+                    components = [entree, default_side]
+                    session["absorbed_sides"] += quantity
+
+                order_state.append(OrderItem(
+                    item=item_name, size=size, quantity=quantity,
+                    price=price, display=display, components=components
+                ))
                 logger.debug("Added %s to session %s", display, session_id)
 
-            # Combo pivot: absorb standalone sides/drinks into a newly added combo
-            if "combo" in item_name.lower():
+            # ── Combo pivot: absorb standalone sides/drinks into newly added meal/combo ──
+            if is_meal_combo:
                 absorbed_side = False
                 absorbed_drink = False
                 items_to_remove = []
                 for i, existing in enumerate(order_state):
-                    if existing.item == item_name:
-                        continue  # skip the combo itself
-                    component = _infer_combo_component(existing.item)
-                    if component == "sides" and not absorbed_side:
-                        logger.info("Absorbing '%s' into new combo '%s'", existing.display, item_name)
+                    if existing.item == item_name and existing.size == size:
+                        continue
+                    comp = _infer_combo_component(existing.item)
+                    if comp == "sides" and not absorbed_side:
+                        if is_meal_item:
+                            continue  # Meals auto-include fries — don't absorb extra sides
+                        logger.info("Absorbing '%s' into new meal/combo '%s'", existing.display, item_name)
+                        meal_items = [oi for oi in order_state if oi.item == item_name and oi.size == size]
+                        if meal_items:
+                            meal_items[0].components.append(existing.display)
                         if existing.quantity > 1:
                             existing.quantity -= 1
                         else:
                             items_to_remove.append(i)
                         absorbed_side = True
-                    elif component == "drinks" and not absorbed_drink:
-                        logger.info("Absorbing '%s' into new combo '%s'", existing.display, item_name)
+                    elif comp == "drinks" and not absorbed_drink:
+                        logger.info("Absorbing '%s' into new meal/combo '%s'", existing.display, item_name)
+                        meal_items = [oi for oi in order_state if oi.item == item_name and oi.size == size]
+                        if meal_items:
+                            meal_items[0].components.append(existing.display)
                         if existing.quantity > 1:
                             existing.quantity -= 1
                         else:
@@ -150,7 +291,9 @@ class OrderState:
                     session["absorbed_sides"] += 1
                 if absorbed_drink:
                     session["absorbed_drinks"] += 1
+
         elif action == "remove":
+            existing_item_index = next((index for index, order_item in enumerate(order_state) if order_item.item == item_name and order_item.size == size), -1)
             if existing_item_index != -1:
                 if order_state[existing_item_index].quantity > quantity:
                     order_state[existing_item_index].quantity -= quantity
@@ -160,6 +303,7 @@ class OrderState:
                     logger.debug("Removed %s from session %s", display, session_id)
 
         self._update_summary(session_id)
+        return result_info
 
     def get_order_summary(self, session_id: str) -> OrderSummary:
         return self.sessions[session_id]["order_summary"]
@@ -169,16 +313,16 @@ class OrderState:
         return self.sessions[session_id]["order_state"]
 
     def get_combo_requirements(self, session_id: str) -> dict:
-        """Scans the order for combos and returns missing components.
+        """Scans the order for meals/combos and returns missing components.
         Helps the AI know exactly what to ask for next."""
         session = self.sessions[session_id]
         order_items = session["order_state"]
 
-        combo_count = sum(item.quantity for item in order_items if "combo" in item.item.lower())
+        combo_count = sum(item.quantity for item in order_items if _is_meal_or_combo(item.item))
         side_count = sum(item.quantity for item in order_items if _infer_combo_component(item.item) == "sides")
         drink_count = sum(item.quantity for item in order_items if _infer_combo_component(item.item) in ("drinks",))
 
-        # Include sides/drinks absorbed into combos during combo pivot
+        # Include sides/drinks absorbed into meals during combo pivot or meal auto-population
         side_count += session.get("absorbed_sides", 0)
         drink_count += session.get("absorbed_drinks", 0)
 
@@ -191,7 +335,7 @@ class OrderState:
         return {
             "is_complete": len(missing) == 0,
             "missing_items": missing,
-            "prompt_hint": f"Ask the guest for {', and '.join(missing)} to finish their combo." if missing else ""
+            "prompt_hint": f"Ask the guest for {', and '.join(missing)} to finish their meal." if missing else ""
         }
 
     def get_grouped_order_for_readback(self, session_id: str) -> str:
@@ -206,19 +350,31 @@ class OrderState:
 
         # Aggregate quantities by display name
         counts = {}
+        components_map = {}
         for oi in items:
             clean_name = oi.display.replace("RT 44", "Route 44").replace("RT44", "Route 44")
             # Convert parenthesized mods to speech-friendly format
-            # e.g. "Big Mac (No Lettuce)" -> "Big Mac with no lettuce"
             if "(" in clean_name and ")" in clean_name:
                 clean_name = clean_name.replace("(", "with ").replace(")", "")
             counts[clean_name] = counts.get(clean_name, 0) + oi.quantity
+            # Track drink components for voice readback
+            if oi.components:
+                drink_parts = [c for c in oi.components if _infer_combo_component(c) == "drinks"]
+                if drink_parts:
+                    components_map[clean_name] = drink_parts
 
         # Build the natural language string
         parts = []
         for display, qty in counts.items():
             prefix = f"{qty} " if qty > 1 else "one "
-            parts.append(f"{prefix}{display}")
+            desc = f"{prefix}{display}"
+            if display in components_map:
+                drinks = components_map[display]
+                if len(drinks) == 1:
+                    desc += f" with a {drinks[0]}"
+                else:
+                    desc += f" with {', '.join(drinks[:-1])} and {drinks[-1]}"
+            parts.append(desc)
 
         if len(parts) > 1:
             summary_str = ", ".join(parts[:-1]) + f", and {parts[-1]}"
@@ -234,6 +390,8 @@ class OrderState:
         session["order_state"] = []
         session["absorbed_sides"] = 0
         session["absorbed_drinks"] = 0
+        session["absorbed_side_display"] = ""
+        session["absorbed_drink_display"] = ""
         self._update_summary(session_id)
         logger.info("Order fully reset for session %s", session_id)
 
