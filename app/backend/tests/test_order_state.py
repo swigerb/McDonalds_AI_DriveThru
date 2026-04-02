@@ -192,14 +192,13 @@ class OrderStateTests(unittest.TestCase):
         self.assertEqual(result["prompt_hint"], "")
 
     def test_combo_requirements_combo_without_side_or_drink(self):
-        """Combo with no side or drink should report both missing."""
+        """Combo auto-includes fries (like a Meal), so only drink is missing."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "standard", 1, 8.49)
         result = order_state_singleton.get_combo_requirements(session_id)
         self.assertFalse(result["is_complete"])
-        self.assertEqual(len(result["missing_items"]), 2)
-        self.assertIn("side", result["prompt_hint"].lower())
-        self.assertIn("drink", result["prompt_hint"].lower())
+        self.assertEqual(len(result["missing_items"]), 1)
+        self.assertIn("drink", result["missing_items"][0])
 
     def test_combo_requirements_combo_with_side_missing_drink(self):
         """Combo with side but no drink should report drink missing."""
@@ -212,14 +211,12 @@ class OrderStateTests(unittest.TestCase):
         self.assertIn("drink", result["missing_items"][0])
 
     def test_combo_requirements_combo_with_drink_missing_side(self):
-        """Combo with drink but no side should report side missing."""
+        """Combo auto-includes fries, so with drink added it's fully complete."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "standard", 1, 8.49)
         order_state_singleton.handle_order_update(session_id, "add", "Coca-Cola", "medium", 1, 2.99)
         result = order_state_singleton.get_combo_requirements(session_id)
-        self.assertFalse(result["is_complete"])
-        self.assertEqual(len(result["missing_items"]), 1)
-        self.assertIn("side", result["missing_items"][0])
+        self.assertTrue(result["is_complete"])
 
     def test_combo_requirements_combo_fully_complete(self):
         """Combo with both side and drink is complete."""
@@ -232,14 +229,15 @@ class OrderStateTests(unittest.TestCase):
         self.assertEqual(result["missing_items"], [])
 
     def test_combo_requirements_two_combos_one_side_one_drink(self):
-        """Two combos with only one side and one drink should still be incomplete."""
+        """Two combos auto-include fries each. With one extra side absorbed + one drink, still need one drink."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "standard", 2, 8.49)
         order_state_singleton.handle_order_update(session_id, "add", "Fries", "medium", 1, 2.79)
         order_state_singleton.handle_order_update(session_id, "add", "Coca-Cola", "medium", 1, 2.99)
         result = order_state_singleton.get_combo_requirements(session_id)
         self.assertFalse(result["is_complete"])
-        self.assertEqual(len(result["missing_items"]), 2)
+        self.assertEqual(len(result["missing_items"]), 1)
+        self.assertIn("drink", result["missing_items"][0])
 
     def test_combo_requirements_empty_order(self):
         """Empty order should be complete (no combos to satisfy)."""
@@ -250,7 +248,8 @@ class OrderStateTests(unittest.TestCase):
     # ── Combo pivot / absorption tests ──
 
     def test_combo_absorbs_existing_side_and_drink(self):
-        """Fish Sandwich + Fries + Diet Coke → 'make it a combo' converts entree and absorbs both."""
+        """Fish Sandwich + Fries + Diet Coke → 'make it a combo' converts entree.
+        Combo auto-includes fries so standalone Fries stay; drink is absorbed."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Fish Sandwich", "standard", 1, 5.49)
         order_state_singleton.handle_order_update(session_id, "add", "Fries", "medium", 1, 2.79)
@@ -259,23 +258,25 @@ class OrderStateTests(unittest.TestCase):
         order_state_singleton.handle_order_update(session_id, "add", "Fish Sandwich Combo", "standard", 1, 8.49)
         items = order_state_singleton.get_order_items(session_id)
         item_names = [i.item for i in items]
-        # Standalone entree is converted to combo; sides and drinks absorbed
+        # Standalone entree is converted to combo
         self.assertNotIn("Fish Sandwich", item_names)
         self.assertIn("Fish Sandwich Combo", item_names)
-        self.assertNotIn("Fries", item_names)
+        # Combo auto-includes fries, so standalone Fries remain as extra
+        self.assertIn("Fries", item_names)
+        # Drink is absorbed into the combo
         self.assertNotIn("Diet Coke", item_names)
         result = order_state_singleton.get_combo_requirements(session_id)
         self.assertTrue(result["is_complete"])
 
     def test_combo_absorbs_only_one_side(self):
-        """Two standalone sides, combo absorbs only one."""
+        """Two standalone sides + combo: combo auto-includes fries so neither side is absorbed."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Fries", "medium", 1, 2.79)
         order_state_singleton.handle_order_update(session_id, "add", "Onion Rings", "medium", 1, 3.29)
         order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "standard", 1, 8.49)
         items = order_state_singleton.get_order_items(session_id)
         side_items = [i for i in items if i.item in ("Fries", "Onion Rings")]
-        self.assertEqual(len(side_items), 1, "Only one side should remain after absorption")
+        self.assertEqual(len(side_items), 2, "Combo auto-includes fries, standalone sides remain")
 
     def test_combo_absorbs_only_one_drink(self):
         """Two standalone drinks, combo absorbs only one."""
@@ -288,13 +289,13 @@ class OrderStateTests(unittest.TestCase):
         self.assertEqual(len(drink_items), 1, "Only one drink should remain after absorption")
 
     def test_combo_absorbs_decrements_quantity_when_multiple(self):
-        """Standalone side qty=2, combo absorbs one unit leaving qty=1."""
+        """Standalone side qty=2 + combo: combo auto-includes fries so standalone stays at qty=2."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Fries", "medium", 2, 2.79)
         order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "standard", 1, 8.49)
         items = order_state_singleton.get_order_items(session_id)
         fries = next(i for i in items if i.item == "Fries")
-        self.assertEqual(fries.quantity, 1, "Should decrement qty rather than remove")
+        self.assertEqual(fries.quantity, 2, "Combo auto-includes fries, standalone fries untouched")
 
     def test_combo_no_absorption_when_no_sides_or_drinks(self):
         """Adding a combo with no standalone sides/drinks absorbs nothing."""
@@ -316,13 +317,14 @@ class OrderStateTests(unittest.TestCase):
         self.assertEqual(items[0].item, "Fries")
 
     def test_combo_absorbs_side_only_when_no_drink_present(self):
-        """Side exists but no drink — absorb side, combo still needs drink."""
+        """Side exists but no drink — combo auto-includes fries so side stays; combo needs drink."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Fries", "medium", 1, 2.79)
         order_state_singleton.handle_order_update(session_id, "add", "Fish Sandwich Combo", "standard", 1, 8.49)
         items = order_state_singleton.get_order_items(session_id)
         item_names = [i.item for i in items]
-        self.assertNotIn("Fries", item_names)
+        # Combo auto-includes fries, standalone Fries remain as extra
+        self.assertIn("Fries", item_names)
         result = order_state_singleton.get_combo_requirements(session_id)
         self.assertFalse(result["is_complete"])
         self.assertEqual(len(result["missing_items"]), 1)
@@ -460,6 +462,77 @@ class OrderStateTests(unittest.TestCase):
         self.assertIn("Big Mac", meal_item["components"])
         self.assertIn("Large Fries", meal_item["components"])
         self.assertIn("Large Diet Coke", meal_item["components"])
+
+    # ── Combo synonym tests ──
+
+    def test_combo_synonym_auto_populates_components(self):
+        """'Big Mac Combo' should get the same entree + fries breakdown as 'Big Mac Meal'."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "large", 1, 11.29)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].item, "Big Mac Combo")
+        self.assertIn("Big Mac", items[0].components)
+        self.assertIn("Large Fries", items[0].components)
+
+    def test_combo_synonym_only_needs_drink(self):
+        """A combo (like a meal) should auto-include fries, leaving only drink missing."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "medium", 1, 9.99)
+        req = order_state_singleton.get_combo_requirements(session_id)
+        self.assertFalse(req["is_complete"])
+        self.assertEqual(len(req["missing_items"]), 1)
+        self.assertIn("drink", req["missing_items"][0])
+
+    def test_combo_synonym_drink_absorption(self):
+        """Drink added after a combo should absorb into the combo's components."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "large", 1, 11.29)
+        result = order_state_singleton.handle_order_update(session_id, "add", "Sprite", "large", 1, 2.19)
+        self.assertTrue(result.get("absorbed_into_meal"))
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)
+        self.assertIn("Large Sprite", items[0].components)
+
+    def test_combo_synonym_meal_conversion(self):
+        """Standalone entree should be removed when combo version is ordered."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac", "", 1, 5.99)
+        self.assertEqual(len(order_state_singleton.get_order_items(session_id)), 1)
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "large", 1, 11.29)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].item, "Big Mac Combo")
+
+    def test_combo_synonym_breakfast_uses_hash_browns(self):
+        """Breakfast combos should use Hash Browns instead of fries."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Egg McMuffin Combo", "", 1, 6.49)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertIn("Hash Browns", items[0].components)
+        self.assertNotIn("Fries", " ".join(items[0].components))
+
+    def test_combo_synonym_complete_order_flow(self):
+        """Full flow: 'Large #1 Combo with a Sprite' should work identically to meal version."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "large", 1, 11.29)
+        order_state_singleton.handle_order_update(session_id, "add", "Sprite", "large", 1, 2.19)
+        req = order_state_singleton.get_combo_requirements(session_id)
+        self.assertTrue(req["is_complete"])
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)
+        self.assertIn("Big Mac", items[0].components)
+        self.assertIn("Large Fries", items[0].components)
+        self.assertIn("Large Sprite", items[0].components)
+
+    def test_combo_synonym_pivot_absorbs_existing_drink(self):
+        """Existing standalone drink should be absorbed when combo is added after."""
+        session_id = order_state_singleton.create_session()
+        order_state_singleton.handle_order_update(session_id, "add", "Diet Coke", "medium", 1, 1.79)
+        order_state_singleton.handle_order_update(session_id, "add", "Big Mac Combo", "medium", 1, 9.99)
+        items = order_state_singleton.get_order_items(session_id)
+        self.assertEqual(len(items), 1)
+        self.assertIn("Medium Diet Coke", items[0].components)
 
 
 if __name__ == "__main__":

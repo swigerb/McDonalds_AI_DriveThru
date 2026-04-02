@@ -568,7 +568,7 @@ class ComboValidationInToolsTests(unittest.TestCase):
             "size": "standard", "quantity": 1, "price": 8.49,
         }, sid))
         self.assertIn("SYSTEM HINT", result.text)
-        self.assertIn("side", result.text.lower())
+        # Combos auto-include fries, so only drink is missing
         self.assertIn("drink", result.text.lower())
 
     def test_complete_combo_no_hint(self):

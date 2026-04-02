@@ -47,8 +47,13 @@ def _is_meal_or_combo(item_name: str) -> bool:
 
 
 def _is_meal(item_name: str) -> bool:
-    """Specifically a McDonald's Meal (includes fries automatically)."""
-    return "meal" in item_name.lower()
+    """Specifically a McDonald's Meal or Combo (includes fries automatically).
+
+    Customers use 'combo' and 'meal' interchangeably — both get
+    the same component breakdown (entree + fries auto-populated).
+    """
+    n = item_name.lower()
+    return "meal" in n or "combo" in n
 
 
 def _extract_meal_entree(meal_name: str) -> str:
