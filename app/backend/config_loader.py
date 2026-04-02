@@ -77,6 +77,16 @@ def get_local_mode_config() -> dict[str, Any]:
     - LOCAL_MODE_ENABLED  → local_mode.enabled
     - LOCAL_MODE_MODEL_PATH → local_mode.model_path
     - LOCAL_MODE_DEVICE → local_mode.device
+    - LOCAL_MODE_MAX_LENGTH → local_mode.max_length
+    - LOCAL_MODE_TEMPERATURE → local_mode.temperature
+    - LOCAL_MODE_LAZY_LOAD → local_mode.lazy_load
+    - LOCAL_MODE_TTS_DEFAULT_VOICE → local_mode.tts_default_voice
+    - LOCAL_MODE_TTS_MODEL_PATH → local_mode.tts_model_path
+    - LOCAL_MODE_TTS_LENGTH_SCALE → local_mode.tts_length_scale
+    - LOCAL_MODE_TTS_SAMPLE_RATE → local_mode.tts_sample_rate
+    - LOCAL_MODE_STT_MODEL → local_mode.stt_model
+    - LOCAL_MODE_STT_DEVICE → local_mode.stt_device
+    - LOCAL_MODE_STT_COMPUTE_TYPE → local_mode.stt_compute_type
     """
     config = get_config()
     # Merge defaults ← yaml ← env overrides
@@ -89,5 +99,25 @@ def get_local_mode_config() -> dict[str, Any]:
         result["model_path"] = env_path
     if (env_device := os.environ.get("LOCAL_MODE_DEVICE")) is not None:
         result["device"] = env_device
+    if (env_max_length := os.environ.get("LOCAL_MODE_MAX_LENGTH")) is not None:
+        result["max_length"] = int(env_max_length)
+    if (env_temperature := os.environ.get("LOCAL_MODE_TEMPERATURE")) is not None:
+        result["temperature"] = float(env_temperature)
+    if (env_lazy_load := os.environ.get("LOCAL_MODE_LAZY_LOAD")) is not None:
+        result["lazy_load"] = env_lazy_load.strip().lower() in {"1", "true", "yes", "on"}
+    if (env_tts_voice := os.environ.get("LOCAL_MODE_TTS_DEFAULT_VOICE")) is not None:
+        result["tts_default_voice"] = env_tts_voice
+    if (env_tts_path := os.environ.get("LOCAL_MODE_TTS_MODEL_PATH")) is not None:
+        result["tts_model_path"] = env_tts_path
+    if (env_tts_length_scale := os.environ.get("LOCAL_MODE_TTS_LENGTH_SCALE")) is not None:
+        result["tts_length_scale"] = float(env_tts_length_scale)
+    if (env_tts_sample_rate := os.environ.get("LOCAL_MODE_TTS_SAMPLE_RATE")) is not None:
+        result["tts_sample_rate"] = int(env_tts_sample_rate)
+    if (env_stt_model := os.environ.get("LOCAL_MODE_STT_MODEL")) is not None:
+        result["stt_model"] = env_stt_model
+    if (env_stt_device := os.environ.get("LOCAL_MODE_STT_DEVICE")) is not None:
+        result["stt_device"] = env_stt_device
+    if (env_stt_compute_type := os.environ.get("LOCAL_MODE_STT_COMPUTE_TYPE")) is not None:
+        result["stt_compute_type"] = env_stt_compute_type
 
     return result
