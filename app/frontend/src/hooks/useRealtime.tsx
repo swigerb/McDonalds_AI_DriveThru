@@ -105,8 +105,8 @@ export default function useRealTime({
 
     const buildWsEndpoint = () => {
         if (localMode) {
-            const url = "ws://127.0.0.1:8000/realtime";
-            console.log("[LOCAL-MODE] WebSocket endpoint:", url, "(using 127.0.0.1 to avoid DNS)");
+            const url = `ws://${window.location.host}/realtime`;
+            console.log("[LOCAL-MODE] WebSocket endpoint:", url, "(derived from page origin)");
             return url;
         }
         if (useDirectAoaiApi) {

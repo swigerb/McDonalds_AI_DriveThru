@@ -178,7 +178,7 @@ function McDonaldsApp() {
         onWebSocketError: event => {
             console.error("[WS] WebSocket error:", event);
             if (localMode) {
-                setConnectionErrorWithMinDisplay("Cannot connect to local server at 127.0.0.1:8000. Is the backend running?");
+                setConnectionErrorWithMinDisplay("Cannot connect to local server. Is the backend running?");
             }
         },
         onReceivedError: message => console.error("error", message),
@@ -327,7 +327,7 @@ function McDonaldsApp() {
             // Check WebSocket connection before proceeding
             if (realtime.readyState !== ReadyState.OPEN) {
                 const errorMsg = localMode
-                    ? "Cannot connect to local server at 127.0.0.1:8000. Is the backend running?"
+                    ? "Cannot connect to local server. Is the backend running?"
                     : "WebSocket not connected. Please check your connection and try again.";
                 console.error("[MIC] WebSocket not connected! readyState:", realtime.readyState);
                 setConnectionError(errorMsg);
