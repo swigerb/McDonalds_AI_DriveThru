@@ -7,6 +7,7 @@ export interface OrderItem {
     quantity: number;
     price: number;
     display: string;
+    components?: string[];
 }
 
 export interface OrderSummaryProps {
@@ -30,12 +31,25 @@ export function calculateOrderSummary(items: OrderItem[]): OrderSummaryProps {
 }
 
 const OrderItemRow = memo(function OrderItemRow({ item }: { item: OrderItem }) {
+    const hasComponents = item.components && item.components.length > 0;
+
     return (
-        <div className="flex justify-between rounded-2xl bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:bg-white/5 dark:text-white">
-            <span className="font-semibold">
-                {item.display} {item.quantity > 1 && `(x${item.quantity})`}
-            </span>
-            <span className="font-mono text-[#DB0007] dark:text-[#FF6B6B]">${(item.price * item.quantity).toFixed(2)}</span>
+        <div className="rounded-2xl bg-white/70 px-3 py-2 shadow-sm dark:bg-white/5">
+            <div className="flex justify-between text-sm text-gray-700 dark:text-white">
+                <span className="font-semibold">
+                    {item.display} {item.quantity > 1 && `(x${item.quantity})`}
+                </span>
+                <span className="font-mono text-[#DB0007] dark:text-[#FF6B6B]">${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+            {hasComponents && (
+                <div className="mt-1 space-y-0.5 pl-3">
+                    {item.components!.map((component, idx) => (
+                        <div key={idx} className="text-xs text-gray-500 dark:text-white/50">
+                            • {component}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 });

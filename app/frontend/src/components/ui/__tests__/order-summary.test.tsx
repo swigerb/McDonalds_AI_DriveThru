@@ -24,4 +24,32 @@ describe("OrderSummary", () => {
 
         expect(screen.getByText(/Add a Big Mac, McNuggets, or McFlurry/i)).toBeInTheDocument();
     });
+
+    it("renders combo component sub-items for meal orders", () => {
+        const mealItems: OrderItem[] = [
+            {
+                item: "Big Mac Meal",
+                size: "large",
+                quantity: 1,
+                price: 11.29,
+                display: "Large Big Mac Meal",
+                components: ["Big Mac", "Large Fries", "Large Diet Coke"]
+            }
+        ];
+        const summary = calculateOrderSummary(mealItems);
+        render(<OrderSummary order={summary} />);
+
+        expect(screen.getByText(/Large Big Mac Meal/)).toBeInTheDocument();
+        expect(screen.getByText("• Big Mac")).toBeInTheDocument();
+        expect(screen.getByText("• Large Fries")).toBeInTheDocument();
+        expect(screen.getByText("• Large Diet Coke")).toBeInTheDocument();
+    });
+
+    it("does not render component sub-items for regular a-la-carte items", () => {
+        const summary = calculateOrderSummary(sampleItems);
+        render(<OrderSummary order={summary} />);
+
+        const bullets = screen.queryAllByText(/^•/);
+        expect(bullets).toHaveLength(0);
+    });
 });

@@ -71,6 +71,15 @@ _No sessions yet._
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
 - ✅ All 13 tests pass (`vitest run`)
 
+### 2025-07-25: Combo Component Sub-Items in Order Panel
+- **What:** Updated `OrderItemRow` in `order-summary.tsx` to render combo/meal component sub-items as indented bullet list under the meal header.
+- **Type change:** Added `components?: string[]` to the `OrderItem` interface. Backend already sends this field from `order_state.py` — the JSON.parse in App.tsx passes it through automatically.
+- **Rendering:** When `item.components` exists and is non-empty, each component renders as a `• Component Name` line in `text-xs text-gray-500` (light mode) / `text-white/50` (dark mode), indented with `pl-3`. Non-combo items render exactly as before.
+- **Structure change:** `OrderItemRow` outer div changed from single `flex` row to a container with a flex row for name/price and a conditional `div` for components. Same rounded-2xl card appearance.
+- **Tests added:** Two new tests in `order-summary.test.tsx` — one verifying combo components render with bullets, one verifying a-la-carte items don't show bullets.
+- ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
+- ✅ All 15 tests pass (`vitest run`)
+
 ## Team Updates (2026-04-02T18:31Z)
 
 ### Offline Mode Diagnostics Iteration Complete
