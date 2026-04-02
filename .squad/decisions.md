@@ -357,6 +357,47 @@
 - **Implementation:** All directives addressed by Decisions #34–40. Piper voices deployed with configurable energy tuning; README expanded with offline mode content.
 - **Impact:** User requirements captured for offline mode delivery and documentation.
 
+#### 42. Faster-Whisper STT Engine for Offline Mode (Mac Tonight — AI Expert, 2026-04-02)
+- **Decision:** Added `whisper_stt.py` with `WhisperSTTEngine` using Faster-Whisper (CTranslate2) for local speech-to-text. Integrated into `local_processor.py` to run **in parallel** with Phi-4 inference.
+- **Key Design Choices:**
+  1. **CUDA-only GPU** — Faster-Whisper uses CTranslate2 which supports CUDA but not DirectML. Falls back to CPU with int8 quantization.
+  2. **Parallel execution** — `asyncio.create_task` launches Whisper transcription before Phi-4 starts; both use `run_in_executor` on separate threads. Zero added latency to the response pipeline.
+  3. **`small` model default** (244 MB) — best accuracy/speed tradeoff for drive-thru. Configurable via `stt_model` in config.yaml.
+  4. **0.5s minimum audio guard** — prevents Whisper hallucination on silence/noise fragments.
+  5. **Graceful degradation** — if Faster-Whisper isn't installed, AI responses still work; only customer transcription is missing.
+- **Files Changed:** `app/backend/whisper_stt.py` (new), `app/backend/local_processor.py` (integration), `app/backend/config.yaml` (keys), `app/backend/config_loader.py` (defaults)
+- **Risk:** Whisper `small` on CPU may add ~1-2s latency per utterance; acceptable since it runs in parallel with Phi-4 and doesn't block the response.
+- **Impact:** Guest Conversation panel displays customer speech in offline mode. 629+ tests passing.
+
+#### 43. Whisper Dependencies & Environment Config (Mayor McCheese — Build, 2026-04-02)
+- **Decision:** Updated requirements.txt with `faster-whisper` and `pydub` dependencies. Updated config.yaml with `stt_model`, `stt_device`, `stt_compute_type` keys. Updated .env-sample with examples. Created model download utility in `download_local_models.py`.
+- **Configuration Keys:**
+  - `stt_model: small` — model size/variant
+  - `stt_device: auto` — GPU/CPU detection
+  - `stt_compute_type: auto` — int8 fallback for CPU
+- **Impact:** Operators can configure STT behavior without code changes. Models pre-downloadable for air-gapped deployments.
+
+#### 44. Offline Menu Search Implementation (Grimace — Backend Dev, 2026-04-02)
+- **Decision:** Created in-memory keyword search engine (`local_search.py`) for 134-item offline McDonald's menu. Replaces Azure AI Search dependency for local mode.
+- **Key Features:**
+  1. Full parity with Azure dataset (134 items, all fields)
+  2. Keyword matching (item name, description, category)
+  3. Quantity and price tracking
+  4. Zero external dependencies (no Azure credentials required)
+- **Files:** `app/backend/local_search.py`, `models/offline_menu.json`
+- **Impact:** Full menu search works without Azure; enables truly offline operation. 70 new tests added.
+
+#### 45. Whisper STT Test Suite (Hamburglar — QA, 2026-04-02)
+- **Decision:** Created comprehensive test suite for Whisper STT engine. Test file: `tests/test_whisper_stt.py` (37 tests). Extended `test_local_processor.py` with 6 integration tests.
+- **Coverage:** Audio processing, model loading, error handling, config integration, parallel execution, graceful degradation.
+- **Results:** 671+ total tests passing, zero regressions.
+- **Impact:** Quality gate ensures STT reliability in offline mode.
+
+#### 46. Offline Mode Documentation — Whisper & Search (Ronald — Documentation, 2026-04-02)
+- **Decision:** Updated README.md with Faster-Whisper documentation and offline search capabilities.
+- **Content:** STT feature guide, model configuration, device selection, performance notes, offline search explanation.
+- **Impact:** Clear documentation for users implementing offline speech transcription and menu search.
+
 ## Governance
 
 - All meaningful changes require team consensus
