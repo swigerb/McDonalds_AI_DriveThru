@@ -364,6 +364,8 @@ Run this app locally using the provided start scripts:
 
 3. The app will be available at [http://localhost:8000](http://localhost:8000)
 
+   For GPU-accelerated local AI mode, use the `-GPU` flag when starting the app (see [Setting Up Offline Mode](#setting-up-offline-mode) for GPU setup instructions).
+
 ### Option 2: Docker-based Local Execution
 
 For testing in an isolated container environment:
@@ -507,6 +509,20 @@ The backend uses a **ProcessorRouter** that delegates WebSocket connections to e
    pwsh .\scripts\start.ps1   # Windows
    ./scripts/start.sh          # Linux/Mac
    ```
+
+   For GPU-accelerated local mode (recommended):
+
+   Windows (DirectML):
+   ```pwsh
+   pwsh .\scripts\start.ps1 -GPU
+   ```
+
+   Linux (NVIDIA CUDA):
+   ```bash
+   ./scripts/start.sh --gpu-cuda
+   ```
+
+   > **Why `-GPU`?** The `faster-whisper` dependency pulls in `onnxruntime` (CPU-only), which conflicts with `onnxruntime-directml` (GPU). The `-GPU` flag automatically swaps the CPU variant for the GPU variant after dependency installation.
 
 4. **Toggle Local Mode** in the settings panel (⚙️) to switch between cloud and offline AI.
 

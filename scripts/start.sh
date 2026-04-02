@@ -1,9 +1,44 @@
 #!/bin/sh
 
-PRODUCTION_MODE="${1:-}"
+# Usage:
+#   ./scripts/start.sh              # CPU mode (default)
+#   ./scripts/start.sh --gpu        # DirectML GPU (Windows)
+#   ./scripts/start.sh --gpu-cuda   # NVIDIA CUDA GPU (Linux)
+
+PRODUCTION_MODE=""
+GPU_MODE=""
+
+# Parse arguments
+for arg in "$@"; do
+    case "$arg" in
+        --production)
+            PRODUCTION_MODE="--production"
+            ;;
+        --gpu)
+            GPU_MODE="directml"
+            ;;
+        --gpu-cuda)
+            GPU_MODE="cuda"
+            ;;
+    esac
+done
 
 echo 'Creating Python virtual environment and installing dependencies...'
 sh scripts/load_python_env.sh
+
+# Fix onnxruntime for GPU — faster-whisper pulls in CPU variant which conflicts
+if [ -n "$GPU_MODE" ]; then
+    echo ""
+    echo "GPU mode: swapping onnxruntime CPU → $GPU_MODE..."
+    pip uninstall onnxruntime -y 2>/dev/null
+    if [ "$GPU_MODE" = "directml" ]; then
+        pip install --force-reinstall --no-deps onnxruntime-directml==1.24.4 --quiet
+    elif [ "$GPU_MODE" = "cuda" ]; then
+        pip install --force-reinstall --no-deps onnxruntime-genai-cuda --quiet
+    fi
+    echo "GPU mode: onnxruntime-$GPU_MODE ready"
+    echo ""
+fi
 
 if [ "$PRODUCTION_MODE" != "--production" ]; then
     echo ""
