@@ -154,7 +154,10 @@ function McDonaldsApp() {
         enableInputAudioTranscription: true,
         onWebSocketOpen: () => {
             console.log("[WS] WebSocket connection opened");
-            dismissAllToasts();
+            // Don't dismiss toasts here — reconnect cycles cause open/close/error
+            // flicker that clears the toast before the user can read it.
+            // Toasts are only dismissed when the user explicitly starts a session
+            // (see handleMicClick) or manually clicks X.
         },
         onWebSocketClose: () => {
             console.log("[WS] WebSocket connection closed");
