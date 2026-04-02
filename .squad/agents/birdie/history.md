@@ -70,3 +70,13 @@ _No sessions yet._
 - **Pattern:** ReadyState guard pattern — always check WS readyState before sending critical messages. Re-exported `ReadyState` from `useRealtime.tsx` for consumer convenience.
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
 - ✅ All 13 tests pass (`vitest run`)
+
+## Team Updates (2026-04-02T18:31Z)
+
+### Offline Mode Diagnostics Iteration Complete
+- ✅ **Birdie (Frontend):** Fixed WebSocket routing to `localhost:8000`, added readyState checks, comprehensive console logging with `[WS]`, `[MIC]`, `[LOCAL-MODE]` prefixes. User-visible error feedback when connection fails. Commit c5d4518.
+- ✅ **Grimace (Backend):** Added auto-fallback to local mode when Azure unreachable, runtime `/api/local-mode/toggle` endpoint, comprehensive `/api/diagnostics` endpoint, `local-pipeline` logger across all local processor modules. Graceful offline startup. Commit 03703dc.
+- **Decisions merged:** Both offline diagnostics decisions now in decisions.md (WebSocket direct connection, auto-fallback & diagnostics)
+- **Session & Orchestration logs:** Written to .squad/ with full context and next actions
+- **Test status:** 632 backend tests passing, zero regressions in cloud mode. Frontend TypeScript clean, all tests pass.
+- **Next:** Wire frontend toggle to `/api/local-mode/toggle` endpoint. Monitor console logs during offline testing. Verify auto-fallback behavior with `local-pipeline` logger filtering.

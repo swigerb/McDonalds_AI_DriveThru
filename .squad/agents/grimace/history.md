@@ -39,3 +39,13 @@ _No sessions yet._
 - **Diagnostics Endpoint (2026-07-19):** Added GET /api/diagnostics returning: current_mode, config_default_mode, runtime_mode_override, local_model_status, gpu_provider, tts_engine_status, stt_engine_status, last_error, websocket_total_connections, websocket_active_connections, cloud_processor status. Gives Brian a quick way to check system state without log diving.
 - **Runtime Mode Toggle (2026-07-19):** Added POST /api/local-mode/toggle accepting `{"mode": "local"|"cloud"|"auto"}`. Updates ProcessorRouter._runtime_mode at runtime. "auto" clears the override and falls back to config default. Frontend can call this when user toggles local mode in the UI, solving the disconnect between UI preference and backend routing.
 - **Graceful Offline Startup (2026-07-19):** app.py create_app() now checks local mode availability BEFORE requiring Azure env vars. If local processor is available but Azure vars are missing, logs a warning instead of sys.exit(1). Cloud RTMiddleTier creation is skipped entirely — ProcessorRouter handles None cloud_processor gracefully. This enables fully offline startup without any Azure credentials.
+
+## Team Updates (2026-04-02T18:31Z)
+
+### Offline Mode Diagnostics Iteration Complete
+- ✅ **Grimace (Backend):** Auto-fallback to local mode when Azure unreachable (3s connectivity check), runtime `/api/local-mode/toggle` endpoint for frontend mode switching, comprehensive `/api/diagnostics` endpoint with 9 telemetry fields, `local-pipeline` logger across all 6 local processor modules (processor_router, local_processor, phi4_model, piper_tts, whisper_stt, local_search), graceful offline startup with non-fatal missing Azure env vars. Commit 03703dc.
+- ✅ **Birdie (Frontend):** Fixed WebSocket URL to connect directly to `ws://localhost:8000/realtime` in local mode, readyState guards before session start, user-visible error feedback (`⚠️`), comprehensive console logging with `[WS]`, `[MIC]`, `[LOCAL-MODE]` prefixes. Commit c5d4518.
+- **Decisions merged:** Both offline diagnostics decisions now in decisions.md
+- **Session & Orchestration logs:** Written with full root cause analysis, fixes, and next actions
+- **Test status:** 632 backend tests passing (baseline maintained), zero regressions. Frontend TypeScript clean, all 13 tests pass.
+- **Next:** Birdie wires frontend toggle to `/api/local-mode/toggle`. Team monitors offline scenario with `local-pipeline` logger. Verify console logs show full diagnostic trace.

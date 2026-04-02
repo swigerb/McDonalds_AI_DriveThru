@@ -554,6 +554,92 @@ Drinks and slushes are automatically half-price between 2:00 PM and 4:00 PM loca
 ### What
 Menu items dependent on down machines get `[OOS: ...]` flagged in search results so AI steers customers away.
 
+---
+
+## Local Mode WebSocket Direct Connection (2026-07-23)
+
+**Author:** Birdie (Frontend Dev)  
+**Status:** Implemented
+
+### Context
+
+Clicking the mic button while offline in local mode produced total silence — no audio, no response, no error. Three root causes:
+
+1. WebSocket URL was relative (`/realtime`), resolving to the remote Azure host instead of localhost
+2. `react-use-websocket`'s `sendJsonMessage` silently drops messages when connection isn't OPEN
+3. Local mode state wasn't synced to backend at session start (only on toggle change)
+
+### Decision
+
+- **When `localMode=true`, connect WebSocket directly to `ws://localhost:8000/realtime`** instead of using relative URL. This ensures the frontend talks to the local backend regardless of where the page was served from.
+- **Always check `readyState === OPEN` before starting a session.** If not connected, show a user-visible error instead of silently failing.
+- **Sync local mode state to backend at every session start**, not just when the toggle changes.
+- **Skip Azure session token fetch in local mode** — no auth needed for offline operation.
+
+### Impact
+
+- `useRealtime.tsx` now accepts `localMode` parameter and returns `readyState`
+- `App.tsx` gates mic activation on WebSocket readyState
+- User sees `⚠️` error message below mic button when connection fails
+- Console logs use `[WS]`, `[MIC]`, `[LOCAL-MODE]` prefixes for easy filtering
+
+### Trade-offs
+
+- Hardcoded `localhost:8000` — matches current backend config. If port changes, this needs updating.
+- `ReadyState` re-exported from `useRealtime.tsx` for consumer convenience (avoids direct `react-use-websocket` import in App.tsx).
+
+---
+
+## Offline Auto-Fallback and Diagnostics Pipeline (2026-07-19)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Problem
+
+When Brian went offline with local mode toggled ON in the UI, clicking the microphone button produced complete silence — no logs, no errors, nothing. The backend was running on localhost:8000 and should have been reachable.
+
+### Root Cause
+
+Three-layer failure:
+1. **Config mismatch:** `config.yaml` has `local_mode.enabled: false`. ProcessorRouter defaults to "cloud" mode regardless of UI preference.
+2. **Late mode signaling:** Frontend sends `extension.set_local_mode` via WebSocket message AFTER connection, but routing happens AT connection time. The preference arrives too late.
+3. **Silent hang:** RTMiddleTier._forward_messages() tries ws_connect to Azure OpenAI. When offline, DNS resolution hangs for 10-30s, then throws an exception — but no error message is sent back to the WebSocket client. The connection just dies silently.
+
+### Solution
+
+**1. Auto-Fallback (processor_router.py)**
+When mode resolves to "cloud" but a local processor exists, the router now does a quick (3s timeout) connectivity check to the Azure endpoint. If unreachable, it automatically falls back to local mode with a logged warning. No config changes needed.
+
+**2. Runtime Mode Toggle (app.py)**
+New `POST /api/local-mode/toggle` endpoint accepts `{"mode": "local"|"cloud"|"auto"}`. Birdie can wire this to the frontend's local mode toggle so the backend knows the user's preference BEFORE the WebSocket connects.
+
+**3. Graceful Offline Startup (app.py)**
+Missing Azure env vars now log a warning (not `sys.exit(1)`) when local mode is available. Cloud RTMiddleTier creation is skipped entirely in this case — ProcessorRouter handles `cloud_processor=None`.
+
+**4. Diagnostics Endpoint (app.py)**
+New `GET /api/diagnostics` returns comprehensive system state: current mode, model status, GPU provider, TTS/STT status, last error, WebSocket connection counts.
+
+**5. Pipeline Logging (all local modules)**
+`local-pipeline` logger added across processor_router, local_processor, phi4_model, piper_tts, whisper_stt, local_search. Every pipeline step is logged with session IDs and timing.
+
+### Impact
+
+- **No regressions:** 632 tests, same baseline (1 pre-existing failure, 2 pre-existing errors)
+- **Cloud mode unchanged:** All existing cloud behavior preserved
+- **Birdie action needed:** Wire `POST /api/local-mode/toggle` to the frontend's local mode toggle switch. Also consider adding `?mode=local` to the WebSocket URL when local mode is active.
+
+### Files Changed
+
+- `app/backend/processor_router.py` — Auto-fallback, runtime mode toggle, connection tracking, diagnostics
+- `app/backend/app.py` — Graceful offline startup, `/api/diagnostics`, `/api/local-mode/toggle`
+- `app/backend/local_processor.py` — Comprehensive pipeline logging
+- `app/backend/phi4_model.py` — Pipeline logging for model load/inference
+- `app/backend/piper_tts.py` — Pipeline logging for TTS load/synthesis
+- `app/backend/whisper_stt.py` — Pipeline logging for STT load/transcription
+- `app/backend/local_search.py` — Pipeline logging for menu search
+- `app/backend/tests/test_performance.py` — Updated env var test for local-only mode
+
 ### Design
 1. **Module-level `MOCK_MACHINE_STATUS`** — easy toggle for demos; production would use Azure Function/IoT Hub
 2. **Keyword-based matching** — items with "shake", "blast", "sundae", "ice cream" tied to `ice_cream_machine` status
