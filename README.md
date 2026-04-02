@@ -453,8 +453,10 @@ In offline mode, the application replaces the Azure OpenAI Realtime API with a l
 | **Speech Understanding** | Azure OpenAI GPT-4o Realtime | Phi-4-multimodal-instruct (ONNX) |
 | **Text Generation** | GPT-4o Realtime | Phi-4-multimodal-instruct (ONNX) |
 | **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, Jenny, Lessac, Kristin) |
-| **Menu Search** | Azure AI Search (semantic + vector) | Local tool calling via structured prompts |
+| **Menu Search** | Azure AI Search (semantic + vector) | Local in-memory search (keyword matching over 71 menu items) |
 | **Order Management** | Same | Same (runs locally in both modes) |
+
+> **Fully Offline Menu Search:** In local mode, menu queries are handled by an in-memory keyword search engine over the embedded `menuItems.json` (71 items). Results are formatted identically to Azure AI Search output, so the AI model produces the same quality responses. No internet connection is needed for any part of the ordering experience.
 
 The backend uses a **ProcessorRouter** that delegates WebSocket connections to either the cloud `RTMiddleTier` or the local `LocalPhi4Processor` based on the user's toggle. Both processors implement the same WebSocket message protocol, so the frontend works identically in both modes.
 

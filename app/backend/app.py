@@ -11,6 +11,7 @@ from azure.identity import AzureDeveloperCliCredential, DefaultAzureCredential
 from dotenv import load_dotenv
 
 from config_loader import get_config, get_local_mode_config
+from local_search import attach_local_tools
 from prompt_loader import PromptLoader
 from processor_router import ProcessorRouter
 from rtmt import RTMiddleTier, create_hmac_token
@@ -264,7 +265,7 @@ async def create_app() -> web.Application:
         from local_processor import LocalPhi4Processor, LOCAL_MODE_AVAILABLE
         if LOCAL_MODE_AVAILABLE:
             local_processor = LocalPhi4Processor(config=local_config)
-            local_processor.tools = rtmt.tools
+            attach_local_tools(local_processor, prompt_loader=prompt_loader)
             local_processor.system_message = rtmt.system_message
             local_mode_available = True
             logger.info("Local Phi-4 processor created (device=%s)", local_processor.device)
