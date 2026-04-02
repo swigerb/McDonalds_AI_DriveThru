@@ -518,5 +518,181 @@ class DownsampleTests(unittest.TestCase):
         self.assertEqual(_BYTES_PER_SAMPLE, 2)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# WHISPER STT INTEGRATION TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class WhisperIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    """Test Whisper STT integration within LocalPhi4Processor."""
+
+    def _make_processor_with_stt(self):
+        """Create a processor with mocked models + STT engine."""
+        proc = LocalPhi4Processor(config={"model_path": "/fake"})
+        proc._model_loaded = True
+
+        # Mock Phi-4 model
+        proc._model = MagicMock()
+        proc._model.is_loaded = True
+        proc._model.device_name = "cpu"
+
+        # Mock TTS
+        proc._tts = MagicMock()
+        proc._tts.is_loaded = True
+        proc._tts.synthesize_streaming = MagicMock(return_value=_empty_async_gen())
+
+        # Mock STT engine
+        proc._stt = MagicMock()
+        proc._stt.transcribe = AsyncMock(return_value="I want a Big Mac")
+        proc._stt.unload = AsyncMock()
+
+        return proc
+
+    async def test_transcription_message_sent(self):
+        """After processing, customer transcription message is sent to WS."""
+        proc = self._make_processor_with_stt()
+        ws = _make_mock_ws()
+        cancel = asyncio.Event()
+
+        # Mock Phi-4 to produce a simple response
+        async def _gen(*a, **kw):
+            yield "Hello! "
+            yield "One Big Mac coming up."
+        proc._model.process_audio = _gen
+
+        await proc._process_utterance(
+            _make_audio_pcm_24k(1.0), ws, "sess-1", cancel
+        )
+
+        # Find the transcription.completed message
+        sent = [c[0][0] for c in ws.send_json.call_args_list]
+        transcript_msgs = [
+            m for m in sent
+            if m.get("type") == "conversation.item.input_audio_transcription.completed"
+        ]
+        self.assertEqual(len(transcript_msgs), 1)
+        self.assertEqual(transcript_msgs[0]["transcript"], "I want a Big Mac")
+
+    async def test_parallel_execution(self):
+        """Whisper transcription runs in parallel with Phi-4 (asyncio.create_task)."""
+        proc = self._make_processor_with_stt()
+        ws = _make_mock_ws()
+        cancel = asyncio.Event()
+
+        phi4_started = asyncio.Event()
+        phi4_proceed = asyncio.Event()
+
+        async def _slow_gen(*a, **kw):
+            phi4_started.set()
+            await phi4_proceed.wait()
+            yield "Response text"
+        proc._model.process_audio = _slow_gen
+
+        transcribe_called = asyncio.Event()
+        original_transcribe = proc._stt.transcribe
+
+        async def _tracked_transcribe(*a, **kw):
+            transcribe_called.set()
+            return await original_transcribe(*a, **kw)
+        proc._stt.transcribe = _tracked_transcribe
+
+        async def _run():
+            task = asyncio.create_task(
+                proc._process_utterance(_make_audio_pcm_24k(1.0), ws, "sess-1", cancel)
+            )
+            # Wait for Phi-4 to start
+            await asyncio.wait_for(phi4_started.wait(), timeout=2.0)
+            # Whisper should already have been called (started in parallel)
+            self.assertTrue(
+                transcribe_called.is_set(),
+                "Whisper transcription should start before Phi-4 completes"
+            )
+            phi4_proceed.set()
+            await asyncio.wait_for(task, timeout=5.0)
+
+        await _run()
+
+    async def test_graceful_skip_when_no_stt(self):
+        """Processor works fine without STT engine — no transcript message."""
+        proc = LocalPhi4Processor(config={"model_path": "/fake"})
+        proc._model_loaded = True
+        proc._model = MagicMock()
+        proc._model.is_loaded = True
+        proc._model.device_name = "cpu"
+        proc._tts = MagicMock()
+        proc._tts.is_loaded = True
+        proc._tts.synthesize_streaming = MagicMock(return_value=_empty_async_gen())
+        proc._stt = None  # No STT engine
+
+        async def _gen(*a, **kw):
+            yield "Welcome to McDonald's!"
+        proc._model.process_audio = _gen
+
+        ws = _make_mock_ws()
+        cancel = asyncio.Event()
+
+        await proc._process_utterance(
+            _make_audio_pcm_24k(1.0), ws, "sess-1", cancel
+        )
+
+        # No transcription.completed message should be sent
+        sent = [c[0][0] for c in ws.send_json.call_args_list]
+        transcript_msgs = [
+            m for m in sent
+            if m.get("type") == "conversation.item.input_audio_transcription.completed"
+        ]
+        self.assertEqual(len(transcript_msgs), 0)
+
+        # But response.done should still be sent
+        done_msgs = [m for m in sent if m.get("type") == "response.done"]
+        self.assertEqual(len(done_msgs), 1)
+
+    async def test_stt_unloaded_on_stop(self):
+        """stop_background_tasks() calls stt.unload()."""
+        proc = self._make_processor_with_stt()
+        proc._model.unload = AsyncMock()
+        proc._tts.unload = AsyncMock()
+
+        await proc.stop_background_tasks()
+
+        proc._stt.unload.assert_awaited_once()
+
+    async def test_stt_failure_does_not_crash_pipeline(self):
+        """If STT transcription fails, pipeline continues without crash."""
+        proc = self._make_processor_with_stt()
+        proc._stt.transcribe = AsyncMock(side_effect=RuntimeError("STT failed"))
+        ws = _make_mock_ws()
+        cancel = asyncio.Event()
+
+        async def _gen(*a, **kw):
+            yield "Here's your order."
+        proc._model.process_audio = _gen
+
+        # Should not raise
+        await proc._process_utterance(
+            _make_audio_pcm_24k(1.0), ws, "sess-1", cancel
+        )
+
+        # response.done should still be sent
+        sent = [c[0][0] for c in ws.send_json.call_args_list]
+        done_msgs = [m for m in sent if m.get("type") == "response.done"]
+        self.assertEqual(len(done_msgs), 1)
+
+
+# ── Whisper integration helpers ─────────────────────────────────────────────
+
+
+async def _empty_async_gen():
+    """Empty async generator (no audio chunks from TTS)."""
+    return
+    yield  # noqa — makes this an async generator
+
+
+def _make_audio_pcm_24k(duration_s: float) -> bytes:
+    """Generate silence PCM bytes at 24 kHz (frontend format)."""
+    n_samples = int(duration_s * _FRONTEND_SAMPLE_RATE)
+    return np.zeros(n_samples, dtype=np.int16).tobytes()
+
+
 if __name__ == "__main__":
     unittest.main()

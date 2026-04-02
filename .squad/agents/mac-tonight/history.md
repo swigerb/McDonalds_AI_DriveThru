@@ -37,6 +37,13 @@
 - Added `GET /api/local-mode/voices` endpoint in `app/backend/app.py` — returns voice list with metadata, current voice, and length_scale from live TTS engine state
 - All 423 existing tests pass; no regressions
 
+### 2026-07-17 — Faster-Whisper STT for Offline Customer Transcription
+- Created `app/backend/whisper_stt.py` — WhisperSTTEngine with CUDA→CPU auto-detection, lazy loading, executor-wrapped sync transcription, PCM int16→float32 normalization, 0.5s minimum audio guard
+- Updated `app/backend/local_processor.py` — integrated STT as `_stt` component alongside Phi-4 and Piper; Whisper transcription runs in parallel with Phi-4 via `asyncio.create_task`; sends `conversation.item.input_audio_transcription.completed` WebSocket message for Guest Conversation panel; lifecycle managed in `_ensure_models_loaded` / `stop_background_tasks`
+- Updated `app/backend/config.yaml` — added `stt_model`, `stt_device`, `stt_compute_type` to `local_mode` section
+- Updated `app/backend/config_loader.py` — added STT defaults to `_LOCAL_MODE_DEFAULTS`
+- All 629 existing tests pass; 1 pre-existing failure (unrelated `test_unknown_category_gets_generic_upsell`); zero regressions
+
 ## Learnings
 - System prompt has 22 distinct behavioral sections — priority ordering matters for model attention allocation
 - McDonald's extras policy differs from Sonic: extras apply to drinks, shakes, McCafé beverages, and combos (not sides or standalone items)
@@ -57,6 +64,11 @@
 - Piper `synthesize()` accepts `length_scale` as a direct keyword argument — no need for SynthesisConfig object; fallback via TypeError catch for older piper-tts versions
 - Only one Piper voice model (~60 MB each) loaded in memory at a time — `set_voice()` unloads previous before loading new to keep RAM bounded
 - Config key renamed from `tts_model` → `tts_default_voice` with backward compat via `or self._config.get("tts_model")` fallback in local_processor.py
+- Faster-Whisper uses CTranslate2 which only supports CUDA (not DirectML) — GPU auto-detection tries CUDA first via torch or ctranslate2, falls back to CPU with int8 quantization
+- Whisper transcription runs in parallel with Phi-4 inference via `asyncio.create_task` — neither blocks the other since both use `run_in_executor` on separate threads
+- Audio shorter than 0.5s is skipped before Whisper transcription to prevent hallucination on silence/noise fragments
+- Whisper `small` model (244 MB) is the default — best accuracy/speed tradeoff for drive-thru; `tiny` faster but less accurate, `medium`/`large-v3` too slow for real-time
+- The `vad_filter=True` parameter in Whisper transcription uses Silero VAD internally to skip non-speech segments — separate from the energy-based VAD in local_processor
 
 ## Team Updates (2026-04-02T16:30Z)
 

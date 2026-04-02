@@ -58,6 +58,7 @@ except Exception:
 # Lazy imports for heavy modules (loaded only when actually needed)
 _Phi4ModelManager = None
 _PiperTTSEngine = None
+_WhisperSTTEngine = None
 
 _cfg = get_config()
 _vad_cfg = _cfg.get("vad", {})
@@ -118,6 +119,7 @@ class LocalPhi4Processor(AbstractProcessor):
         # Sub-components (created on load)
         self._model: Any = None  # Phi4ModelManager
         self._tts: Any = None    # PiperTTSEngine
+        self._stt: Any = None    # WhisperSTTEngine
 
         # Per-connection state is managed inside handle_websocket;
         # these are processor-level flags.
@@ -315,6 +317,8 @@ class LocalPhi4Processor(AbstractProcessor):
             await self._model.unload()
         if self._tts:
             await self._tts.unload()
+        if self._stt:
+            await self._stt.unload()
         self._model_loaded = False
         logger.info("Local processor background tasks stopped")
 
@@ -348,6 +352,7 @@ class LocalPhi4Processor(AbstractProcessor):
         try:
             await self._load_phi4()
             await self._load_tts()
+            await self._load_stt()
             self._model_loaded = True
             logger.info("All local models loaded successfully")
         finally:
@@ -392,6 +397,35 @@ class LocalPhi4Processor(AbstractProcessor):
             logger.warning("Piper TTS failed to load: %s — text-only mode", exc)
             self._tts = None
 
+    async def _load_stt(self) -> None:
+        """Initialize and load the Faster-Whisper STT engine."""
+        global _WhisperSTTEngine
+        if _WhisperSTTEngine is None:
+            try:
+                from whisper_stt import WhisperSTTEngine as _WhisperSTTEngine, WHISPER_AVAILABLE
+            except ImportError:
+                logger.info("whisper_stt module not found — STT unavailable")
+                return
+
+            if not WHISPER_AVAILABLE:
+                logger.info("Faster-Whisper not installed — customer transcription unavailable")
+                return
+
+        stt_model = self._config.get("stt_model", "small")
+        stt_device = self._config.get("stt_device", "auto")
+        stt_compute = self._config.get("stt_compute_type", "int8")
+
+        self._stt = _WhisperSTTEngine(
+            model_size=stt_model,
+            device=stt_device,
+            compute_type=stt_compute,
+        )
+        try:
+            await self._stt.load()
+        except Exception as exc:
+            logger.warning("Faster-Whisper failed to load: %s — customer transcription unavailable", exc)
+            self._stt = None
+
     # ── Processing pipeline ─────────────────────────────────────────────────
 
     async def _process_utterance_safe(
@@ -423,8 +457,13 @@ class LocalPhi4Processor(AbstractProcessor):
         """Full pipeline: audio → Phi-4 → tools → Piper TTS → audio deltas."""
         response_id = f"resp-{uuid.uuid4().hex[:8]}"
 
-        # Downsample 24 kHz → 16 kHz for Phi-4
+        # Downsample 24 kHz → 16 kHz for Phi-4 and Whisper
         audio_16k = _downsample_24k_to_16k(audio)
+
+        # Start Whisper transcription in parallel (non-blocking)
+        transcription_task: asyncio.Task | None = None
+        if self._stt:
+            transcription_task = asyncio.create_task(self._stt.transcribe(audio_16k))
 
         # 1. Send response.created
         await ws.send_json({
@@ -433,6 +472,8 @@ class LocalPhi4Processor(AbstractProcessor):
         })
 
         if not self._model or not self._model.is_loaded:
+            if transcription_task:
+                transcription_task.cancel()
             await self._send_transcript_and_done(ws, response_id,
                 "Local model is not loaded. Please wait for initialization to complete.")
             return
@@ -453,13 +494,27 @@ class LocalPhi4Processor(AbstractProcessor):
             })
 
         if cancel_event.is_set():
+            if transcription_task:
+                transcription_task.cancel()
             await ws.send_json({
                 "type": _MSG_RESPONSE_DONE,
                 "response": {"id": response_id, "status": "cancelled"},
             })
             return
 
-        # 3. Check for tool calls in the response
+        # 3. Collect customer transcription (ran in parallel with Phi-4)
+        if transcription_task:
+            try:
+                customer_text = await transcription_task
+                if customer_text:
+                    await ws.send_json({
+                        "type": "conversation.item.input_audio_transcription.completed",
+                        "transcript": customer_text,
+                    })
+            except Exception as exc:
+                logger.warning("Customer transcription failed: %s", exc)
+
+        # 4. Check for tool calls in the response
         from phi4_model import Phi4ModelManager
         tool_calls = Phi4ModelManager.parse_tool_calls(full_text)
 
@@ -475,13 +530,13 @@ class LocalPhi4Processor(AbstractProcessor):
         import re
         speech_text = re.sub(r"<tool_call>.*?</tool_call>", "", speech_text, flags=re.DOTALL).strip()
 
-        # 4. Send transcript done
+        # 5. Send transcript done
         await ws.send_json({
             "type": _MSG_TRANSCRIPT_DONE,
             "transcript": speech_text,
         })
 
-        # 5. Synthesize speech from text (if TTS available)
+        # 6. Synthesize speech from text (if TTS available)
         if self._tts and self._tts.is_loaded and speech_text:
             async for audio_chunk in self._tts.synthesize_streaming(speech_text):
                 if cancel_event.is_set():
@@ -491,7 +546,7 @@ class LocalPhi4Processor(AbstractProcessor):
                     "delta": base64.b64encode(audio_chunk).decode(),
                 })
 
-        # 6. Send response.done
+        # 7. Send response.done
         await ws.send_json({
             "type": _MSG_RESPONSE_DONE,
             "response": {

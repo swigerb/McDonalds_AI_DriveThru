@@ -33,6 +33,9 @@ _LOCAL_MODE_DEFAULTS: dict[str, Any] = {
     "temperature": 0.6,
     "tts_sample_rate": 24000,
     "lazy_load": True,
+    "stt_model": "small",
+    "stt_device": "auto",
+    "stt_compute_type": "int8",
 }
 
 

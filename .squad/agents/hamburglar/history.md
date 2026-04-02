@@ -54,6 +54,9 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - PiperTTSEngine.set_voice() calls unload→load internally — must patch both `Path.exists` and `_PIPER_AVAILABLE` + `_PiperVoice.load` for the full chain to succeed in tests
 - Phi4ModelManager._load_onnxruntime_genai() tries CUDA→DirectML→CPU import priority — mock with `builtins.__import__` side_effect that selectively raises ImportError
 - LocalPhi4Processor uses module-level `LOCAL_MODE_AVAILABLE` flag set at import time — patch `local_processor.LOCAL_MODE_AVAILABLE` at test time, not the import chain
+- WhisperSTTEngine._detect_device() tries torch→ctranslate2→CPU priority — mock with `builtins.__import__` side_effect that selectively raises ImportError (same pattern as Phi4)
+- WhisperSTTEngine.transcribe() runs _sync_transcribe via run_in_executor — mock model.transcribe return as `(iter([segments]), info)` tuple
+- LocalPhi4Processor._process_utterance() creates transcription_task via asyncio.create_task for parallel STT+Phi4 — test parallelism by gating Phi-4 with Events
 
 ## Team Updates (2026-04-02T16:30Z)
 
@@ -63,3 +66,8 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - **Tests:** 560 passing (137 new + 423 existing), zero regressions
 - **Key Patterns:** Custom `_AsyncIter` for WebSocket mocking, module-boundary patching, lazy import handling, state initialization guard
 - **Next:** Full test coverage validates offline mode architecture before demo
+
+### Whisper STT Test Coverage
+- ✅ **test_whisper_stt.py** (37 tests): WHISPER_AVAILABLE flag (3), init/config (4), device detection CUDA→ctranslate2→CPU (5), model loading/idempotent/auto-detect (4), unloading (2), properties (2), transcription PCM→float32/segments/executor/vad/language/beam (7), short audio guard (4), error handling/lazy-load/empty-segments (4), constants (2)
+- ✅ **test_local_processor.py** (6 new tests): Transcription message sent to WS, parallel execution verification, graceful skip without STT, STT unloaded on stop, STT failure doesn't crash pipeline
+- **Tests:** 671+ passing (43 new + existing), zero regressions from Whisper changes

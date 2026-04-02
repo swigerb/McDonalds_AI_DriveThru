@@ -256,6 +256,28 @@ def download_phi4(model_dir: Path, cpu_only: bool) -> None:
         raise
 
 
+def download_whisper(model_dir: Path, model_size: str = "small") -> None:
+    """Pre-download Faster-Whisper model for offline STT.
+    
+    Args:
+        model_dir: Base model directory (not directly used; faster-whisper caches to ~/.cache/huggingface/)
+        model_size: Model size (tiny|base|small|medium)
+    """
+    console.rule(f"[bold cyan]Faster-Whisper STT — {model_size} model")
+    try:
+        from faster_whisper import WhisperModel
+        console.print(f"  [yellow]↓[/yellow] Downloading Whisper {model_size} model …")
+        # This triggers the HuggingFace download + CTranslate2 conversion
+        model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        del model
+        console.print(f"  [green]✓[/green] Whisper {model_size} model cached successfully")
+    except ImportError:
+        console.print("  [yellow]⚠[/yellow] faster-whisper not installed — skipping STT model download")
+    except Exception as e:
+        console.print(f"  [red]✗[/red] Whisper download failed: {e}")
+        raise
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Download local AI models for McDonald's AI Drive-Thru"
@@ -281,6 +303,13 @@ def main() -> None:
             "Default: download all voices."
         ),
     )
+    parser.add_argument(
+        "--stt-model",
+        type=str,
+        default="small",
+        choices=["tiny", "base", "small", "medium"],
+        help="Faster-Whisper model size for offline STT (default: small)",
+    )
     args = parser.parse_args()
 
     model_dir = Path(args.model_dir).resolve()
@@ -296,7 +325,7 @@ def main() -> None:
     download_phi4(model_dir, cpu_only=args.cpu_only)
 
     console.print()
-    console.rule("[bold green]All downloads complete")
+    download_whisper(model_dir, model_size=args.stt_model)
     console.print(
         "\nNext steps:\n"
         "  1. Set [bold]LOCAL_MODE_ENABLED=true[/bold] in app/backend/.env\n"

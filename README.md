@@ -254,6 +254,7 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 - Microsoft Phi-4-multimodal-instruct (5.6B params, INT4 ONNX) for speech understanding and text generation
 - ONNX Runtime GenAI for local model inference (CUDA, DirectML, or CPU)
 - Piper TTS for local text-to-speech (4 curated voices, ~60MB each)
+- Faster-Whisper (small model, 244 MB) for local customer speech transcription
 - Audio pipeline: 24kHz PCM → 16kHz downsample → Phi-4 → Piper TTS → 24kHz PCM
 
 This repository includes infrastructure as code and a `Dockerfile` to deploy the app to Azure Container Apps, but it can also be run locally as long as Azure AI Search and Azure OpenAI services are configured.
@@ -451,6 +452,7 @@ In offline mode, the application replaces the Azure OpenAI Realtime API with a l
 | Component | Cloud Mode | Offline Mode |
 |-----------|------------|--------------|
 | **Speech Understanding** | Azure OpenAI GPT-4o Realtime | Phi-4-multimodal-instruct (ONNX) |
+| **Customer Transcription** | Whisper-1 (via Azure OpenAI) | Faster-Whisper (local, small model) |
 | **Text Generation** | GPT-4o Realtime | Phi-4-multimodal-instruct (ONNX) |
 | **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, Jenny, Lessac, Kristin) |
 | **Menu Search** | Azure AI Search (semantic + vector) | Local in-memory search (keyword matching over 71 menu items) |
@@ -461,6 +463,8 @@ In offline mode, the application replaces the Azure OpenAI Realtime API with a l
 The backend uses a **ProcessorRouter** that delegates WebSocket connections to either the cloud `RTMiddleTier` or the local `LocalPhi4Processor` based on the user's toggle. Both processors implement the same WebSocket message protocol, so the frontend works identically in both modes.
 
 > **Hardware Note:** Offline mode will run on **CPU**, though a **GPU (NVIDIA CUDA or DirectML) or NPU is strongly recommended** for real-time performance. The INT4 quantized model (~5.14 GB) fits comfortably in 8GB of GPU VRAM. An NVIDIA RTX 4060 or equivalent provides a responsive drive-thru experience.
+
+> **Faster-Whisper customer transcription**: Local speech-to-text via [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) (small model, 244 MB) runs in parallel with Phi-4 inference — the Guest Conversation panel shows both AI responses and customer speech, just like cloud mode. Supports CUDA GPU acceleration; falls back to CPU.
 
 ### Setting Up Offline Mode
 
@@ -473,6 +477,7 @@ The backend uses a **ProcessorRouter** that delegates WebSocket connections to e
    This downloads:
    - Phi-4-multimodal-instruct ONNX INT4 (~5.14 GB) from [Hugging Face](https://huggingface.co/microsoft/Phi-4-multimodal-instruct-onnx)
    - 4 Piper TTS voice models (~60 MB each) from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)
+   - Faster-Whisper small model (~244 MB) for local speech transcription
 
    For CPU-only environments:
    ```bash
