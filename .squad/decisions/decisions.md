@@ -769,3 +769,33 @@ Created 221 new tests across 3 files covering the Phase 3 refactored modules (se
 
 - McFlurry items are NOT flagged OOS when ice cream machine is down — the keyword list doesn't include "mcflurry". Consider adding it in a future PR.
 - Security tests use stubs. Once Phase 4 source merges, these should be updated to import real implementations.
+
+---
+
+## Local Menu Search Replaces Azure AI Search for Offline Mode (2026-04-02)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Approved
+
+### Context
+Azure AI Search was the last cloud dependency blocking true offline mode. The local Phi-4 processor was sharing \tmt.tools\ from the cloud RTMiddleTier, meaning the \search\ tool still required Azure Search credentials and network access.
+
+### Decision
+Created \pp/backend/local_search.py\ with a fully offline in-memory keyword search engine:
+
+1. **Data source:** Loads \menuItems.json\ (71 items) at module init using the same path resolution as \	ools.py\.
+2. **Scoring:** Tiered keyword matching (exact name 100 → name-contains 80 → category 40 → description 20 → token overlap +2 each).
+3. **Format compatibility:** Output is byte-for-byte identical to Azure AI Search results — same \[{id}]: Item: ...\ template, same \\n-----\n\ separator, same OOS flags, same size formatting.
+4. **Reuse:** Imports \_expand_meal_number_query\, \_format_size_human_readable\, \MOCK_MACHINE_STATUS\, and all tool schemas/handlers directly from \	ools.py\ — no code duplication for order tools.
+5. **\ttach_local_tools()\** registers search (local) + order tools (already local) on the processor, completely decoupling local mode from Azure credentials.
+6. **app.py change:** \local_processor.tools = rtmt.tools\ → \ttach_local_tools(local_processor, prompt_loader)\.
+
+### Trade-offs
+- **No semantic/vector search:** Keyword matching is less sophisticated than Azure AI Search's hybrid semantic+vector search. Acceptable for a structured menu of ~70 items where exact/substring matching covers 99% of drive-thru queries.
+- **No index updates without restart:** Menu is loaded once at module init. Fine for a static menu; if menu changes frequently, would need a reload mechanism.
+- **Separate cache instances:** Local and cloud search each maintain their own \_SearchCache\. No shared state, which is correct since they serve different processor instances.
+
+### Impact
+- Cloud mode: zero changes (tools.py untouched)
+- Local mode: fully offline — no Azure credentials needed
+- Tests: 559 pass, 0 regressions introduced
