@@ -275,9 +275,13 @@ async def create_app() -> web.Application:
         logger.info("Local processor unavailable: %s — cloud-only mode", exc)
 
     # Check model files at startup — warn but don't block
-    model_path = Path(local_config.get("model_path", "./models/phi4-multimodal"))
+    # Resolve paths relative to repo root (2 levels up from app/backend/)
+    _repo_root = Path(__file__).resolve().parent.parent.parent
+    model_path_raw = local_config.get("model_path", "./models/phi4-multimodal")
+    tts_model_path_raw = local_config.get("tts_model_path", "./models/piper")
+    model_path = Path(model_path_raw) if Path(model_path_raw).is_absolute() else _repo_root / model_path_raw.lstrip("./")
+    tts_model_path = Path(tts_model_path_raw) if Path(tts_model_path_raw).is_absolute() else _repo_root / tts_model_path_raw.lstrip("./")
     model_exists = model_path.exists() and model_path.is_dir()
-    tts_model_path = Path(local_config.get("tts_model_path", "./models/piper"))
     tts_exists = tts_model_path.exists() and tts_model_path.is_dir()
 
     if local_mode_available:
