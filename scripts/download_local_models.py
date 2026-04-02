@@ -52,25 +52,25 @@ PIPER_BASE_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 # Map voice IDs to their download paths and sizes
 PIPER_VOICES = {
     "amy": {
-        "path": "en/en_US-amy-medium",
+        "path": "en/en_US/amy/medium",
         "filename": "en_US-amy-medium",
         "model_size_bytes": 60_000_000,
         "json_size_bytes": 500,
     },
     "jenny": {
-        "path": "en/en_GB-jenny_dioco-medium",
+        "path": "en/en_GB/jenny_dioco/medium",
         "filename": "en_GB-jenny_dioco-medium",
         "model_size_bytes": 60_000_000,
         "json_size_bytes": 500,
     },
     "lessac": {
-        "path": "en/en_US-lessac-medium",
+        "path": "en/en_US/lessac/medium",
         "filename": "en_US-lessac-medium",
         "model_size_bytes": 60_000_000,
         "json_size_bytes": 500,
     },
     "kristin": {
-        "path": "en/en_US-kristin-medium",
+        "path": "en/en_US/kristin/medium",
         "filename": "en_US-kristin-medium",
         "model_size_bytes": 60_000_000,
         "json_size_bytes": 500,
@@ -215,7 +215,7 @@ def download_phi4(model_dir: Path, cpu_only: bool) -> None:
     console.rule(f"[bold cyan]Phi-4-multimodal ONNX — {variant.upper()} variant")
 
     # Check if model already present by looking for key files
-    marker_patterns = list(phi4_dir.glob(f"{variant}/*.onnx*"))
+    marker_patterns = list(phi4_dir.glob(f"{variant}/**/*.onnx*"))
     if marker_patterns:
         console.print(
             f"  [green]✓[/green] Found {len(marker_patterns)} ONNX file(s) "
@@ -240,7 +240,7 @@ def download_phi4(model_dir: Path, cpu_only: bool) -> None:
             local_dir_use_symlinks=False,
         )
         # Verify download
-        onnx_files = list(phi4_dir.glob(f"{variant}/*.onnx*"))
+        onnx_files = list(phi4_dir.glob(f"{variant}/**/*.onnx*"))
         if onnx_files:
             console.print(
                 f"  [green]✓[/green] Phi-4 {variant.upper()} model downloaded "
