@@ -13,13 +13,14 @@ PyYAML>=6,<7
 Jinja2>=3,<4
 
 # Local AI mode (offline inference)
-onnxruntime-genai>=0.6.0
+# Install ONE of the following (GPU recommended):
+#   pip install onnxruntime-genai              (CPU only — fallback)
+#   pip install onnxruntime-genai-cuda         (NVIDIA CUDA — recommended for Linux)
+#   pip install onnxruntime-genai-directml     (Windows GPU — recommended for Windows)
+# Do NOT install both CPU and GPU variants — they conflict.
 piper-tts>=1.2.0
 soundfile>=0.12.1
 huggingface-hub>=0.20.0
-# For GPU support, install one of these separately:
-#   pip install onnxruntime-genai-cuda      (NVIDIA CUDA)
-#   pip install onnxruntime-genai-directml  (Windows DirectML)
 
 # Local STT (offline customer transcription)
 faster-whisper>=1.0.0

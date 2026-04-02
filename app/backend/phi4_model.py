@@ -26,19 +26,31 @@ _OG_PROVIDER: str = "none"
 
 
 def _load_onnxruntime_genai() -> tuple[Any, str]:
-    """Try importing onnxruntime-genai variants in GPU priority order."""
-    for pkg, provider in [
-        ("onnxruntime_genai_cuda", "cuda"),
-        ("onnxruntime_genai_directml", "directml"),
-        ("onnxruntime_genai", "cpu"),
-    ]:
-        try:
-            mod = __import__(pkg)
-            logger.info("Loaded %s — provider: %s", pkg, provider)
-            return mod, provider
-        except ImportError:
-            continue
-    return None, "none"
+    """Try importing onnxruntime-genai and detect best available provider.
+    
+    All onnxruntime-genai variants (CPU, CUDA, DirectML) install as the same
+    Python module ``onnxruntime_genai``.  We detect the actual provider by
+    checking for DirectML / CUDA support via onnxruntime's provider list.
+    """
+    try:
+        mod = __import__("onnxruntime_genai")
+    except ImportError:
+        return None, "none"
+
+    # Determine which execution provider is actually available
+    provider = "cpu"
+    try:
+        import onnxruntime as _ort
+        eps = _ort.get_available_providers()
+        if "DmlExecutionProvider" in eps:
+            provider = "directml"
+        elif "CUDAExecutionProvider" in eps:
+            provider = "cuda"
+    except Exception:
+        pass  # onnxruntime not importable or no provider info — assume CPU
+
+    logger.info("Loaded onnxruntime_genai — provider: %s", provider)
+    return mod, provider
 
 
 class Phi4ModelManager:
