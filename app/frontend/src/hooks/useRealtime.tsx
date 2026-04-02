@@ -105,8 +105,8 @@ export default function useRealTime({
 
     const buildWsEndpoint = () => {
         if (localMode) {
-            const url = `ws://${window.location.host}/realtime`;
-            console.log("[LOCAL-MODE] WebSocket endpoint:", url, "(derived from page origin)");
+            const url = `ws://${window.location.host}/realtime?mode=local`;
+            console.log("[LOCAL-MODE] WebSocket endpoint:", url, "(derived from page origin, mode=local)");
             return url;
         }
         if (useDirectAoaiApi) {
