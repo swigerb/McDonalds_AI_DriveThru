@@ -353,6 +353,39 @@
 
 #### 41. User Directives: Offline Mode & Piper Voices (Brian Swiger via Copilot, 2026-04-02)
 - **Directive 1 (2026-04-02T15:45:00Z):** 4 Piper TTS voices with dropdown in settings panel. Voice models from huggingface.co/rhasspy/piper-voices. `length_scale 0.9-0.95` for drive-thru energy.
+
+#### 42. Meal Component Breakdown Architecture (Grimace — Backend, 2026-04-02T20:22)
+- **Decision:** Meals now decompose into visible components (entree, fries, drink) tracked on each OrderItem via a new `components: list[str]` field. Drinks are absorbed into the meal at no extra charge. Fries auto-populate based on meal size. The system prompt instructs the AI to parse all meal components from a single utterance before asking follow-ups.
+- **Rationale:** Brian ordered "Big Mac Meal large with a Diet Coke" but the order panel showed only "Large Big Mac Meal $11.29" — the Diet Coke was invisible. Root cause: `order_state.py` only checked for "combo" keyword but McDonald's menu uses "Meal". Additionally, there was no mechanism to display sub-items of a meal.
+- **Impact:**
+  - **Birdie (Frontend):** The `OrderItem` JSON now includes a `components` array (e.g., `["Big Mac", "Large Fries", "Large Diet Coke"]`). The frontend should render these as sub-items under the meal header. If components is empty or missing, render as before (backward compatible).
+  - **Ronald (Architecture):** The `OrderItem` Pydantic model gained a new field with a default value — no breaking changes to serialization. The `handle_order_update()` return value now includes metadata about absorption events.
+  - **All:** System prompt now includes SAME-UTTERANCE MEAL RULE — the AI should process all items from one sentence before responding.
+- **Trade-offs:**
+  - Meal component logic uses session-level `absorbed_sides`/`absorbed_drinks` counters, which works for typical drive-thru orders but doesn't perfectly handle edge cases with multiple meals of different sizes. Acceptable for MVP.
+  - Combo conversion (standalone entree → meal) is automatic. If a customer genuinely wants both a standalone Big Mac AND a Big Mac Meal, the standalone would be removed. This matches real drive-thru behavior.
+- **Test Coverage:** 14 new tests for meal parsing, component absorption, size inference. 680 total passing tests.
+- **Commits:** `53d9779`, `98074b7`
+
+#### 43. Combo Component Display Pattern (Birdie — Frontend, 2026-04-02T20:22)
+- **Decision:** The order panel renders combo components as indented bullet sub-items below the meal header row:
+  ```
+  Large Big Mac Meal                    $11.29
+    • Big Mac
+    • Large Fries
+    • Large Diet Coke
+  ```
+- **Details:**
+  - Components use `text-xs text-gray-500` (light) / `text-white/50` (dark) — smaller and muted relative to the main item line.
+  - Components do NOT show individual prices (included in meal price).
+  - Items without `components` (or with an empty array) render identically to the previous design — fully backward compatible.
+  - The `OrderItem` TypeScript interface now has `components?: string[]` (optional).
+- **Rationale:** Customers need to see what's included in their combo at a glance. The indented bullet pattern is visually clear without cluttering the order total area. The optional field ensures zero-impact on existing a-la-carte item rendering.
+- **Impact:**
+  - **Grimace:** No action needed — backend already sends the field.
+  - **Birdie:** `order-summary.tsx` updated, 2 new tests added.
+  - **All:** Any future order item display (receipts, confirmation screens) should follow this same pattern for combo components.
+- **Commits:** `dec20b0`
 - **Directive 2 (2026-04-02T16:00:00Z):** README documentation for offline mode: ONNX Runtime + Phi-4-multimodal, Piper TTS, online/offline toggle, CPU support with GPU/NPU recommended, Azure Local compatibility.
 - **Implementation:** All directives addressed by Decisions #34–40. Piper voices deployed with configurable energy tuning; README expanded with offline mode content.
 - **Impact:** User requirements captured for offline mode delivery and documentation.
