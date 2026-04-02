@@ -112,6 +112,22 @@ function McDonaldsApp() {
         return localStorage.getItem("piperVoice") || "en_US-amy-medium";
     });
     const [connectionError, setConnectionError] = useState<string | null>(null);
+    const connectionErrorSetAtRef = useRef<number>(0);
+
+    const setConnectionErrorWithMinDisplay = (msg: string) => {
+        connectionErrorSetAtRef.current = Date.now();
+        setConnectionError(msg);
+    };
+
+    const clearConnectionError = () => {
+        const elapsed = Date.now() - connectionErrorSetAtRef.current;
+        const MIN_DISPLAY_MS = 5000;
+        if (elapsed >= MIN_DISPLAY_MS) {
+            setConnectionError(null);
+        } else {
+            setTimeout(() => setConnectionError(null), MIN_DISPLAY_MS - elapsed);
+        }
+    };
 
     useEffect(() => {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
@@ -154,7 +170,7 @@ function McDonaldsApp() {
         enableInputAudioTranscription: true,
         onWebSocketOpen: () => {
             console.log("[WS] WebSocket connection opened");
-            setConnectionError(null);
+            clearConnectionError();
         },
         onWebSocketClose: () => {
             console.log("[WS] WebSocket connection closed");
@@ -162,7 +178,7 @@ function McDonaldsApp() {
         onWebSocketError: event => {
             console.error("[WS] WebSocket error:", event);
             if (localMode) {
-                setConnectionError("Cannot connect to local server. Is the backend running on localhost:8000?");
+                setConnectionErrorWithMinDisplay("Cannot connect to local server at 127.0.0.1:8000. Is the backend running?");
             }
         },
         onReceivedError: message => console.error("error", message),
@@ -311,7 +327,7 @@ function McDonaldsApp() {
             // Check WebSocket connection before proceeding
             if (realtime.readyState !== ReadyState.OPEN) {
                 const errorMsg = localMode
-                    ? "Cannot connect to local server at localhost:8000. Is the backend running?"
+                    ? "Cannot connect to local server at 127.0.0.1:8000. Is the backend running?"
                     : "WebSocket not connected. Please check your connection and try again.";
                 console.error("[MIC] WebSocket not connected! readyState:", realtime.readyState);
                 setConnectionError(errorMsg);

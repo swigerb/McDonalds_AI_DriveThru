@@ -92,16 +92,21 @@ export default function useRealTime({
             return;
         }
         console.log("[WS] Fetching session token...");
-        fetchSessionToken().then((token) => {
-            console.log("[WS] Session token:", token ? "obtained" : "not required");
-            setSessionToken(token);
-        });
+        if (!localMode) {
+            fetchSessionToken().then((token) => {
+                console.log("[WS] Session token:", token ? "obtained" : "not required");
+                setSessionToken(token);
+            });
+        } else {
+            console.log("[LOCAL-MODE] Skipping session token fetch — not needed offline");
+            setSessionToken(null);
+        }
     }, [localMode]);
 
     const buildWsEndpoint = () => {
         if (localMode) {
-            const url = "ws://localhost:8000/realtime";
-            console.log("[LOCAL-MODE] WebSocket endpoint:", url);
+            const url = "ws://127.0.0.1:8000/realtime";
+            console.log("[LOCAL-MODE] WebSocket endpoint:", url, "(using 127.0.0.1 to avoid DNS)");
             return url;
         }
         if (useDirectAoaiApi) {
