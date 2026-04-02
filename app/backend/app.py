@@ -10,8 +10,9 @@ from azure.core.credentials import AzureKeyCredential
 from azure.identity import AzureDeveloperCliCredential, DefaultAzureCredential
 from dotenv import load_dotenv
 
-from config_loader import get_config
+from config_loader import get_config, get_local_mode_config
 from prompt_loader import PromptLoader
+from processor_router import ProcessorRouter
 from rtmt import RTMiddleTier, create_hmac_token
 from tools import attach_tools_rtmt
 
@@ -111,6 +112,10 @@ async def _index_handler(_request: web.Request) -> web.FileResponse:
     return resp
 
 
+# Startup state for local mode — populated during create_app()
+_local_mode_info: dict = {"available": False, "device": None}
+
+
 async def _health_handler(_request: web.Request) -> web.Response:
     all_ok = all(_startup_checks.values())
     return web.json_response(
@@ -118,6 +123,7 @@ async def _health_handler(_request: web.Request) -> web.Response:
             "status": "healthy" if all_ok else "unhealthy",
             "version": _APP_VERSION,
             "checks": _startup_checks,
+            "local_mode": _local_mode_info,
         },
         status=200 if all_ok else 503,
     )
@@ -250,18 +256,141 @@ async def create_app() -> web.Application:
         prompt_loader=prompt_loader,
     )
 
-    rtmt.attach_to_app(app, "/realtime")
+    # ── Processor Router (cloud ↔ local mode switching) ──
+    local_config = get_local_mode_config()
+    local_processor = None
+    local_mode_available = False
+    try:
+        from local_processor import LocalPhi4Processor, LOCAL_MODE_AVAILABLE
+        if LOCAL_MODE_AVAILABLE:
+            local_processor = LocalPhi4Processor(config=local_config)
+            local_processor.tools = rtmt.tools
+            local_processor.system_message = rtmt.system_message
+            local_mode_available = True
+            logger.info("Local Phi-4 processor created (device=%s)", local_processor.device)
+        else:
+            logger.info("Local mode: not available (onnxruntime-genai not installed)")
+    except Exception as exc:
+        logger.info("Local processor unavailable: %s — cloud-only mode", exc)
+
+    # Check model files at startup — warn but don't block
+    model_path = Path(local_config.get("model_path", "./models/phi4-multimodal"))
+    model_exists = model_path.exists() and model_path.is_dir()
+    tts_model_path = Path(local_config.get("tts_model_path", "./models/piper"))
+    tts_exists = tts_model_path.exists() and tts_model_path.is_dir()
+
+    if local_mode_available:
+        if not model_exists:
+            logger.warning(
+                "Local mode model not found at %s — Run: python scripts/download_local_models.py",
+                model_path,
+            )
+        else:
+            # Log model size if available
+            try:
+                total_bytes = sum(f.stat().st_size for f in model_path.rglob("*") if f.is_file())
+                size_gb = total_bytes / (1024 ** 3)
+                logger.info("Local mode: model at %s (%.2f GB)", model_path, size_gb)
+            except OSError:
+                logger.info("Local mode: model at %s", model_path)
+
+        if not tts_exists:
+            logger.warning(
+                "Local mode TTS model not found at %s — local TTS unavailable",
+                tts_model_path,
+            )
+        else:
+            logger.info("Local mode: TTS model %s ready", local_config.get("tts_default_voice", local_config.get("tts_model", "unknown")))
+
+        # Detect GPU
+        _detected_device = local_config.get("device", "auto")
+        if _detected_device == "auto":
+            try:
+                import onnxruntime_genai  # noqa: F811
+                _detected_device = "cuda" if hasattr(onnxruntime_genai, "CudaExecutionProvider") else "cpu"
+            except ImportError:
+                _detected_device = "cpu"
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    _detected_device = "cuda"
+            except ImportError:
+                pass
+        logger.info("Local mode: available (%s)", _detected_device.upper() if _detected_device != "cpu" else "CPU only")
+    else:
+        logger.info("Local mode: not available (dependencies not installed)")
+
+    # Populate health endpoint info
+    _local_mode_info["available"] = local_mode_available
+    _local_mode_info["device"] = local_processor.device if local_processor else None
+
+    router = ProcessorRouter(cloud_processor=rtmt, local_processor=local_processor)
+    router.attach_to_app(app, "/realtime")
 
     # ── HMAC Session Token Endpoint ──
     async def get_session_token(_request: web.Request) -> web.Response:
         token = create_hmac_token(app_secret, expiry_seconds=900)
         return web.json_response({"token": token})
 
+    # ── Local Mode Status Endpoint ──
+    async def local_mode_status(_request: web.Request) -> web.Response:
+        if local_processor is not None:
+            return web.json_response({
+                "available": local_processor.available,
+                "enabled": local_config.get("enabled", False),
+                "device": local_processor.device,
+                "model_loaded": local_processor.model_loaded,
+                "model_path": str(local_config.get("model_path", "")),
+                "model_exists": model_exists,
+                "tts_model": local_config.get("tts_default_voice", local_config.get("tts_model", "")),
+                "tts_available": tts_exists,
+            })
+        return web.json_response({
+            "available": False,
+            "enabled": False,
+            "device": None,
+            "model_loaded": False,
+            "model_path": str(local_config.get("model_path", "")),
+            "model_exists": model_exists,
+            "tts_model": local_config.get("tts_default_voice", local_config.get("tts_model", "")),
+            "tts_available": False,
+        })
+
+    # ── Local Mode Voices Endpoint ──
+    async def local_mode_voices(_request: web.Request) -> web.Response:
+        from piper_tts import PIPER_VOICES
+        available_ids = local_config.get("tts_available_voices", list(PIPER_VOICES.keys()))
+        current = local_config.get("tts_default_voice", local_config.get("tts_model", "en_US-amy-medium"))
+        ls = local_config.get("tts_length_scale", 0.9)
+
+        # If processor has a live TTS engine, use its runtime state
+        if local_processor and hasattr(local_processor, "_tts") and local_processor._tts:
+            current = local_processor._tts.current_voice
+            ls = local_processor._tts.length_scale
+
+        voices = []
+        for vid in available_ids:
+            meta = PIPER_VOICES.get(vid, {})
+            voices.append({
+                "id": vid,
+                "name": meta.get("name", vid),
+                "accent": meta.get("accent", ""),
+                "personality": meta.get("personality", ""),
+            })
+
+        return web.json_response({
+            "voices": voices,
+            "current": current,
+            "length_scale": ls,
+        })
+
     current_directory = Path(__file__).parent
     app.add_routes([
         web.get('/', _index_handler),
         web.get('/health', _health_handler),
         web.get('/api/auth/session', get_session_token),
+        web.get('/api/local-mode/status', local_mode_status),
+        web.get('/api/local-mode/voices', local_mode_voices),
     ])
     app.router.add_static(
         '/',
@@ -271,12 +400,12 @@ async def create_app() -> web.Application:
     )
 
     async def _on_startup(app: web.Application):
-        rtmt.start_background_tasks()
+        router.start_background_tasks()
         logger.info("Background tasks started (token refresh, idle checker)")
 
     async def _on_shutdown(app: web.Application):
         logger.info("Graceful shutdown initiated — cleaning up active sessions")
-        rtmt.stop_background_tasks()
+        router.stop_background_tasks()
 
     app.on_startup.append(_on_startup)
     app.on_shutdown.append(_on_shutdown)

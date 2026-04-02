@@ -8,7 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useDummyDataContext } from "@/context/dummy-data-context";
 import { useAzureSpeechOnContext } from "@/context/azure-speech-context";
 import { useMenuModeContext } from "@/context/menu-mode-context";
+import { useLocalMode } from "@/context/local-mode-context";
 import { Tooltip } from "@/components/ui/tooltip";
+
+type LocalModeStatus = "off" | "loading" | "ready" | "unavailable";
 
 interface SettingsProps {
     isMobile: boolean;
@@ -20,15 +23,51 @@ interface SettingsProps {
     onLogToFileChange: (checked: boolean) => void;
     voiceChoice: string;
     onVoiceChoiceChange: (voice: string) => void;
+    piperVoice: string;
+    onPiperVoiceChange: (voice: string) => void;
+    onLocalModeChange: (enabled: boolean) => void;
 }
 
-export default function Settings({ isMobile, showSessionTokens, onShowSessionTokensChange, verboseLogging, onVerboseLoggingChange, logToFile, onLogToFileChange, voiceChoice, onVoiceChoiceChange }: SettingsProps) {
+export default function Settings({ isMobile, showSessionTokens, onShowSessionTokensChange, verboseLogging, onVerboseLoggingChange, logToFile, onLogToFileChange, voiceChoice, onVoiceChoiceChange, piperVoice, onPiperVoiceChange, onLocalModeChange }: SettingsProps) {
     const [isDarkMode, setIsDarkMode] = useState(() => {
         return localStorage.getItem("isDarkMode") === "true";
     });
     const { useAzureSpeechOn, setUseAzureSpeechOn } = useAzureSpeechOnContext();
     const { useDummyData, setUseDummyData } = useDummyDataContext();
     const { menuMode, setMenuMode } = useMenuModeContext();
+    const { localMode, setLocalMode } = useLocalMode();
+    const [localModeStatus, setLocalModeStatus] = useState<LocalModeStatus>(localMode ? "loading" : "off");
+
+    useEffect(() => {
+        if (localMode) {
+            checkLocalModeAvailability();
+        } else {
+            setLocalModeStatus("off");
+        }
+    }, [localMode]);
+
+    const checkLocalModeAvailability = async () => {
+        setLocalModeStatus("loading");
+        try {
+            const resp = await fetch("/api/local-mode/status");
+            if (resp.ok) {
+                const data = await resp.json();
+                setLocalModeStatus(data.available ? "ready" : "unavailable");
+            } else {
+                setLocalModeStatus("unavailable");
+            }
+        } catch {
+            setLocalModeStatus("unavailable");
+        }
+    };
+
+    const handleLocalModeChange = (checked: boolean) => {
+        setLocalMode(checked);
+        onLocalModeChange(checked);
+        if (checked) {
+            checkLocalModeAvailability();
+        }
+    };
 
     useEffect(() => {
         localStorage.setItem("isDarkMode", isDarkMode.toString());
@@ -118,28 +157,77 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
             </div>
             <div className="flex items-start justify-between">
                 <div className="flex-1 space-y-0.5">
-                    <Label htmlFor="voice-choice" className="text-gray-900 dark:text-gray-100">
-                        AI Voice
+                    <Label htmlFor="local-mode" className="text-gray-900 dark:text-gray-100">
+                        🔌 Local Mode
                     </Label>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Choose your drive-thru assistant's voice</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Run AI locally — no internet needed</p>
                 </div>
                 <div className="ml-4 flex flex-col items-end">
-                    <select
-                        id="voice-choice"
-                        value={voiceChoice}
-                        onChange={(e) => onVoiceChoiceChange(e.target.value)}
-                        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                    >
-                        <option value="shimmer">Shimmer — Cheerful &amp; Bright</option>
-                        <option value="ash">Ash — Warm &amp; Friendly</option>
-                        <option value="ballad">Ballad — Caring &amp; Soft</option>
-                        <option value="coral">Coral — Confident &amp; Clear</option>
-                        <option value="sage">Sage — Calm &amp; Thoughtful</option>
-                        <option value="verse">Verse — Natural &amp; Adaptable</option>
-                    </select>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">Default: Shimmer</span>
+                    <Switch id="local-mode" checked={localMode} onCheckedChange={handleLocalModeChange} aria-label="Toggle local mode" />
+                    {localModeStatus === "loading" && (
+                        <span className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                            Loading model…
+                        </span>
+                    )}
+                    {localModeStatus === "ready" && (
+                        <span className="mt-1 text-xs text-green-600 dark:text-green-400">● Ready</span>
+                    )}
+                    {localModeStatus === "unavailable" && (
+                        <span className="mt-1 text-xs text-amber-600 dark:text-amber-400">⚠ Model not available</span>
+                    )}
                 </div>
             </div>
+            {!localMode && (
+                <div className="flex items-start justify-between transition-all duration-300 ease-in-out">
+                    <div className="flex-1 space-y-0.5">
+                        <Label htmlFor="voice-choice" className="text-gray-900 dark:text-gray-100">
+                            AI Voice
+                        </Label>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Choose your drive-thru assistant's voice</p>
+                    </div>
+                    <div className="ml-4 flex flex-col items-end">
+                        <select
+                            id="voice-choice"
+                            value={voiceChoice}
+                            onChange={(e) => onVoiceChoiceChange(e.target.value)}
+                            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                            <option value="shimmer">Shimmer — Cheerful &amp; Bright</option>
+                            <option value="ash">Ash — Warm &amp; Friendly</option>
+                            <option value="ballad">Ballad — Caring &amp; Soft</option>
+                            <option value="coral">Coral — Confident &amp; Clear</option>
+                            <option value="sage">Sage — Calm &amp; Thoughtful</option>
+                            <option value="verse">Verse — Natural &amp; Adaptable</option>
+                        </select>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">Default: Shimmer</span>
+                    </div>
+                </div>
+            )}
+            {localMode && (
+                <div className="flex items-start justify-between transition-all duration-300 ease-in-out animate-in fade-in slide-in-from-top-2">
+                    <div className="flex-1 space-y-0.5">
+                        <Label htmlFor="piper-voice" className="text-gray-900 dark:text-gray-100">
+                            🎙️ Local Voice
+                        </Label>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Upbeat drive-thru voices — runs locally</p>
+                    </div>
+                    <div className="ml-4 flex flex-col items-end">
+                        <select
+                            id="piper-voice"
+                            value={piperVoice}
+                            onChange={(e) => onPiperVoiceChange(e.target.value)}
+                            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                            <option value="en_US-amy-medium">Amy (US) — Friendly &amp; Conversational</option>
+                            <option value="en_GB-jenny_dioco-medium">Jenny (UK) — Expressive &amp; Upbeat</option>
+                            <option value="en_US-lessac-medium">Lessac (US) — Warm &amp; Professional</option>
+                            <option value="en_US-kristin-medium">Kristin (US) — Neutral &amp; Clear</option>
+                        </select>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">Default: Amy (US)</span>
+                    </div>
+                </div>
+            )}
             <div className="flex items-start justify-between">
                 <div className="flex-1 space-y-0.5">
                     <Label htmlFor="azure-backend" className="text-gray-900 dark:text-gray-100">

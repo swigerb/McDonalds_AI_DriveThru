@@ -11,3 +11,12 @@ python-dotenv==1.0.1
 rich==13.9.4
 PyYAML>=6,<7
 Jinja2>=3,<4
+
+# Local AI mode (offline inference)
+onnxruntime-genai>=0.6.0
+piper-tts>=2023.11.14
+soundfile>=0.12.1
+huggingface-hub>=0.20.0
+# For GPU support, install one of these separately:
+#   pip install onnxruntime-genai-cuda      (NVIDIA CUDA)
+#   pip install onnxruntime-genai-directml  (Windows DirectML)

@@ -2,7 +2,7 @@
 
 # McDonald's AI Drive-Thru
 
-McDonald's AI Drive-Thru is a McDonald's–themed, voice-driven ordering experience that showcases Microsoft best practices for Azure OpenAI GPT-4o Realtime, Azure AI Search, and Azure Container Apps. The experience emulates a McDonald's crew member who can search the official menu, hold multilingual conversations, and keep orders in sync across devices.
+McDonald's AI Drive-Thru is a McDonald's–themed, voice-driven ordering experience that showcases Microsoft best practices for Azure OpenAI GPT-4o Realtime, Azure AI Search, and Azure Container Apps. The experience emulates a McDonald's crew member who can search the official menu, hold multilingual conversations, and keep orders in sync across devices. The app also supports an **offline mode** powered by Microsoft's Phi-4-multimodal-instruct model via ONNX Runtime for uninterrupted AI drive-thru experiences without cloud connectivity.
 
 As guests speak, real-time transcription, translation, and order management provide a transparent view of every choice...from shakes and fries to burgers and McNuggets. The UI applies McDonald's vibrant design language so stakeholders can picture how voice AI augments drive-thru, crew member, and kiosk flows.
 
@@ -45,6 +45,11 @@ Beyond the drive-thru experience, this sample demonstrates how Microsoft’s Res
     - [Option 1: Direct Local Execution (Recommended for Development)](#option-1-direct-local-execution-recommended-for-development)
     - [Option 2: Docker-based Local Execution](#option-2-docker-based-local-execution)
   - [Deploying to Azure](#deploying-to-azure)
+  - [Offline Mode (Local AI)](#offline-mode-local-ai)
+    - [How Offline Mode Works](#how-offline-mode-works)
+    - [Setting Up Offline Mode](#setting-up-offline-mode)
+    - [Piper TTS Voice Selection](#piper-tts-voice-selection)
+    - [Azure Local Compatibility](#azure-local-compatibility)
   - [🍔 Built with Squad](#-built-with-squad)
   - [Contributing](#contributing)
   - [Resources](#resources)
@@ -125,6 +130,14 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 
 ### Audio Output + Accessibility
 - **Browser audio playback**: Mirrors what a guest would hear at a McDonald's drive-thru, supporting screenless or low-vision ordering.
+
+### Offline Mode (Local AI)
+- **Phi-4-multimodal-instruct via ONNX Runtime**: Run the complete AI drive-thru experience without internet connectivity using Microsoft's Phi-4-multimodal-instruct model (5.6B parameters, INT4 quantized) through ONNX Runtime GenAI — the same model understanding, powered locally.
+- **Piper TTS voices**: Four curated drive-thru voices — Amy (US, friendly), Jenny (UK, upbeat), Lessac (US, warm), Kristin (US, clear) — with `length_scale=0.9` for energetic delivery. Switch voices from the settings panel.
+- **One-toggle switch**: The settings panel provides a single "Local Mode" toggle. When enabled, the UI swaps to a local voice selector, shows an offline indicator on the mic button, and routes all AI processing through the local ONNX pipeline.
+- **CPU, GPU, and NPU support**: Offline mode runs on CPU out of the box, though a **GPU (CUDA/DirectML) or NPU is strongly recommended** for real-time inference performance. Auto-detects available hardware at startup.
+- **Azure Local compatible**: Pairs seamlessly with [Azure Local](https://learn.microsoft.com/azure/azure-local/) (formerly Azure Stack HCI) for edge deployments — enabling uninterrupted AI drive-thru experiences in environments with limited, intermittent, or no cloud connectivity.
+- **Graceful degradation**: If local model files aren't downloaded, the toggle is automatically disabled. Cloud mode remains fully functional — offline mode is purely additive.
 
 ## Agentic Architecture Flow
 
@@ -210,6 +223,8 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 - **[SYSTEM HINT] injection**: Deterministic Python logic guides conversation without relying on LLM memory
 - **TO_BOTH payloads**: Split responses between voice-friendly text for the AI and JSON metadata for the frontend
 
+> **Offline Mode Architecture:** When local mode is enabled, the `ProcessorRouter` redirects the WebSocket connection from `RTMiddleTier` (Azure OpenAI) to `LocalPhi4Processor` (Phi-4 ONNX + Piper TTS). The frontend, tools, and order state remain identical — only the AI inference layer swaps.
+
 ### Technical Stack
 
 **Frontend:**
@@ -234,6 +249,12 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 - Docker with layer caching for fast rebuilds
 - Health probes: startup (50s), liveness (30s), readiness (10s)
 - Azure Developer CLI (`azd`) for one-command provisioning
+
+**Offline AI (Local Mode):**
+- Microsoft Phi-4-multimodal-instruct (5.6B params, INT4 ONNX) for speech understanding and text generation
+- ONNX Runtime GenAI for local model inference (CUDA, DirectML, or CPU)
+- Piper TTS for local text-to-speech (4 curated voices, ~60MB each)
+- Audio pipeline: 24kHz PCM → 16kHz downsample → Phi-4 → Piper TTS → 24kHz PCM
 
 This repository includes infrastructure as code and a `Dockerfile` to deploy the app to Azure Container Apps, but it can also be run locally as long as Azure AI Search and Azure OpenAI services are configured.
 
@@ -418,6 +439,97 @@ To deploy the demo app to Azure:
    ```
 
 4. After deployment completes, your app will be available at the URL displayed in the console.
+
+## Offline Mode (Local AI)
+
+The McDonald's AI Drive-Thru supports a fully offline mode powered by Microsoft's **Phi-4-multimodal-instruct** model running locally via **ONNX Runtime GenAI**. This enables uninterrupted AI drive-thru experiences without cloud connectivity — ideal for edge deployments, demo environments, and locations with limited internet access.
+
+### How Offline Mode Works
+
+In offline mode, the application replaces the Azure OpenAI Realtime API with a local AI pipeline:
+
+| Component | Cloud Mode | Offline Mode |
+|-----------|------------|--------------|
+| **Speech Understanding** | Azure OpenAI GPT-4o Realtime | Phi-4-multimodal-instruct (ONNX) |
+| **Text Generation** | GPT-4o Realtime | Phi-4-multimodal-instruct (ONNX) |
+| **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, Jenny, Lessac, Kristin) |
+| **Menu Search** | Azure AI Search (semantic + vector) | Local tool calling via structured prompts |
+| **Order Management** | Same | Same (runs locally in both modes) |
+
+The backend uses a **ProcessorRouter** that delegates WebSocket connections to either the cloud `RTMiddleTier` or the local `LocalPhi4Processor` based on the user's toggle. Both processors implement the same WebSocket message protocol, so the frontend works identically in both modes.
+
+> **Hardware Note:** Offline mode will run on **CPU**, though a **GPU (NVIDIA CUDA or DirectML) or NPU is strongly recommended** for real-time performance. The INT4 quantized model (~5.14 GB) fits comfortably in 8GB of GPU VRAM. An NVIDIA RTX 4060 or equivalent provides a responsive drive-thru experience.
+
+### Setting Up Offline Mode
+
+1. **Download the models** (~5.4 GB total):
+
+   ```bash
+   python scripts/download_local_models.py
+   ```
+
+   This downloads:
+   - Phi-4-multimodal-instruct ONNX INT4 (~5.14 GB) from [Hugging Face](https://huggingface.co/microsoft/Phi-4-multimodal-instruct-onnx)
+   - 4 Piper TTS voice models (~60 MB each) from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)
+
+   For CPU-only environments:
+   ```bash
+   python scripts/download_local_models.py --cpu-only
+   ```
+
+   To download specific voices only:
+   ```bash
+   python scripts/download_local_models.py --voices amy,jenny
+   ```
+
+2. **Install GPU dependencies** (recommended):
+
+   ```bash
+   # For NVIDIA GPUs (CUDA):
+   pip install onnxruntime-genai-cuda
+
+   # For Windows GPUs (DirectML):
+   pip install onnxruntime-genai-directml
+   ```
+
+   CPU inference works out of the box with the base `onnxruntime-genai` package.
+
+3. **Start the app normally** — offline mode is automatically available if models are present:
+
+   ```bash
+   pwsh .\scripts\start.ps1   # Windows
+   ./scripts/start.sh          # Linux/Mac
+   ```
+
+4. **Toggle Local Mode** in the settings panel (⚙️) to switch between cloud and offline AI.
+
+### Piper TTS Voice Selection
+
+When offline mode is active, the settings panel displays a **Local Voice** dropdown with four curated drive-thru voices:
+
+| Voice | Accent | Personality | Best For |
+|-------|--------|-------------|----------|
+| **Amy** | US | Friendly & Conversational | General drive-thru (default) |
+| **Jenny** | UK | Expressive & Upbeat | Energetic interactions |
+| **Lessac** | US | Warm & Professional | Manager-on-duty vibe |
+| **Kristin** | US | Neutral & Clear | Noisy environments |
+
+All voices run with `length_scale=0.9` (slightly faster speech) for upbeat, drive-thru-friendly energy.
+
+### Azure Local Compatibility
+
+Offline mode pairs seamlessly with **[Azure Local](https://learn.microsoft.com/azure/azure-local/)** (formerly Azure Stack HCI) for enterprise edge deployments. This combination enables:
+
+- **Uninterrupted AI drive-thru experiences** during internet outages or in locations with limited connectivity
+- **Data sovereignty** — all voice and order data stays on-premises
+- **Low-latency inference** — no round-trip to the cloud for AI processing
+- **Hybrid flexibility** — toggle between cloud mode (full Azure AI) and local mode (Phi-4 + Piper) per location or per shift
+
+For Docker-based local deployments with GPU passthrough:
+
+```bash
+docker compose -f docker-compose.local.yml up
+```
 
 ## 🍔 Built with Squad
 

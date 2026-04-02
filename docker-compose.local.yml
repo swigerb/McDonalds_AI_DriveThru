@@ -1,0 +1,27 @@
+# Local development compose — GPU-accelerated offline inference
+# Usage:  docker compose -f docker-compose.local.yml up --build
+#
+# Requires: NVIDIA Container Toolkit for GPU pass-through.
+# Models must be downloaded first:  python scripts/download_local_models.py
+
+version: "3.8"
+services:
+  backend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./app/backend/.env
+    volumes:
+      - ./models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - LOCAL_MODE_ENABLED=true

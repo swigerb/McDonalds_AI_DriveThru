@@ -24,6 +24,7 @@ import { DummyDataProvider, useDummyDataContext } from "@/context/dummy-data-con
 import { AzureSpeechProvider, useAzureSpeechOnContext } from "@/context/azure-speech-context";
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { MenuModeProvider } from "@/context/menu-mode-context";
+import { LocalModeProvider, useLocalMode } from "@/context/local-mode-context";
 
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
@@ -68,6 +69,7 @@ function McDonaldsApp() {
     const { useDummyData } = useDummyDataContext();
     const { theme } = useTheme();
     const { logout, authEnabled } = useAuth();
+    const { localMode } = useLocalMode();
 
     const [transcripts, setTranscripts] = useState<Array<{ text: string; isUser: boolean; timestamp: Date }>>([]);
     const dummyTranscripts = useMemo<Array<{ text: string; isUser: boolean; timestamp: Date }>>(
@@ -105,6 +107,9 @@ function McDonaldsApp() {
     const [voiceChoice, setVoiceChoice] = useState<string>(() => {
         return localStorage.getItem("voiceChoice") || "shimmer";
     });
+    const [piperVoice, setPiperVoice] = useState<string>(() => {
+        return localStorage.getItem("piperVoice") || "en_US-amy-medium";
+    });
 
     useEffect(() => {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
@@ -121,6 +126,10 @@ function McDonaldsApp() {
     useEffect(() => {
         localStorage.setItem("voiceChoice", voiceChoice);
     }, [voiceChoice]);
+
+    useEffect(() => {
+        localStorage.setItem("piperVoice", piperVoice);
+    }, [piperVoice]);
 
     const handleSessionIdentifiers = useCallback((message: ExtensionSessionMetadata | ExtensionRoundTripToken) => {
         const snapshot: SessionIdentifiersState = {
@@ -385,6 +394,14 @@ function McDonaldsApp() {
                                     setVoiceChoice(voice);
                                     realtime.sendVoiceChoice(voice);
                                 }}
+                                piperVoice={piperVoice}
+                                onPiperVoiceChange={(voice: string) => {
+                                    setPiperVoice(voice);
+                                    realtime.sendPiperVoiceChoice(voice);
+                                }}
+                                onLocalModeChange={(enabled: boolean) => {
+                                    realtime.sendLocalModeToggle(enabled);
+                                }}
                             />
                         </Suspense>
                         {authEnabled && (
@@ -433,11 +450,14 @@ function McDonaldsApp() {
                             <div className="mb-4 flex flex-col items-center justify-center">
                                 <Button
                                     onClick={onToggleListening}
-                                    className={`h-12 w-60 border-none font-semibold shadow-lg transition-colors ${
+                                    className={`relative h-12 w-60 border-none font-semibold shadow-lg transition-colors ${
                                         isRecording ? "bg-[#27251F] text-white hover:bg-[#3d3a32]" : "bg-[#DB0007] text-white hover:bg-[#a50005]"
                                     }`}
                                     aria-label={isRecording ? t("app.stopRecording") : t("app.startRecording")}
                                 >
+                                    {localMode && (
+                                        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-yellow-400 border-2 border-yellow-600" title="Local Mode (Offline)" />
+                                    )}
                                     {isRecording ? (
                                         <>
                                             <MicOff className="mr-2 h-4 w-4" />
@@ -705,7 +725,9 @@ export default function RootApp() {
                 <DummyDataProvider>
                     <AzureSpeechProvider>
                         <MenuModeProvider>
-                            <App />
+                            <LocalModeProvider>
+                                <App />
+                            </LocalModeProvider>
                         </MenuModeProvider>
                     </AzureSpeechProvider>
                 </DummyDataProvider>

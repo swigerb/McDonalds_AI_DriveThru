@@ -1,6 +1,7 @@
 import "./status-message.css";
 import { useTranslation } from "react-i18next";
 import { memo } from "react";
+import { useLocalMode } from "@/context/local-mode-context";
 
 type Properties = {
     isRecording: boolean;
@@ -8,11 +9,26 @@ type Properties = {
 
 export default memo(function StatusMessage({ isRecording }: Properties) {
     const { t } = useTranslation();
+    const { localMode } = useLocalMode();
+
+    const modeIndicator = (
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+            localMode
+                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+        }`}>
+            {localMode ? "🔌 Local" : "☁️ Cloud"}
+        </span>
+    );
+
     if (!isRecording) {
         return (
-            <p className="text mb-4 mt-6 text-sm text-muted-foreground" aria-live="polite">
-                {t("status.notRecordingMessage")}
-            </p>
+            <div className="mb-4 mt-6 flex items-center gap-2">
+                <p className="text-sm text-muted-foreground" aria-live="polite">
+                    {t("status.notRecordingMessage")}
+                </p>
+                {modeIndicator}
+            </div>
         );
     }
 
@@ -26,6 +42,7 @@ export default memo(function StatusMessage({ isRecording }: Properties) {
             <p className="mb-4 ml-2 mt-6 font-semibold text-primary">
                 {t("status.conversationInProgress")}
             </p>
+            <span className="mb-4 ml-2 mt-6">{modeIndicator}</span>
         </div>
     );
 });

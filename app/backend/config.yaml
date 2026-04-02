@@ -60,3 +60,20 @@ security:
   idle_timeout_seconds: 300
   allowed_origins: []
   require_session_token: false
+
+local_mode:
+  enabled: false                          # Default: cloud mode
+  model_path: "./models/phi4-multimodal"  # Phi-4 ONNX model directory
+  tts_default_voice: "en_US-amy-medium"   # Default Piper voice model
+  tts_length_scale: 0.9                   # Speech tempo (< 1.0 = faster / more upbeat)
+  tts_available_voices:                   # Voices from huggingface.co/rhasspy/piper-voices
+    - en_US-amy-medium
+    - en_GB-jenny_dioco-medium
+    - en_US-lessac-medium
+    - en_US-kristin-medium
+  tts_model_path: "./models/piper"        # Piper model directory
+  device: "auto"                          # auto | cuda | cpu | directml
+  max_length: 256                         # Max generation tokens
+  temperature: 0.6                        # Generation temperature
+  tts_sample_rate: 24000                  # Output sample rate (match frontend)
+  lazy_load: true                         # Only load model on first use

@@ -151,6 +151,9 @@ static/
 # TypeScript
 *.tsbuildinfo
 
+# Local AI models (large binary files — download via scripts/download_local_models.py)
+models/
+
 data/**/*.md5
 
 .DS_Store

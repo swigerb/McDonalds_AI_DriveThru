@@ -1,0 +1,46 @@
+✓ MISSION ACCOMPLISHED, Chief!
+
+UPDATED FILE: scripts/download_local_models.py
+
+KEY CHANGES:
+============
+
+1. PIPER_VOICES Configuration
+   - Added all 4 voice models (amy, jenny, lessac, kristin)
+   - Each voice has full metadata (path, filename, sizes)
+   - Changed source from GitHub releases to Hugging Face (rhasspy/piper-voices)
+   - Total download: ~240 MB (4 voices × ~60MB .onnx + config)
+
+2. download_piper() Function
+   - Now accepts optional voice_ids parameter (default: all 4 voices)
+   - Downloads .onnx + .onnx.json pair for each voice
+   - Shows total size estimate before downloading
+   - Validates voice IDs and provides helpful error messages
+   - Skips already-downloaded files by checking file size
+
+3. _download_file() Helper
+   - Extracted download logic for reusability
+   - Handles progress bars with rich library
+   - Verifies file integrity after download
+   - Cleans up partial/corrupted files
+
+4. Command-line Interface
+   - Added --voices flag: download specific voices
+     Example: --voices amy,jenny,kristin
+   - Updated docstring with usage examples
+   - Maintains backward compatibility with --cpu-only and --model-dir
+
+USAGE EXAMPLES:
+===============
+  python scripts/download_local_models.py              # All 4 voices + GPU model
+  python scripts/download_local_models.py --voices amy,jenny  # 2 voices
+  python scripts/download_local_models.py --cpu-only    # CPU variant + all 4 voices
+
+COMPATIBILITY:
+===============
+  ✓ Existing Phi-4 model logic unchanged
+  ✓ Works with --cpu-only flag
+  ✓ Works with --model-dir custom paths
+  ✓ Uses urllib.request (no external download tools needed)
+  ✓ Progress bars via existing rich dependency
+  ✓ Syntax validated

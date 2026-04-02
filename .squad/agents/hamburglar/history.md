@@ -25,6 +25,17 @@ Created 221 new tests across 3 files covering Phase 3/4 modules:
 
 All 423 total tests pass (221 new + 202 existing).
 
+### 2026-03-22 — Phase 6: Offline Mode Component Tests
+
+Created 137 new tests across 4 files covering the offline/local mode architecture:
+
+- **test_processor_router.py** (23 tests): Router creation cloud-only (2), both processors (2), default mode logic (2), mode resolution via query params (5), WebSocket routing delegation (4), attach_to_app (1), background task lifecycle (4), property accessors (3).
+- **test_phi4_model.py** (31 tests): Init/defaults (4), auto-device detection CUDA→DirectML→CPU→none (4), model loading/unloading (7), inference async generator (3), PCM conversion (2), prompt building (4), tool call parsing (7).
+- **test_piper_tts.py** (42 tests): Init/defaults (6), voice metadata dict (5), length_scale clamping (4), voice switching valid/invalid/lazy (5), loading/unloading (5), synthesis streaming/complete (7), sentence chunking (5), PCM resampling (5).
+- **test_local_processor.py** (41 tests): Init/config (6), LOCAL_MODE_AVAILABLE flag (4), status properties (5), WebSocket protocol messages (10), model loading errors (1), background tasks (4), tool schemas (3), _compute_energy (4), _downsample_24k_to_16k (5).
+
+All 560 total tests pass (137 new + 423 existing), zero regressions.
+
 ## Learnings
 
 - PromptLoader API follows manifest-driven YAML loading: manifest.yaml → references to system_prompt.yaml, greeting.yaml, tool_schemas.yaml, error_messages.yaml, hints.yaml
@@ -38,3 +49,8 @@ All 423 total tests pass (221 new + 202 existing).
 - `_ICE_CREAM_MACHINE_KEYWORDS` only covers ("shake", "blast", "sundae", "ice cream") — "mcflurry" is NOT in this list, so McFlurry items aren't flagged OOS when ice cream machine is down
 - Security test stubs (_StubSessionLimiter, _validate_origin, _generate_hmac_token) allow tests to pass before Phase 4 source modules land; swap for real imports once available
 - EchoSuppressor cooldown boundary: `loop_time < cooldown_end` means at exactly the boundary, suppression is OFF
+- For `async for msg in ws` WebSocket iteration in tests, use a custom `_AsyncIter` adapter wrapping a list — `MagicMock(return_value=iter(...))` on `__aiter__` does NOT work with `async for`
+- ProcessorRouter imports `asyncio` inside method bodies (lazy import) — patch `asyncio.ensure_future` directly, not `processor_router.asyncio.ensure_future`
+- PiperTTSEngine.set_voice() calls unload→load internally — must patch both `Path.exists` and `_PIPER_AVAILABLE` + `_PiperVoice.load` for the full chain to succeed in tests
+- Phi4ModelManager._load_onnxruntime_genai() tries CUDA→DirectML→CPU import priority — mock with `builtins.__import__` side_effect that selectively raises ImportError
+- LocalPhi4Processor uses module-level `LOCAL_MODE_AVAILABLE` flag set at import time — patch `local_processor.LOCAL_MODE_AVAILABLE` at test time, not the import chain

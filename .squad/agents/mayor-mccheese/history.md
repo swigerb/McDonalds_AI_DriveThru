@@ -33,3 +33,11 @@
 - **Skill migration:** v0.9.x automatically migrates project skills from `.squad/skills/` to `.copilot/skills/` as part of Copilot standardization
 - **Version tracking:** Version stored in HTML comment at top of `.github/agents/squad.agent.md` (e.g., `<!-- version: 0.9.1 -->`)
 - **Git lock handling:** On Windows, if commit fails with "index.lock exists", remove the lock file with `Remove-Item -Path ".git\index.lock" -Force` and retry
+
+### Phase 4: Local Model Asset Management (2025-07)
+- **Model download script:** `scripts/download_local_models.py` — uses `huggingface_hub.snapshot_download()` for Phi-4 ONNX, `urllib` for Piper TTS. Includes `--cpu-only` and `--model-dir` flags. PowerShell wrapper at `scripts/download_local_models.ps1`.
+- **Config approach:** `local_mode` section added to `app/backend/config.yaml` with `enabled: false` default — cloud mode unchanged, no existing behavior disrupted.
+- **Dependency isolation:** Local AI deps (`onnxruntime-genai`, `piper-tts`, `soundfile`, `huggingface-hub`) added to `requirements.txt`. GPU variants (`onnxruntime-genai-cuda`, `onnxruntime-genai-directml`) are opt-in via comment instructions.
+- **Docker strategy:** `docker-compose.local.yml` is dev-only with NVIDIA GPU pass-through. Production Dockerfile untouched — no local mode deps in production image.
+- **Key paths:** `models/phi4-multimodal/` (Phi-4 ONNX), `models/piper/` (Piper TTS). Both gitignored.
+- **Constraint:** azure.yaml, infra/main.bicep, and app/Dockerfile were NOT modified — cloud deployment is unchanged.

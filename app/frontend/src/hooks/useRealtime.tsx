@@ -242,5 +242,13 @@ export default function useRealTime({
         sendJsonMessage({ type: "extension.set_voice", voice });
     };
 
-    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice };
+    const sendLocalModeToggle = (enabled: boolean) => {
+        sendJsonMessage({ type: "extension.set_local_mode", enabled });
+    };
+
+    const sendPiperVoiceChoice = (voice: string) => {
+        sendJsonMessage({ type: "extension.set_piper_voice", voice });
+    };
+
+    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice, sendLocalModeToggle, sendPiperVoiceChoice };
 }
