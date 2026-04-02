@@ -1,6 +1,7 @@
 # Production mode: pass -Production flag to skip frontend rebuild and use gunicorn
 param(
-    [switch]$Production
+    [switch]$Production,
+    [switch]$GPU
 )
 
 Set-StrictMode -Version Latest
@@ -12,6 +13,18 @@ $repoRoot = Resolve-Path (Join-Path $scriptRoot "..")
 Push-Location $repoRoot
 try {
     & "$repoRoot/scripts/load_python_env.ps1"
+
+    # Fix onnxruntime for GPU (DirectML) — faster-whisper pulls in CPU variant which conflicts
+    if ($GPU) {
+        Write-Host ""
+        Write-Host "GPU mode: swapping onnxruntime CPU → DirectML..."
+        $pipPath = Join-Path $repoRoot ".venv/scripts/pip.exe"
+        if ($IsLinux -or $IsMacOS) { $pipPath = Join-Path $repoRoot ".venv/bin/pip" }
+        & $pipPath uninstall onnxruntime -y 2>$null
+        & $pipPath install --force-reinstall --no-deps onnxruntime-directml==1.24.4 --quiet
+        Write-Host "GPU mode: onnxruntime-directml ready"
+        Write-Host ""
+    }
 
     if (-not $Production) {
         Write-Host ""
