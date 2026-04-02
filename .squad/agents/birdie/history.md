@@ -54,3 +54,19 @@ _No sessions yet._
 - **Decisions Merged:** #36–#37 captured (local mode UI, piper voice UI)
 - **Tests:** TypeScript clean, no build errors
 - **Next:** Frontend integrated with backend voice endpoints, ready for user testing
+
+### 2025-07-23: Offline Mic Silence Fix & Diagnostic Logging
+- **What:** Fixed silent failure when clicking mic in local mode while offline. Added comprehensive diagnostic logging and user-visible error feedback.
+- **Root cause:** Three issues combined to produce total silence:
+  1. **WebSocket URL was relative (`/realtime`)** — resolved to the page's host (Azure), not localhost. Going offline killed the remote WS connection.
+  2. **`sendJsonMessage` silently drops messages** when WS is not OPEN — no error, no feedback, just silence.
+  3. **Local mode state not synced at session start** — if `localMode=true` was persisted in localStorage, the backend never received the toggle message on page reload.
+- **Fixes applied:**
+  - `useRealtime.tsx`: When `localMode=true`, WebSocket connects directly to `ws://localhost:8000/realtime` (bypasses relative URL). Skips Azure session token fetch. Returns `readyState` for connection checking.
+  - `App.tsx`: Checks `readyState === OPEN` before starting session — shows error if disconnected. Sends `sendLocalModeToggle(true)` before `startSession()` to sync backend. Clears error on successful WS open.
+  - Added `connectionError` state with red `⚠️` alert below mic button for user-visible feedback.
+  - `[WS]`, `[MIC]`, `[LOCAL-MODE]` prefixed `console.log` at every critical point for browser console filtering.
+- **Files modified:** `useRealtime.tsx`, `App.tsx`, `status-message.test.tsx` (wrapped in `LocalModeProvider`)
+- **Pattern:** ReadyState guard pattern — always check WS readyState before sending critical messages. Re-exported `ReadyState` from `useRealtime.tsx` for consumer convenience.
+- ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
+- ✅ All 13 tests pass (`vitest run`)

@@ -1,14 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import StatusMessage from "../status-message";
+import { LocalModeProvider } from "@/context/local-mode-context";
+
+const renderWithProvider = (ui: React.ReactElement) =>
+    render(<LocalModeProvider>{ui}</LocalModeProvider>);
 
 describe("StatusMessage", () => {
     it("renders the idle helper when recording is disabled", () => {
-        render(<StatusMessage isRecording={false} />);
+        renderWithProvider(<StatusMessage isRecording={false} />);
         expect(screen.getByText("status.notRecordingMessage")).toBeInTheDocument();
     });
 
     it("renders the live equalizer label while recording", () => {
-        const { container } = render(<StatusMessage isRecording />);
+        const { container } = renderWithProvider(<StatusMessage isRecording />);
         expect(screen.getByText("status.conversationInProgress")).toBeInTheDocument();
         expect(container.querySelector(".listening-equalizer")).not.toBeNull();
     });

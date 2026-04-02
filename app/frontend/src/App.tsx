@@ -13,6 +13,7 @@ import OrderSummary, { calculateOrderSummary, OrderSummaryProps } from "@/compon
 import TranscriptPanel from "@/components/ui/transcript-panel";
 const Settings = lazy(() => import("@/components/ui/settings"));
 import useRealTime from "@/hooks/useRealtime";
+import { ReadyState } from "react-use-websocket";
 import useAzureSpeech from "@/hooks/useAzureSpeech";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
 import useAudioPlayer from "@/hooks/useAudioPlayer";
@@ -110,6 +111,7 @@ function McDonaldsApp() {
     const [piperVoice, setPiperVoice] = useState<string>(() => {
         return localStorage.getItem("piperVoice") || "en_US-amy-medium";
     });
+    const [connectionError, setConnectionError] = useState<string | null>(null);
 
     useEffect(() => {
         localStorage.setItem("showSessionTokens", showSessionTokens.toString());
@@ -148,10 +150,21 @@ function McDonaldsApp() {
     const isAiSpeakingRef = useRef(false);
 
     const realtime = useRealTime({
+        localMode,
         enableInputAudioTranscription: true,
-        onWebSocketOpen: () => console.log("WebSocket connection opened"),
-        onWebSocketClose: () => console.log("WebSocket connection closed"),
-        onWebSocketError: event => console.error("WebSocket error:", event),
+        onWebSocketOpen: () => {
+            console.log("[WS] WebSocket connection opened");
+            setConnectionError(null);
+        },
+        onWebSocketClose: () => {
+            console.log("[WS] WebSocket connection closed");
+        },
+        onWebSocketError: event => {
+            console.error("[WS] WebSocket error:", event);
+            if (localMode) {
+                setConnectionError("Cannot connect to local server. Is the backend running on localhost:8000?");
+            }
+        },
         onReceivedError: message => console.error("error", message),
         onReceivedResponseCreated: () => {
             if (!isSessionActiveRef.current) return;
@@ -292,7 +305,21 @@ function McDonaldsApp() {
     });
 
     const onToggleListening = async () => {
+        console.log("[MIC] Toggle clicked. isRecording:", isRecording, "localMode:", localMode, "readyState:", realtime.readyState);
+
         if (!isRecording) {
+            // Check WebSocket connection before proceeding
+            if (realtime.readyState !== ReadyState.OPEN) {
+                const errorMsg = localMode
+                    ? "Cannot connect to local server at localhost:8000. Is the backend running?"
+                    : "WebSocket not connected. Please check your connection and try again.";
+                console.error("[MIC] WebSocket not connected! readyState:", realtime.readyState);
+                setConnectionError(errorMsg);
+                return;
+            }
+
+            console.log("[MIC] Starting session...", localMode ? "(local mode)" : "(cloud mode)");
+            setConnectionError(null);
             setSessionIdentifiers(null);
 
             // Start session and playback immediately, but delay mic capture until the greeting finishes.
@@ -305,9 +332,17 @@ function McDonaldsApp() {
 
             if (useAzureSpeechOn) {
                 // AzureSpeech mode doesn't play a synthesized greeting audio stream.
+                console.log("[MIC] Starting Azure Speech session");
                 azureSpeech.startSession();
                 await startAudioRecording();
+                console.log("[MIC] Audio recording started (Azure Speech)");
             } else {
+                // In local mode, sync the local mode state to backend before starting session
+                if (localMode) {
+                    console.log("[LOCAL-MODE] Syncing local mode state to backend before session start");
+                    realtime.sendLocalModeToggle(true);
+                }
+
                 realtime.startSession();
                 if (verboseLogging) {
                     realtime.sendVerboseLogging(true);
@@ -330,7 +365,9 @@ function McDonaldsApp() {
 
             setIsRecording(true);
         } else {
+            console.log("[MIC] Stopping session...");
             await stopAudioRecording();
+            console.log("[MIC] Audio recording stopped");
             stopAudioPlayer();
             isSessionActiveRef.current = false;
             isAiSpeakingRef.current = false;
@@ -470,6 +507,11 @@ function McDonaldsApp() {
                                     )}
                                 </Button>
                                 <StatusMessage isRecording={isRecording} />
+                                {connectionError && (
+                                    <p className="mt-2 max-w-xs text-center text-sm font-medium text-red-600 dark:text-red-400" role="alert">
+                                        ⚠️ {connectionError}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </Card>

@@ -1,4 +1,4 @@
-import useWebSocket from "react-use-websocket";
+import useWebSocket, { ReadyState } from "react-use-websocket";
 import { useRef, useCallback, useEffect, useState } from "react";
 
 import {
@@ -15,7 +15,10 @@ import {
     ExtensionRoundTripToken
 } from "@/types";
 
+export { ReadyState };
+
 type Parameters = {
+    localMode?: boolean; // When true, WebSocket connects to localhost:8000 for offline operation
     useDirectAoaiApi?: boolean; // If true, the middle tier will be skipped and the AOAI ws API will be called directly
     aoaiEndpointOverride?: string;
     aoaiApiKeyOverride?: string;
@@ -57,6 +60,7 @@ async function fetchSessionToken(): Promise<string | null> {
 }
 
 export default function useRealTime({
+    localMode,
     useDirectAoaiApi,
     aoaiEndpointOverride,
     aoaiApiKeyOverride,
@@ -80,11 +84,26 @@ export default function useRealTime({
     const [sessionToken, setSessionToken] = useState<string | null>(null);
 
     // Fetch a session token on mount (graceful — null means no token required)
+    // In local mode, skip — no Azure auth needed for offline operation
     useEffect(() => {
-        fetchSessionToken().then(setSessionToken);
-    }, []);
+        if (localMode) {
+            console.log("[LOCAL-MODE] Skipping session token fetch — running locally");
+            setSessionToken(null);
+            return;
+        }
+        console.log("[WS] Fetching session token...");
+        fetchSessionToken().then((token) => {
+            console.log("[WS] Session token:", token ? "obtained" : "not required");
+            setSessionToken(token);
+        });
+    }, [localMode]);
 
     const buildWsEndpoint = () => {
+        if (localMode) {
+            const url = "ws://localhost:8000/realtime";
+            console.log("[LOCAL-MODE] WebSocket endpoint:", url);
+            return url;
+        }
         if (useDirectAoaiApi) {
             return `${aoaiEndpointOverride}/openai/realtime?api-key=${aoaiApiKeyOverride}&deployment=${aoaiModelOverride}&api-version=2024-10-01-preview`;
         }
@@ -159,19 +178,25 @@ export default function useRealTime({
         onReceivedError
     ]);
 
-    const { sendJsonMessage } = useWebSocket(wsEndpoint, {
+    const { sendJsonMessage, readyState } = useWebSocket(wsEndpoint, {
         onOpen: () => {
+            console.log("[WS] Connection opened", localMode ? "(local mode)" : "(cloud mode)", "→", wsEndpoint);
             retryCountRef.current = 0;
             onWebSocketOpen?.();
         },
         onClose: (event) => {
+            console.log("[WS] Connection closed", { code: event.code, reason: event.reason, localMode });
             // Auth failure → refresh token and let reconnect use the new one
-            if (event.code === 4001 || event.reason?.includes("expired")) {
+            // Skip in local mode — no Azure auth needed
+            if (!localMode && (event.code === 4001 || event.reason?.includes("expired"))) {
                 fetchSessionToken().then(setSessionToken);
             }
             onWebSocketClose?.();
         },
-        onError: event => onWebSocketError?.(event),
+        onError: event => {
+            console.error("[WS] Connection error:", event, localMode ? "(local mode)" : "(cloud mode)");
+            onWebSocketError?.(event);
+        },
         onMessage: onMessageReceived,
         shouldReconnect: () => true,
         reconnectAttempts: MAX_RETRIES,
@@ -188,6 +213,7 @@ export default function useRealTime({
     }, [sendJsonMessage]);
 
     const startSession = () => {
+        console.log("[WS] Starting session. readyState:", readyState, readyState === ReadyState.OPEN ? "OPEN" : "NOT OPEN");
         const command: SessionUpdateCommand = {
             type: "session.update",
             session: {
@@ -243,6 +269,7 @@ export default function useRealTime({
     };
 
     const sendLocalModeToggle = (enabled: boolean) => {
+        console.log("[LOCAL-MODE] Sending local mode toggle:", enabled, "readyState:", readyState);
         sendJsonMessage({ type: "extension.set_local_mode", enabled });
     };
 
@@ -250,5 +277,5 @@ export default function useRealTime({
         sendJsonMessage({ type: "extension.set_piper_voice", voice });
     };
 
-    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice, sendLocalModeToggle, sendPiperVoiceChoice };
+    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice, sendLocalModeToggle, sendPiperVoiceChoice, readyState };
 }
