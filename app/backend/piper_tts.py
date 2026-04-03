@@ -13,7 +13,6 @@ before loading the new one.
 from __future__ import annotations
 
 import asyncio
-import io
 import logging
 import re
 from collections.abc import AsyncGenerator
@@ -253,27 +252,31 @@ class PiperTTSEngine:
         return await loop.run_in_executor(None, self._sync_synthesize, sentence)
 
     def _sync_synthesize(self, text: str) -> bytes:
-        """Synchronous Piper synthesis + optional resampling."""
-        audio_buffer = io.BytesIO()
+        """Synchronous Piper synthesis + optional resampling.
+
+        Piper v2 API: synthesize() returns Iterable[AudioChunk].
+        Each AudioChunk has audio_int16_bytes (PCM int16) and sample_rate.
+        Length scale is configured via piper.config.SynthesisConfig.
+        """
         try:
-            self._voice.synthesize(
-                text,
-                audio_buffer,
-                length_scale=self._length_scale,
-            )
-        except TypeError:
-            # Older piper-tts versions may not accept length_scale kwarg
-            try:
-                self._voice.synthesize(text, audio_buffer)
-            except Exception as exc:
-                logger.error("Piper synthesis failed: %s", exc)
-                return b""
+            from piper.config import SynthesisConfig
+            syn_config = SynthesisConfig(length_scale=self._length_scale)
+        except ImportError:
+            syn_config = None
+
+        try:
+            chunks = self._voice.synthesize(text, syn_config=syn_config)
+            pcm_parts: list[bytes] = []
+            for chunk in chunks:
+                pcm_parts.append(chunk.audio_int16_bytes)
+                if self._native_rate is None and hasattr(chunk, "sample_rate"):
+                    self._native_rate = chunk.sample_rate
+            raw_pcm = b"".join(pcm_parts)
         except Exception as exc:
             logger.error("Piper synthesis failed: %s", exc)
             pipeline_logger.error("Piper TTS synthesis failed: %s", exc)
             return b""
 
-        raw_pcm = audio_buffer.getvalue()
         if not raw_pcm:
             return b""
 

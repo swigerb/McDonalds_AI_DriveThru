@@ -77,7 +77,7 @@ local_mode:
   stt_device: "auto"                      # auto | cuda | cpu (CUDA only)
   stt_compute_type: "int8"                # CTranslate2 quantization (int8/float16/float32)
   device: "auto"                          # auto | cuda | cpu | directml
-  max_length: 256                         # Max generation tokens
+  max_length: 8192                        # Max total tokens (prompt + response)
   temperature: 0.6                        # Generation temperature
   tts_sample_rate: 24000                  # Output sample rate (match frontend)
   lazy_load: true                         # Only load model on first use
