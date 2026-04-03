@@ -165,6 +165,14 @@ async def create_app() -> web.Application:
     local_config = get_local_mode_config()
     local_processor = None
     local_mode_available = False
+
+    # Resolve relative model paths to absolute (relative to repo root, not CWD)
+    _repo_root = Path(__file__).resolve().parent.parent.parent
+    for _path_key in ("model_path", "tts_model_path"):
+        _raw = local_config.get(_path_key, "")
+        if _raw and not Path(_raw).is_absolute():
+            local_config[_path_key] = str(_repo_root / _raw.lstrip("./"))
+
     try:
         from local_processor import LocalPhi4Processor, LOCAL_MODE_AVAILABLE
         if LOCAL_MODE_AVAILABLE:
