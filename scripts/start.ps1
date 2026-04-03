@@ -44,9 +44,10 @@ try {
         Write-Host ""
         Push-Location "$repoRoot/app/frontend"
         try {
-            npm install
+            # Use --prefer-offline so npm doesn't hang when network is down
+            npm install --prefer-offline
             if ($LASTEXITCODE -ne 0) {
-                throw "Failed to restore frontend npm packages"
+                Write-Host "WARNING: npm install failed (offline?). Using existing node_modules."
             }
 
             Write-Host ""

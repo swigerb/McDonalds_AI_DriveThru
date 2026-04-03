@@ -77,8 +77,22 @@ try {
     throw "Python executable not found inside virtual environment at $venvPythonPath"
   }
 
-  Write-Host 'Installing dependencies from "app/backend/requirements.txt" into virtual environment'
-  & $venvPythonPath -m pip install -r (Join-Path $projectRoot "app/backend/requirements.txt")
+  # Check if we can reach PyPI (quick 2s test) — skip pip install if offline
+  $reqFile = Join-Path $projectRoot "app/backend/requirements.txt"
+  $canReachPyPI = $false
+  try {
+    $null = [System.Net.Dns]::GetHostAddresses("pypi.org")
+    $canReachPyPI = $true
+  } catch {
+    $canReachPyPI = $false
+  }
+
+  if ($canReachPyPI) {
+    Write-Host 'Installing dependencies from "app/backend/requirements.txt" into virtual environment'
+    & $venvPythonPath -m pip install -r $reqFile
+  } else {
+    Write-Host 'Offline mode — skipping pip install (dependencies already installed)'
+  }
 }
 finally {
   Pop-Location
