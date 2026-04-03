@@ -150,6 +150,7 @@ class Phi4ModelManager:
         audio_pcm: bytes,
         system_prompt: str,
         tool_schemas: list[dict] | None = None,
+        timeout: float = 30.0,
     ) -> AsyncGenerator[str, None]:
         """Process audio input through Phi-4 multimodal and stream text tokens.
 
@@ -157,6 +158,8 @@ class Phi4ModelManager:
             audio_pcm: Raw PCM audio bytes (16kHz, mono, int16)
             system_prompt: System message for the AI
             tool_schemas: Optional tool definitions for structured output
+            timeout: Maximum seconds to wait for inference (default 30s).
+                     If exceeded, yields a fallback message instead of hanging.
 
         Yields:
             Text tokens as they're generated
@@ -169,6 +172,7 @@ class Phi4ModelManager:
 
         loop = asyncio.get_event_loop()
         queue: asyncio.Queue[str | None] = asyncio.Queue()
+        _timed_out = False
 
         def _run_inference() -> None:
             try:
@@ -212,6 +216,25 @@ class Phi4ModelManager:
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 
         asyncio.get_event_loop().run_in_executor(None, _run_inference)
+
+        try:
+            first_token = await asyncio.wait_for(queue.get(), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.error(
+                "Phi-4 inference timed out after %.0fs (prompt=%d chars). "
+                "System prompt may be too large for local INT4 model.",
+                timeout, len(prompt),
+            )
+            pipeline_logger.error(
+                "Phi-4 inference TIMEOUT after %.0fs — prompt was %d chars",
+                timeout, len(prompt),
+            )
+            yield "I'm sorry, could you repeat that?"
+            return
+
+        # First token arrived — stream the rest without a global timeout
+        if first_token is not None:
+            yield first_token
 
         while True:
             token = await queue.get()

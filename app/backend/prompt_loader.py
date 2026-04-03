@@ -57,6 +57,30 @@ class PromptLoader:
         self._maybe_reload()
         return self._cache["system_prompt"]
 
+    def get_local_system_prompt(self) -> str:
+        """Return the short local-mode system prompt for INT4 inference.
+
+        Falls back to the full system prompt if local_system_prompt.yaml
+        doesn't exist.
+        """
+        self._maybe_reload()
+        cached = self._cache.get("local_system_prompt")
+        if cached is not None:
+            return cached
+
+        local_data = self._load_yaml("local_system_prompt.yaml")
+        if local_data is None:
+            logger.warning("local_system_prompt.yaml not found — falling back to full prompt")
+            return self._cache["system_prompt"]
+
+        prompt = self._assemble_system_prompt(local_data)
+        self._cache["local_system_prompt"] = prompt
+        logger.info(
+            "Loaded local system prompt: %d chars (vs %d full)",
+            len(prompt), len(self._cache["system_prompt"]),
+        )
+        return prompt
+
     def get_greeting(self) -> dict:
         """Return the greeting message dict (conversation.item.create payload)."""
         self._maybe_reload()

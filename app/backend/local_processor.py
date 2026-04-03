@@ -761,8 +761,11 @@ class LocalPhi4Processor(AbstractProcessor):
             return
 
         # 2. Run Phi-4 inference, stream text tokens
-        system_prompt = self.system_message or "You are a helpful McDonald's drive-thru assistant."
-        tool_schemas = self._get_tool_schemas()
+        # Use short local prompt to avoid overwhelming INT4 model
+        system_prompt = self._get_local_system_prompt()
+        # No tool schemas for local mode — they bloat the prompt and
+        # local INT4 models can't reliably produce structured tool calls.
+        tool_schemas = None
 
         pipeline_logger.info("[%s] Starting Phi-4 inference...", session_id)
         _vlog(verbose, "[%s] Phi-4 inference: START (system_prompt=%d chars, tools=%s)",
@@ -900,6 +903,43 @@ class LocalPhi4Processor(AbstractProcessor):
         if not self.tools:
             return None
         return [tool.schema for tool in self.tools.values() if tool.schema]
+
+    def _get_local_system_prompt(self) -> str:
+        """Return the short local-mode system prompt for INT4 inference.
+
+        Tries prompt_loader's local prompt first, then falls back to
+        the session system_message, then a minimal hardcoded default.
+        """
+        try:
+            from prompt_loader import PromptLoader
+            loader = PromptLoader(brand="mcdonalds")
+            prompt = loader.get_local_system_prompt()
+            if prompt:
+                return prompt
+        except Exception as exc:
+            logger.debug("Could not load local system prompt via PromptLoader: %s", exc)
+
+        if self.system_message:
+            # Truncate full cloud prompt if it's too long for local inference
+            if len(self.system_message) > 2000:
+                logger.warning(
+                    "system_message is %d chars — too large for local INT4; using fallback",
+                    len(self.system_message),
+                )
+                return (
+                    "You are a friendly McDonald's drive-thru crew member. "
+                    "Take orders quickly, confirm each item, and suggest meals "
+                    "when someone orders just a sandwich. Keep responses to one "
+                    "or two short sentences. Be warm and upbeat."
+                )
+            return self.system_message
+
+        return (
+            "You are a friendly McDonald's drive-thru crew member. "
+            "Take orders quickly, confirm each item, and suggest meals "
+            "when someone orders just a sandwich. Keep responses to one "
+            "or two short sentences. Be warm and upbeat."
+        )
 
     async def _execute_tool_calls(
         self,
