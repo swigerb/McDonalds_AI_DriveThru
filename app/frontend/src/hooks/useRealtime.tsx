@@ -105,11 +105,11 @@ export default function useRealTime({
 
     const buildWsEndpoint = () => {
         if (localMode) {
-            // Use 127.0.0.1 directly to bypass DNS resolution (fails when offline).
-            // Port 8000 is the backend default; derive from location.port if available.
-            const port = window.location.port || "8000";
-            const url = `ws://127.0.0.1:${port}/realtime?mode=local`;
-            console.log("[LOCAL-MODE] WebSocket endpoint:", url, "(direct IP, no DNS)");
+            // Use the same host the page was loaded from — avoids cross-origin issues.
+            // The browser already resolved this hostname to load the page, so it works offline too.
+            const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const url = `${wsProtocol}//${window.location.host}/realtime?mode=local`;
+            console.log("[LOCAL-MODE] WebSocket endpoint:", url);
             return url;
         }
         if (useDirectAoaiApi) {
