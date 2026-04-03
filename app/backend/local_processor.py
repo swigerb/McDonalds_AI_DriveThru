@@ -12,6 +12,7 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import struct
 import time
 import uuid
@@ -25,6 +26,13 @@ from aiohttp import web
 from config_loader import get_config
 from processor_base import AbstractProcessor
 from rtmt import Tool, ToolResult, ToolResultDirection
+from audio_pipeline import (
+    vlog as _vlog,
+    vlogger,
+    create_verbose_file_handler as _create_verbose_file_handler,
+    remove_verbose_file_handler as _remove_verbose_file_handler,
+    _VERBOSE_GLOBAL,
+)
 
 logger = logging.getLogger("mcdonalds-drive-thru.local")
 pipeline_logger = logging.getLogger("local-pipeline")
@@ -74,6 +82,8 @@ _MSG_AUDIO_DELTA = "response.audio.delta"
 _MSG_TRANSCRIPT_DELTA = "response.audio_transcript.delta"
 _MSG_TRANSCRIPT_DONE = "response.audio_transcript.done"
 _MSG_TOOL_RESPONSE = "extension.middle_tier_tool_response"
+_MSG_SESSION_METADATA = "extension.session_metadata"
+_MSG_ROUND_TRIP_TOKEN = "extension.round_trip_token"
 
 # ── Audio constants ─────────────────────────────────────────────────────────
 
@@ -196,6 +206,31 @@ class LocalPhi4Processor(AbstractProcessor):
         cancel_event = asyncio.Event()
         processing_lock = asyncio.Lock()
 
+        # ── Session token tracking ──
+        session_token = str(uuid.uuid4())
+        session_state = {
+            "round_trip_index": 0,
+            "session_token": session_token,
+        }
+
+        # ── Verbose logging per-connection state ──
+        verbose = _VERBOSE_GLOBAL
+        session_file_handler: logging.FileHandler | None = None
+
+        # Emit initial session token metadata (same format as cloud mode)
+        await ws.send_json({
+            "type": _MSG_SESSION_METADATA,
+            "sessionToken": session_token,
+            "roundTripIndex": 0,
+            "roundTripToken": f"{session_token}-0000",
+        })
+        _vlog(verbose,
+              "─── [SESSION TOKEN] ───\n"
+              "Token: %s\n"
+              "Round Trip: #%d (token: %s)\n"
+              "───────────────────────",
+              session_token, 0, f"{session_token}-0000")
+
         # Samples of silence needed to trigger utterance end
         silence_sample_threshold = int(
             (_FRONTEND_SAMPLE_RATE * self._silence_duration_ms) / 1000
@@ -247,7 +282,8 @@ class LocalPhi4Processor(AbstractProcessor):
                         if not processing_lock.locked():
                             asyncio.ensure_future(
                                 self._process_utterance_safe(
-                                    utterance, ws, session_id, cancel_event, processing_lock
+                                    utterance, ws, session_id, cancel_event, processing_lock,
+                                    session_state, verbose,
                                 )
                             )
 
@@ -268,7 +304,8 @@ class LocalPhi4Processor(AbstractProcessor):
                         if not processing_lock.locked():
                             asyncio.ensure_future(
                                 self._process_utterance_safe(
-                                    utterance, ws, session_id, cancel_event, processing_lock
+                                    utterance, ws, session_id, cancel_event, processing_lock,
+                                    session_state, verbose,
                                 )
                             )
 
@@ -317,6 +354,43 @@ class LocalPhi4Processor(AbstractProcessor):
                                 "error": f"Failed to load voice '{voice_id}'",
                             })
 
+                elif msg_type == "extension.set_verbose_logging":
+                    verbose = bool(message.get("enabled", False))
+                    if verbose and not _VERBOSE_GLOBAL:
+                        vlogger.setLevel(logging.DEBUG)
+                        if not vlogger.handlers:
+                            _h = logging.StreamHandler()
+                            _h.setFormatter(logging.Formatter("%(message)s"))
+                            vlogger.addHandler(_h)
+                    logger.info("Verbose logging %s for session %s",
+                                "ENABLED" if verbose else "DISABLED", session_id)
+                    _vlog(verbose,
+                          "\n╔══════════════════════════════════════╗\n"
+                          "║  VERBOSE LOGGING: %-8s           ║\n"
+                          "╚══════════════════════════════════════╝",
+                          "ENABLED" if verbose else "DISABLED")
+
+                elif msg_type == "extension.set_log_to_file":
+                    enabled = bool(message.get("enabled", False))
+                    if enabled and session_file_handler is None:
+                        vlogger.setLevel(logging.DEBUG)
+                        if not any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in vlogger.handlers):
+                            _h = logging.StreamHandler()
+                            _h.setFormatter(logging.Formatter("%(message)s"))
+                            vlogger.addHandler(_h)
+                        session_file_handler = _create_verbose_file_handler()
+                        vlogger.addHandler(session_file_handler)
+                    elif not enabled and session_file_handler is not None:
+                        _remove_verbose_file_handler(session_file_handler)
+                        session_file_handler = None
+                    logger.info("Verbose log-to-file %s for session %s",
+                                "ENABLED" if enabled else "DISABLED", session_id)
+                    _vlog(verbose or enabled,
+                          "\n╔══════════════════════════════════════╗\n"
+                          "║  LOG TO FILE: %-8s              ║\n"
+                          "╚══════════════════════════════════════╝",
+                          "ENABLED" if enabled else "DISABLED")
+
                 elif msg_type.startswith("extension."):
                     logger.debug("Extension message: %s", msg_type)
 
@@ -328,6 +402,8 @@ class LocalPhi4Processor(AbstractProcessor):
                 break
 
         cancel_event.set()
+        if session_file_handler is not None:
+            _remove_verbose_file_handler(session_file_handler)
         pipeline_logger.info("[%s] Local processor WebSocket closed", session_id)
 
     async def start_background_tasks(self) -> None:
@@ -468,11 +544,15 @@ class LocalPhi4Processor(AbstractProcessor):
         session_id: str,
         cancel_event: asyncio.Event,
         lock: asyncio.Lock,
+        session_state: dict[str, Any] | None = None,
+        verbose: bool = False,
     ) -> None:
         """Wrapper with error handling and lock management."""
+        if session_state is None:
+            session_state = {"round_trip_index": 0, "session_token": str(uuid.uuid4())}
         async with lock:
             try:
-                await self._process_utterance(audio, ws, session_id, cancel_event)
+                await self._process_utterance(audio, ws, session_id, cancel_event, session_state, verbose)
             except Exception as exc:
                 pipeline_logger.error("[%s] Utterance processing error: %s", session_id, exc, exc_info=True)
                 try:
@@ -494,19 +574,27 @@ class LocalPhi4Processor(AbstractProcessor):
         ws: web.WebSocketResponse,
         session_id: str,
         cancel_event: asyncio.Event,
+        session_state: dict[str, Any] | None = None,
+        verbose: bool = False,
     ) -> None:
         """Full pipeline: audio → Phi-4 → tools → Piper TTS → audio deltas."""
+        if session_state is None:
+            session_state = {"round_trip_index": 0, "session_token": str(uuid.uuid4())}
         response_id = f"resp-{uuid.uuid4().hex[:8]}"
         pipeline_logger.info("[%s] Processing utterance (response=%s, %d bytes audio)", session_id, response_id, len(audio))
+        _vlog(verbose, "─── [UTTERANCE] session=%s response=%s audio=%d bytes ───",
+              session_id, response_id, len(audio))
 
         # Downsample 24 kHz → 16 kHz for Phi-4 and Whisper
         audio_16k = _downsample_24k_to_16k(audio)
         pipeline_logger.debug("[%s] Downsampled 24kHz→16kHz: %d→%d bytes", session_id, len(audio), len(audio_16k))
+        _vlog(verbose, "[%s] Audio received: %d bytes (24kHz) → %d bytes (16kHz)", session_id, len(audio), len(audio_16k))
 
         # Start Whisper transcription in parallel (non-blocking)
         transcription_task: asyncio.Task | None = None
         if self._stt:
             pipeline_logger.info("[%s] Starting Whisper STT transcription (parallel)", session_id)
+            _vlog(verbose, "[%s] Whisper STT: starting parallel transcription", session_id)
             transcription_task = asyncio.create_task(self._stt.transcribe(audio_16k))
 
         # 1. Send response.created
@@ -528,13 +616,17 @@ class LocalPhi4Processor(AbstractProcessor):
         tool_schemas = self._get_tool_schemas()
 
         pipeline_logger.info("[%s] Starting Phi-4 inference...", session_id)
+        _vlog(verbose, "[%s] Phi-4 inference: START (system_prompt=%d chars, tools=%s)",
+              session_id, len(system_prompt), [s.get("name", "?") for s in (tool_schemas or [])])
         t0 = time.monotonic()
         full_text = ""
+        token_count = 0
         async for token in self._model.process_audio(audio_16k, system_prompt, tool_schemas):
             if cancel_event.is_set():
                 pipeline_logger.info("[%s] Response cancelled (response=%s)", session_id, response_id)
                 break
             full_text += token
+            token_count += 1
             await ws.send_json({
                 "type": _MSG_TRANSCRIPT_DELTA,
                 "delta": token,
@@ -542,6 +634,8 @@ class LocalPhi4Processor(AbstractProcessor):
 
         inference_ms = (time.monotonic() - t0) * 1000
         pipeline_logger.info("[%s] Phi-4 inference completed in %.0fms (%d chars)", session_id, inference_ms, len(full_text))
+        _vlog(verbose, "[%s] Phi-4 inference: DONE in %.0fms — %d tokens, %d chars",
+              session_id, inference_ms, token_count, len(full_text))
 
         if cancel_event.is_set():
             if transcription_task:
@@ -576,6 +670,7 @@ class LocalPhi4Processor(AbstractProcessor):
             pipeline_logger.info(
                 "[%s] Tool calls detected: %s", session_id, [c.get("name") for c in tool_calls]
             )
+            _vlog(verbose, "[%s] Tool execution: %s", session_id, [c.get("name") for c in tool_calls])
             tool_result_text = await self._execute_tool_calls(
                 tool_calls, ws, session_id
             )
@@ -583,7 +678,6 @@ class LocalPhi4Processor(AbstractProcessor):
                 speech_text = tool_result_text
 
         # Strip tool_call tags from speech text
-        import re
         speech_text = re.sub(r"<tool_call>.*?</tool_call>", "", speech_text, flags=re.DOTALL).strip()
 
         # 5. Send transcript done
@@ -595,6 +689,7 @@ class LocalPhi4Processor(AbstractProcessor):
         # 6. Synthesize speech from text (if TTS available)
         if self._tts and self._tts.is_loaded and speech_text:
             pipeline_logger.info("[%s] Starting Piper TTS synthesis (%d chars)", session_id, len(speech_text))
+            _vlog(verbose, "[%s] Piper TTS: START (%d chars)", session_id, len(speech_text))
             tts_t0 = time.monotonic()
             chunk_count = 0
             async for audio_chunk in self._tts.synthesize_streaming(speech_text):
@@ -608,6 +703,7 @@ class LocalPhi4Processor(AbstractProcessor):
                 })
             tts_ms = (time.monotonic() - tts_t0) * 1000
             pipeline_logger.info("[%s] Piper TTS completed in %.0fms (%d chunks)", session_id, tts_ms, chunk_count)
+            _vlog(verbose, "[%s] Piper TTS: DONE in %.0fms — %d audio chunks", session_id, tts_ms, chunk_count)
         elif speech_text:
             pipeline_logger.warning("[%s] TTS unavailable — text-only response", session_id)
 
@@ -619,8 +715,30 @@ class LocalPhi4Processor(AbstractProcessor):
                 "id": response_id,
                 "output": [{"type": "message", "role": "assistant"}],
                 "status": "completed",
+                "usage": {
+                    "total_tokens": token_count,
+                    "output_tokens": token_count,
+                },
             },
         })
+
+        # 8. Advance round trip and emit token to frontend
+        session_state["round_trip_index"] += 1
+        rt_idx = session_state["round_trip_index"]
+        st = session_state["session_token"]
+        rt_token = f"{st}-{rt_idx:04d}"
+        await ws.send_json({
+            "type": _MSG_ROUND_TRIP_TOKEN,
+            "sessionToken": st,
+            "roundTripIndex": rt_idx,
+            "roundTripToken": rt_token,
+        })
+        _vlog(verbose,
+              "─── [ROUND TRIP] #%d ───\n"
+              "Token: %s\n"
+              "Inference: %.0fms, %d tokens\n"
+              "────────────────────────",
+              rt_idx, rt_token, inference_ms, token_count)
 
     # ── Tool execution ──────────────────────────────────────────────────────
 
