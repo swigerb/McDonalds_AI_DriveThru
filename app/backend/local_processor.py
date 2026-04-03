@@ -138,6 +138,12 @@ class LocalPhi4Processor(AbstractProcessor):
         self._loading: bool = False
         self._current_task: asyncio.Task | None = None
 
+        # Model load error tracking — surfaces via diagnostics and frontend
+        self._model_load_error: str | None = None
+        self._phi4_load_error: str | None = None
+        self._tts_load_error: str | None = None
+        self._stt_load_error: str | None = None
+
     # ── AbstractProcessor interface ─────────────────────────────────────────
 
     async def handle_websocket(
@@ -161,21 +167,34 @@ class LocalPhi4Processor(AbstractProcessor):
 
         # Lazy-load models on first connection if not already loaded
         model_load_failed = False
+        model_load_error_detail = ""
         if not self._model_loaded and not self._loading:
             try:
                 pipeline_logger.info("[%s] Lazy-loading local models (first connection)...", session_id)
                 await self._ensure_models_loaded()
                 pipeline_logger.info("[%s] Local models loaded successfully", session_id)
             except Exception as exc:
+                model_load_error_detail = self._format_load_error_detail()
                 pipeline_logger.error("[%s] Failed to load local models: %s", session_id, exc, exc_info=True)
+                print(f"\n{'='*70}")
+                print(f"  LOCAL MODEL LOAD FAILED — session {session_id}")
+                print(f"  Error: {exc}")
+                if self._phi4_load_error:
+                    print(f"  Phi-4: {self._phi4_load_error}")
+                if self._tts_load_error:
+                    print(f"  Piper TTS: {self._tts_load_error}")
+                if self._stt_load_error:
+                    print(f"  Whisper STT: {self._stt_load_error}")
+                print(f"{'='*70}\n")
                 model_load_failed = True
                 await ws.send_json({
                     "type": _MSG_SESSION_CREATED,
                     "session": {"id": session_id, "model": "phi-4-onnx", "voice": "unavailable"},
                 })
+                # Send detailed error as transcript so it appears in Guest Conversation panel
                 await self._send_text_response(
                     ws,
-                    f"Local mode model loading failed: {exc}. Please switch to cloud mode.",
+                    f"⚠️ Local model loading failed.\n{model_load_error_detail}\nPlease switch to cloud mode in settings.",
                 )
                 # DON'T return — keep the WebSocket alive in degraded mode.
                 # Returning here would close the socket, triggering auto-reconnect,
@@ -296,6 +315,13 @@ class LocalPhi4Processor(AbstractProcessor):
                         cancel_event.clear()
 
                         if model_load_failed:
+                            _vlog(verbose,
+                                  "─── [DROPPED] Utterance dropped — model_load_failed=True ───\n"
+                                  "  %s", model_load_error_detail or "Models not loaded")
+                            pipeline_logger.warning(
+                                "[%s] Utterance dropped (model_load_failed=True): %s",
+                                session_id, model_load_error_detail or "Models not loaded",
+                            )
                             await self._send_text_response(
                                 ws,
                                 "Local models are not loaded. Please switch to cloud mode in settings.",
@@ -326,6 +352,13 @@ class LocalPhi4Processor(AbstractProcessor):
                         is_speaking = False
                         cancel_event.clear()
                         if model_load_failed:
+                            _vlog(verbose,
+                                  "─── [DROPPED] Committed utterance dropped — model_load_failed=True ───\n"
+                                  "  %s", model_load_error_detail or "Models not loaded")
+                            pipeline_logger.warning(
+                                "[%s] Committed utterance dropped (model_load_failed=True): %s",
+                                session_id, model_load_error_detail or "Models not loaded",
+                            )
                             await self._send_text_response(
                                 ws,
                                 "Local models are not loaded. Please switch to cloud mode in settings.",
@@ -485,6 +518,19 @@ class LocalPhi4Processor(AbstractProcessor):
         """Whether the model is loaded into memory and ready for inference."""
         return self._model_loaded
 
+    def _format_load_error_detail(self) -> str:
+        """Build a human-readable summary of which models failed and why."""
+        parts: list[str] = []
+        if self._phi4_load_error:
+            parts.append(f"• Phi-4 LLM: {self._phi4_load_error}")
+        if self._tts_load_error:
+            parts.append(f"• Piper TTS: {self._tts_load_error}")
+        if self._stt_load_error:
+            parts.append(f"• Whisper STT: {self._stt_load_error}")
+        if self._model_load_error and not parts:
+            parts.append(f"• General: {self._model_load_error}")
+        return "\n".join(parts) if parts else "Unknown error"
+
     # ── Model lifecycle ─────────────────────────────────────────────────────
 
     async def _ensure_models_loaded(self) -> None:
@@ -493,43 +539,81 @@ class LocalPhi4Processor(AbstractProcessor):
             return
 
         self._loading = True
+        self._model_load_error = None
+        self._phi4_load_error = None
+        self._tts_load_error = None
+        self._stt_load_error = None
         try:
             pipeline_logger.info("Loading Phi-4 ONNX model...")
+            print("[LOCAL] Loading Phi-4 ONNX model...")
             await self._load_phi4()
             pipeline_logger.info("Phi-4 model loaded (device=%s)", self._model.device_name if self._model else "unknown")
+            print(f"[LOCAL] Phi-4 loaded (device={self._model.device_name if self._model else 'unknown'})")
 
             pipeline_logger.info("Loading Piper TTS engine...")
+            print("[LOCAL] Loading Piper TTS engine...")
             await self._load_tts()
-            pipeline_logger.info("TTS status: %s", "loaded" if (self._tts and self._tts.is_loaded) else "unavailable")
+            tts_status = "loaded" if (self._tts and self._tts.is_loaded) else "unavailable"
+            pipeline_logger.info("TTS status: %s", tts_status)
+            print(f"[LOCAL] TTS status: {tts_status}")
 
             pipeline_logger.info("Loading Whisper STT engine...")
+            print("[LOCAL] Loading Whisper STT engine...")
             await self._load_stt()
-            pipeline_logger.info("STT status: %s", "loaded" if (self._stt and self._stt.is_loaded) else "unavailable")
+            stt_status = "loaded" if (self._stt and self._stt.is_loaded) else "unavailable"
+            pipeline_logger.info("STT status: %s", stt_status)
+            print(f"[LOCAL] STT status: {stt_status}")
 
             self._model_loaded = True
             pipeline_logger.info("All local models loaded successfully")
+            print("[LOCAL] All models loaded successfully")
+        except Exception as exc:
+            self._model_load_error = str(exc)
+            print(f"[LOCAL] MODEL LOAD FAILED: {exc}")
+            raise
         finally:
             self._loading = False
 
     async def _load_phi4(self) -> None:
         """Initialize and load the Phi-4 model manager."""
         global _Phi4ModelManager
-        if _Phi4ModelManager is None:
-            from phi4_model import Phi4ModelManager as _Phi4ModelManager
+        try:
+            if _Phi4ModelManager is None:
+                from phi4_model import Phi4ModelManager as _Phi4ModelManager
+        except ImportError as exc:
+            err = f"phi4_model module not importable: {exc}"
+            self._phi4_load_error = err
+            pipeline_logger.error("Phi-4 LOAD FAILED: %s", err)
+            print(f"[LOCAL] Phi-4 LOAD FAILED: {err}")
+            raise RuntimeError(err) from exc
 
-        self._model = _Phi4ModelManager(
-            model_path=self._model_path or "./models/phi4-multimodal",
-            device=self._device,
-            max_length=self.max_tokens or 256,
-            temperature=self.temperature or 0.6,
-        )
-        await self._model.load()
+        try:
+            self._model = _Phi4ModelManager(
+                model_path=self._model_path or "./models/phi4-multimodal",
+                device=self._device,
+                max_length=self.max_tokens or 256,
+                temperature=self.temperature or 0.6,
+            )
+            await self._model.load()
+        except Exception as exc:
+            err = f"Phi-4 model failed to load: {exc}"
+            self._phi4_load_error = err
+            pipeline_logger.error("Phi-4 LOAD FAILED: %s", err)
+            print(f"[LOCAL] Phi-4 LOAD FAILED: {err}")
+            raise
 
     async def _load_tts(self) -> None:
         """Initialize and load the Piper TTS engine with multi-voice support."""
         global _PiperTTSEngine
-        if _PiperTTSEngine is None:
-            from piper_tts import PiperTTSEngine as _PiperTTSEngine
+        try:
+            if _PiperTTSEngine is None:
+                from piper_tts import PiperTTSEngine as _PiperTTSEngine
+        except ImportError as exc:
+            err = f"piper_tts module not importable: {exc}"
+            self._tts_load_error = err
+            pipeline_logger.warning("Piper TTS LOAD FAILED: %s — text-only mode", err)
+            print(f"[LOCAL] Piper TTS LOAD FAILED: {err}")
+            return  # TTS is optional — don't crash the pipeline
 
         tts_voice = self._config.get("tts_default_voice") or self._config.get("tts_model", "en_US-amy-medium")
         tts_path = self._config.get("tts_model_path", "./models/piper")
@@ -547,7 +631,10 @@ class LocalPhi4Processor(AbstractProcessor):
         try:
             await self._tts.load()
         except Exception as exc:
-            logger.warning("Piper TTS failed to load: %s — text-only mode", exc)
+            err = f"Piper TTS failed to load: {exc}"
+            self._tts_load_error = err
+            pipeline_logger.warning("Piper TTS LOAD FAILED: %s — text-only mode", err)
+            print(f"[LOCAL] Piper TTS LOAD FAILED: {err}")
             self._tts = None
 
     async def _load_stt(self) -> None:
@@ -556,12 +643,18 @@ class LocalPhi4Processor(AbstractProcessor):
         if _WhisperSTTEngine is None:
             try:
                 from whisper_stt import WhisperSTTEngine as _WhisperSTTEngine, WHISPER_AVAILABLE
-            except ImportError:
-                logger.info("whisper_stt module not found — STT unavailable")
+            except ImportError as exc:
+                err = f"whisper_stt module not importable: {exc}"
+                self._stt_load_error = err
+                pipeline_logger.warning("Whisper STT LOAD FAILED: %s", err)
+                print(f"[LOCAL] Whisper STT LOAD FAILED: {err}")
                 return
 
             if not WHISPER_AVAILABLE:
-                logger.info("Faster-Whisper not installed — customer transcription unavailable")
+                err = "faster-whisper package not installed (pip install faster-whisper)"
+                self._stt_load_error = err
+                pipeline_logger.warning("Whisper STT unavailable: %s", err)
+                print(f"[LOCAL] Whisper STT unavailable: {err}")
                 return
 
         stt_model = self._config.get("stt_model", "small")
@@ -576,7 +669,10 @@ class LocalPhi4Processor(AbstractProcessor):
         try:
             await self._stt.load()
         except Exception as exc:
-            logger.warning("Faster-Whisper failed to load: %s — customer transcription unavailable", exc)
+            err = f"Faster-Whisper failed to load: {exc}"
+            self._stt_load_error = err
+            pipeline_logger.warning("Whisper STT LOAD FAILED: %s — customer transcription unavailable", err)
+            print(f"[LOCAL] Whisper STT LOAD FAILED: {err}")
             self._stt = None
 
     # ── Processing pipeline ─────────────────────────────────────────────────
@@ -599,6 +695,14 @@ class LocalPhi4Processor(AbstractProcessor):
                 await self._process_utterance(audio, ws, session_id, cancel_event, session_state, verbose)
             except Exception as exc:
                 pipeline_logger.error("[%s] Utterance processing error: %s", session_id, exc, exc_info=True)
+                _vlog(verbose,
+                      "─── [ERROR] _process_utterance_safe CRASHED ───\n"
+                      "  Session: %s\n"
+                      "  Error: %s\n"
+                      "  Type: %s\n"
+                      "───────────────────────────────────────────────",
+                      session_id, exc, type(exc).__name__)
+                print(f"[LOCAL PROCESSOR ERROR] session={session_id}: {type(exc).__name__}: {exc}")
                 try:
                     if not ws.closed:
                         await ws.send_json({
@@ -609,8 +713,9 @@ class LocalPhi4Processor(AbstractProcessor):
                             ws,
                             "I'm sorry, I had trouble processing that. Could you repeat your order?",
                         )
-                except Exception:
-                    pipeline_logger.error("[%s] Failed to send error response to client", session_id)
+                except Exception as send_exc:
+                    pipeline_logger.error("[%s] Failed to send error response to client: %s", session_id, send_exc)
+                    _vlog(verbose, "─── [ERROR] Failed to send error to client: %s ───", send_exc)
 
     async def _process_utterance(
         self,

@@ -497,6 +497,14 @@ async def create_app() -> web.Application:
             elif local_mode_available:
                 diag["stt_engine_status"] = "not initialized"
 
+            # Surface exact model load errors for debugging
+            diag["model_load_errors"] = {
+                "overall": local_processor._model_load_error,
+                "phi4": local_processor._phi4_load_error,
+                "piper_tts": local_processor._tts_load_error,
+                "whisper_stt": local_processor._stt_load_error,
+            }
+
         return web.json_response(diag)
 
     # ── Local Mode Voices Endpoint ──
