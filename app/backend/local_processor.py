@@ -862,7 +862,11 @@ class LocalPhi4Processor(AbstractProcessor):
             "type": _MSG_RESPONSE_DONE,
             "response": {
                 "id": response_id,
-                "output": [{"type": "message", "role": "assistant"}],
+                "output": [{
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "text", "transcript": speech_text}],
+                }],
                 "status": "completed",
                 "usage": {
                     "total_tokens": token_count,
@@ -971,7 +975,11 @@ class LocalPhi4Processor(AbstractProcessor):
             "type": _MSG_RESPONSE_DONE,
             "response": {
                 "id": response_id,
-                "output": [{"type": "message", "role": "assistant"}],
+                "output": [{
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "text", "transcript": text}],
+                }],
             },
         })
 
@@ -982,7 +990,14 @@ class LocalPhi4Processor(AbstractProcessor):
         await ws.send_json({"type": _MSG_TRANSCRIPT_DELTA, "delta": text})
         await ws.send_json({
             "type": _MSG_RESPONSE_DONE,
-            "response": {"id": response_id, "output": [{"type": "message", "role": "assistant"}]},
+            "response": {
+                "id": response_id,
+                "output": [{
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "text", "transcript": text}],
+                }],
+            },
         })
 
 
