@@ -211,6 +211,8 @@ class LocalPhi4Processor(AbstractProcessor):
         is_speaking = False
         cancel_event = asyncio.Event()
         processing_lock = asyncio.Lock()
+        greeting_sent = False
+        audio_frame_count = 0
 
         # ── Session token tracking ──
         session_token = str(uuid.uuid4())
@@ -257,12 +259,17 @@ class LocalPhi4Processor(AbstractProcessor):
                         continue
                     chunk = base64.b64decode(audio_b64)
                     audio_buffer.extend(chunk)
+                    audio_frame_count += 1
+                    if audio_frame_count % 50 == 0:
+                        _vlog(verbose, "─── [Client → Server] Audio frame #%d ───", audio_frame_count)
 
                     # Simple energy-based VAD
                     chunk_energy = _compute_energy(chunk)
                     if chunk_energy > self._silence_threshold * 1000:
                         if not is_speaking:
                             pipeline_logger.info("[%s] VAD: speech detected (energy=%.1f)", session_id, chunk_energy)
+                            _vlog(verbose, "─── [VAD] Speech detected (energy=%.1f, threshold=%.1f) ───",
+                                  chunk_energy, self._silence_threshold * 1000)
                         is_speaking = True
                         silence_samples = 0
                     else:
@@ -279,6 +286,9 @@ class LocalPhi4Processor(AbstractProcessor):
                             "[%s] VAD: silence detected after speech — processing %.1fs utterance (%d bytes)",
                             session_id, duration_s, len(audio_buffer),
                         )
+                        _vlog(verbose,
+                              "─── [VAD] Silence after speech — processing %.1fs utterance (%d bytes, %d frames) ───",
+                              duration_s, len(audio_buffer), audio_frame_count)
                         utterance = bytes(audio_buffer)
                         audio_buffer.clear()
                         silence_samples = 0
@@ -303,9 +313,12 @@ class LocalPhi4Processor(AbstractProcessor):
                     is_speaking = True
                     silence_samples = 0
                     cancel_event.set()
+                    _vlog(verbose, "─── [Client → Server] input_audio_buffer.speech_started (barge-in) ───")
 
                 elif msg_type == "input_audio_buffer.commit":
                     # Explicit commit — process whatever we have
+                    _vlog(verbose, "─── [Client → Server] input_audio_buffer.commit (%d bytes buffered) ───",
+                          len(audio_buffer))
                     if len(audio_buffer) > 0:
                         utterance = bytes(audio_buffer)
                         audio_buffer.clear()
@@ -329,10 +342,25 @@ class LocalPhi4Processor(AbstractProcessor):
                     session_cfg = message.get("session", {})
                     if "instructions" in session_cfg:
                         self.system_message = session_cfg["instructions"]
+                    _vlog(verbose,
+                          "─── [Client → Server] session.update ───\n"
+                          "  Instructions: %d chars, tools configured",
+                          len(session_cfg.get("instructions", "")))
                     await ws.send_json({
                         "type": _MSG_SESSION_UPDATED,
                         "session": session_cfg,
                     })
+                    _vlog(verbose, "─── [Server → Client] session.updated ───")
+
+                    # Generate greeting (mirrors cloud mode's greeting after session.update)
+                    if not greeting_sent:
+                        greeting_sent = True
+                        greeting_text = "Welcome to McDonald's! What can I get started for you today?"
+                        pipeline_logger.info("[%s] Generating greeting after session.update", session_id)
+                        _vlog(verbose,
+                              "─── [Lifecycle] Greeting trigger=session.update ───\n"
+                              "  Text: %s", greeting_text)
+                        await self._send_text_response(ws, greeting_text)
 
                 elif msg_type == "response.cancel":
                     logger.debug("Cancel requested (session=%s)", session_id)
