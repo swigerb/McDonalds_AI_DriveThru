@@ -116,7 +116,7 @@ class LocalPhi4Processor(AbstractProcessor):
         self.tools: dict[str, Tool] = {}
         self.system_message: str | None = None
         self.temperature: float | None = self._config.get("temperature", 0.6)
-        self.max_tokens: int | None = self._config.get("max_length", 8192)
+        self.max_tokens: int | None = self._config.get("max_length", 2048)
         self.voice_choice: str | None = self._config.get("tts_default_voice") or self._config.get("tts_model")
 
         self._model_path: str | None = self._config.get("model_path")
@@ -143,6 +143,10 @@ class LocalPhi4Processor(AbstractProcessor):
         self._phi4_load_error: str | None = None
         self._tts_load_error: str | None = None
         self._stt_load_error: str | None = None
+
+        # Conversation history: list of (role, text) tuples, max 3 turns
+        self._conversation_history: list[tuple[str, str]] = []
+        self._max_history_turns: int = 3
 
     # ── AbstractProcessor interface ─────────────────────────────────────────
 
@@ -591,7 +595,7 @@ class LocalPhi4Processor(AbstractProcessor):
             self._model = _Phi4ModelManager(
                 model_path=self._model_path or "./models/phi4-multimodal",
                 device=self._device,
-                max_length=self.max_tokens or 8192,
+                max_length=self.max_tokens or 2048,
                 temperature=self.temperature or 0.6,
             )
             await self._model.load()
@@ -739,14 +743,26 @@ class LocalPhi4Processor(AbstractProcessor):
         pipeline_logger.debug("[%s] Downsampled 24kHz→16kHz: %d→%d bytes", session_id, len(audio), len(audio_16k))
         _vlog(verbose, "[%s] Audio received: %d bytes (24kHz) → %d bytes (16kHz)", session_id, len(audio), len(audio_16k))
 
-        # Start Whisper transcription in parallel (non-blocking)
-        transcription_task: asyncio.Task | None = None
+        # 1. Run Whisper STT FIRST and await result (sequential — Phi-4 needs the text)
+        customer_text: str | None = None
         if self._stt:
-            pipeline_logger.info("[%s] Starting Whisper STT transcription (parallel)", session_id)
-            _vlog(verbose, "[%s] Whisper STT: starting parallel transcription", session_id)
-            transcription_task = asyncio.create_task(self._stt.transcribe(audio_16k))
+            pipeline_logger.info("[%s] Starting Whisper STT transcription (sequential — awaiting result)", session_id)
+            _vlog(verbose, "[%s] Whisper STT: starting sequential transcription", session_id)
+            try:
+                customer_text = await self._stt.transcribe(audio_16k)
+                if customer_text:
+                    pipeline_logger.info("[%s] Whisper STT transcription: '%s'", session_id, customer_text[:100])
+                    _vlog(verbose, "[%s] Whisper STT result: '%s'", session_id, customer_text[:100])
+                    await ws.send_json({
+                        "type": "conversation.item.input_audio_transcription.completed",
+                        "transcript": customer_text,
+                    })
+                else:
+                    pipeline_logger.debug("[%s] Whisper STT returned empty transcription", session_id)
+            except Exception as exc:
+                pipeline_logger.warning("[%s] Customer transcription failed: %s", session_id, exc)
 
-        # 1. Send response.created
+        # 2. Send response.created
         await ws.send_json({
             "type": _MSG_RESPONSE_CREATED,
             "response": {"id": response_id},
@@ -754,26 +770,28 @@ class LocalPhi4Processor(AbstractProcessor):
 
         if not self._model or not self._model.is_loaded:
             pipeline_logger.error("[%s] Model not loaded — cannot process utterance", session_id)
-            if transcription_task:
-                transcription_task.cancel()
             await self._send_transcript_and_done(ws, response_id,
                 "Local model is not loaded. Please wait for initialization to complete.")
             return
 
-        # 2. Run Phi-4 inference, stream text tokens
-        # Use short local prompt to avoid overwhelming INT4 model
+        # 3. Run Phi-4 inference with user text (sequential — STT already completed)
         system_prompt = self._get_local_system_prompt()
-        # No tool schemas for local mode — they bloat the prompt and
-        # local INT4 models can't reliably produce structured tool calls.
         tool_schemas = None
 
-        pipeline_logger.info("[%s] Starting Phi-4 inference...", session_id)
-        _vlog(verbose, "[%s] Phi-4 inference: START (system_prompt=%d chars, tools=%s)",
-              session_id, len(system_prompt), [s.get("name", "?") for s in (tool_schemas or [])])
+        pipeline_logger.info("[%s] Starting Phi-4 inference (user_message=%s)...",
+                             session_id, repr(customer_text[:80]) if customer_text else "None")
+        _vlog(verbose, "[%s] Phi-4 inference: START (system_prompt=%d chars, user_message=%s, history=%d turns)",
+              session_id, len(system_prompt),
+              repr(customer_text[:80]) if customer_text else "None",
+              len(self._conversation_history))
         t0 = time.monotonic()
         full_text = ""
         token_count = 0
-        async for token in self._model.process_audio(audio_16k, system_prompt, tool_schemas):
+        async for token in self._model.process_audio(
+            audio_16k, system_prompt, tool_schemas,
+            user_message=customer_text,
+            conversation_history=self._conversation_history[-self._max_history_turns * 2:] if self._conversation_history else None,
+        ):
             if cancel_event.is_set():
                 pipeline_logger.info("[%s] Response cancelled (response=%s)", session_id, response_id)
                 break
@@ -790,28 +808,11 @@ class LocalPhi4Processor(AbstractProcessor):
               session_id, inference_ms, token_count, len(full_text))
 
         if cancel_event.is_set():
-            if transcription_task:
-                transcription_task.cancel()
             await ws.send_json({
                 "type": _MSG_RESPONSE_DONE,
                 "response": {"id": response_id, "status": "cancelled"},
             })
             return
-
-        # 3. Collect customer transcription (ran in parallel with Phi-4)
-        if transcription_task:
-            try:
-                customer_text = await transcription_task
-                if customer_text:
-                    pipeline_logger.info("[%s] Whisper STT transcription: '%s'", session_id, customer_text[:100])
-                    await ws.send_json({
-                        "type": "conversation.item.input_audio_transcription.completed",
-                        "transcript": customer_text,
-                    })
-                else:
-                    pipeline_logger.debug("[%s] Whisper STT returned empty transcription", session_id)
-            except Exception as exc:
-                pipeline_logger.warning("[%s] Customer transcription failed: %s", session_id, exc)
 
         # 4. Check for tool calls in the response
         from phi4_model import Phi4ModelManager
@@ -878,7 +879,17 @@ class LocalPhi4Processor(AbstractProcessor):
             },
         })
 
-        # 8. Advance round trip and emit token to frontend
+        # 8. Store conversation history for multi-turn context
+        if customer_text:
+            self._conversation_history.append(("user", customer_text))
+        if speech_text:
+            self._conversation_history.append(("assistant", speech_text))
+        # Keep only the last N turns (each turn = user + assistant = 2 entries)
+        max_entries = self._max_history_turns * 2
+        if len(self._conversation_history) > max_entries:
+            self._conversation_history = self._conversation_history[-max_entries:]
+
+        # 9. Advance round trip and emit token to frontend
         session_state["round_trip_index"] += 1
         rt_idx = session_state["round_trip_index"]
         st = session_state["session_token"]

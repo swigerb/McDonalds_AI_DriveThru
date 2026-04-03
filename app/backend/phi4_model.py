@@ -61,7 +61,7 @@ class Phi4ModelManager:
         self,
         model_path: str,
         device: str = "auto",
-        max_length: int = 8192,
+        max_length: int = 2048,
         temperature: float = 0.6,
     ) -> None:
         self._model_path = model_path
@@ -151,6 +151,8 @@ class Phi4ModelManager:
         system_prompt: str,
         tool_schemas: list[dict] | None = None,
         timeout: float = 30.0,
+        user_message: str | None = None,
+        conversation_history: list[tuple[str, str]] | None = None,
     ) -> AsyncGenerator[str, None]:
         """Process audio input through Phi-4 multimodal and stream text tokens.
 
@@ -160,6 +162,8 @@ class Phi4ModelManager:
             tool_schemas: Optional tool definitions for structured output
             timeout: Maximum seconds to wait for inference (default 30s).
                      If exceeded, yields a fallback message instead of hanging.
+            user_message: Transcribed user text (required for text-only mode)
+            conversation_history: Previous (role, text) turns for context
 
         Yields:
             Text tokens as they're generated
@@ -167,7 +171,7 @@ class Phi4ModelManager:
         if not self._loaded:
             raise RuntimeError("Model not loaded — call load() first")
 
-        prompt = self._build_prompt(system_prompt, tool_schemas)
+        prompt = self._build_prompt(system_prompt, tool_schemas, user_message, conversation_history)
         audio_array = self._pcm_bytes_to_numpy(audio_pcm)
 
         loop = asyncio.get_event_loop()
@@ -254,23 +258,39 @@ class Phi4ModelManager:
     def _build_prompt(
         system_prompt: str,
         tool_schemas: list[dict] | None = None,
+        user_message: str | None = None,
+        conversation_history: list[tuple[str, str]] | None = None,
     ) -> str:
-        """Build the chat-style prompt string for Phi-4 multimodal.
+        """Build the chat-style prompt string for Phi-4.
 
+        Produces a proper chat template with system, history, and user turns.
         Includes tool schemas as a structured JSON block in the system
         message when tools are provided.
         """
-        parts: list[str] = [system_prompt]
+        system_content = system_prompt
 
         if tool_schemas:
-            tools_block = (
+            system_content += (
                 "\n\nYou have access to the following tools. To call a tool, "
                 "output a JSON block wrapped in <tool_call> tags:\n"
                 "<tool_call>{\"name\": \"tool_name\", \"arguments\": {...}}</tool_call>\n\n"
                 "Available tools:\n"
                 + json.dumps(tool_schemas, indent=2)
             )
-            parts.append(tools_block)
+
+        parts: list[str] = [f"<|system|>\n{system_content}\n<|end|>"]
+
+        # Append conversation history (previous turns for context)
+        if conversation_history:
+            for role, text in conversation_history:
+                tag = "user" if role == "user" else "assistant"
+                parts.append(f"<|{tag}|>\n{text}\n<|end|>")
+
+        # Append current user message
+        if user_message:
+            parts.append(f"<|user|>\n{user_message}\n<|end|>")
+
+        parts.append("<|assistant|>")
 
         return "\n".join(parts)
 
