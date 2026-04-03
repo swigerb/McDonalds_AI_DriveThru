@@ -16,13 +16,13 @@ upsell_hints:
     trigger_categories:
       - "drinks"
       - "mccafe"
-    hint: "Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!"
+    hint: "Great drink choice! Ask if they'd like to add some food — maybe a burger, McNuggets, or World Famous Fries!"
 
   shake:
     trigger_categories:
       - "shakes"
       - "desserts"
-    hint: "Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!"
+    hint: "Yum! Great pick! Ask if they'd like to add anything else to their order!"
 
   side:
     trigger_categories:

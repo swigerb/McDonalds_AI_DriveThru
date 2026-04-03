@@ -152,16 +152,14 @@ def _expand_meal_number_query(query: str) -> str:
     return query
 
 
-# Extras may only be applied to specific beverage categories.
+# Extras may only be applied to specific categories.
 EXTRAS_KEYWORDS = (
-    "flavor add-in",
-    "whipped cream",
     "extra patty",
     "extra cheese",
     "add bacon",
 )
-ALLOWED_EXTRA_CATEGORIES = {"slushes & drinks", "shakes & ice cream", "burgers & sandwiches", "drinks", "slushes", "shakes", "combos"}
-BLOCKED_EXTRA_CATEGORIES = {"hot dogs & tots", "sides", "hot dogs"}
+ALLOWED_EXTRA_CATEGORIES = {"burgers & sandwiches", "chicken & mcnuggets®", "combos"}
+BLOCKED_EXTRA_CATEGORIES = {"drinks", "shakes", "sides", "desserts", "sweets & treats"}
 
 
 def _load_menu_category_map() -> dict[str, str]:
@@ -462,13 +460,13 @@ async def update_order(args, session_id: str) -> ToolResult:
 
         if not has_allowed_base:
             apology = (
-                "I can add extras to drinks, slushes, shakes, or combos, "
-                "but not to sides or hot dogs on their own."
+                "I can add extras like extra patty or bacon to burgers and sandwiches, "
+                "but not to drinks or sides on their own."
             )
             if has_blocked_base:
                 apology = (
-                    "I can add extras to drinks, slushes, shakes, or combos, "
-                    "but I can't add them to sides or hot dogs on their own."
+                    "I can add extras like extra patty or bacon to burgers and sandwiches, "
+                    "but I can't add them to drinks or sides on their own."
                 )
             logger.info("Blocked extra '%s' for session %s", item_name, session_id)
             return ToolResult(apology, ToolResultDirection.TO_SERVER)
@@ -577,11 +575,11 @@ async def update_order(args, session_id: str) -> ToolResult:
             elif category in ("burgers", "burgers & sandwiches"):
                 delta_text += " (UPSELL HINT: Perfect choice! Ask if they want to make it a combo meal with Fries and a refreshing Drink!)"
             elif category in ("drinks", "slushes"):
-                delta_text += " (UPSELL HINT: Great drink choice! Ask if they want to add a Flavor Add-In to customize it, or pair it with a tasty side!)"
+                delta_text += " (UPSELL HINT: Great drink choice! Ask if they'd like to add some food — maybe a burger, McNuggets, or World Famous Fries!)"
             elif category in ("shakes", "desserts", "shakes & ice cream"):
-                delta_text += " (UPSELL HINT: Yum! Shakes are perfect on their own, but ask if they'd like to add Whipped Cream or pair with a snack!)"
-            elif category in ("sides", "hot dogs", "hot dogs & tots"):
-                delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a refreshing Drink to complete their meal!)"
+                delta_text += " (UPSELL HINT: Yum! Great pick! Ask if they'd like to add anything else to their order!)"
+            elif category in ("sides",):
+                delta_text += " (UPSELL HINT: Tasty! Ask if they want to add a sandwich or a refreshing Drink to complete their meal!)"
             else:
                 delta_text += " (UPSELL HINT: Ask if they'd like to add anything else — maybe a drink, side, or dessert!)"
         logger.debug("Upsell hint for category '%s'", category)

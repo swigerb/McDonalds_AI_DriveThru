@@ -13,19 +13,22 @@ from tools import _infer_category, _is_extra_item, _search_cache, search
 class IsExtraItemTests(unittest.TestCase):
     def test_recognized_extras(self):
         self.assertTrue(_is_extra_item("Extra Patty"))
-        self.assertTrue(_is_extra_item("Whipped Cream"))
-        self.assertTrue(_is_extra_item("Flavor Add-In"))
         self.assertTrue(_is_extra_item("Extra Cheese"))
+        self.assertTrue(_is_extra_item("Add Bacon"))
 
     def test_case_insensitive(self):
         self.assertTrue(_is_extra_item("extra patty"))
-        self.assertTrue(_is_extra_item("WHIPPED CREAM"))
+        self.assertTrue(_is_extra_item("EXTRA CHEESE"))
 
     def test_non_extras(self):
         self.assertFalse(_is_extra_item("Fries"))
         self.assertFalse(_is_extra_item("Coca-Cola"))
         self.assertFalse(_is_extra_item("Big Mac"))
         self.assertFalse(_is_extra_item("Onion Rings"))
+
+    def test_removed_sonic_extras_not_recognized(self):
+        self.assertFalse(_is_extra_item("Flavor Add-In"))
+        self.assertFalse(_is_extra_item("Whipped Cream"))
 
 
 class InferCategoryTests(unittest.TestCase):

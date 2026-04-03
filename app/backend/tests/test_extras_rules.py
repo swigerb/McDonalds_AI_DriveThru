@@ -18,9 +18,9 @@ class ExtrasRuleTests(unittest.TestCase):
     def _add_item(self, session_id: str, name: str, size: str, qty: int, price: float):
         order_state_singleton.handle_order_update(session_id, "add", name, size, qty, price)
 
-    def test_block_extra_when_only_hot_dog(self):
+    def test_block_extra_when_only_drink(self):
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Chili Cheese Coney", "standard", 1, 3.99)
+        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
 
         result = asyncio.run(
             update_order(
@@ -40,21 +40,20 @@ class ExtrasRuleTests(unittest.TestCase):
 
         summary = order_state_singleton.get_order_summary(session_id)
         self.assertEqual(len(summary.items), 1)
-        self.assertEqual(summary.items[0].item, "Chili Cheese Coney")
-        self.assertTrue(math.isclose(summary.total, 3.99, rel_tol=1e-9))
+        self.assertEqual(summary.items[0].item, "Coca-Cola")
 
-    def test_allow_extra_when_slush_present(self):
+    def test_allow_extra_when_burger_present(self):
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
+        self._add_item(session_id, "Big Mac", "standard", 1, 5.99)
 
         result = asyncio.run(
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Flavor Add-In",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )
@@ -65,9 +64,9 @@ class ExtrasRuleTests(unittest.TestCase):
         summary = order_state_singleton.get_order_summary(session_id)
         self.assertEqual(len(summary.items), 2)
         extras_item = summary.items[1]
-        self.assertEqual(extras_item.item, "Flavor Add-In")
+        self.assertEqual(extras_item.item, "Extra Patty")
         self.assertEqual(extras_item.quantity, 1)
-        expected_total = (1 * 2.99) + 0.50
+        expected_total = (1 * 5.99) + 1.50
         self.assertTrue(math.isclose(summary.total, expected_total, rel_tol=1e-9))
 
     def test_block_extra_when_only_sides(self):
@@ -78,10 +77,10 @@ class ExtrasRuleTests(unittest.TestCase):
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Whipped Cream",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )
@@ -97,8 +96,8 @@ class ExtrasRuleTests(unittest.TestCase):
 
     # ── Additional extras scenarios ──
 
-    def test_allow_extra_with_shake(self):
-        """Extras should be allowed when a shake is in the order."""
+    def test_block_extra_when_only_shake(self):
+        """Extras like extra patty should be blocked when only a shake is in the order."""
         session_id = order_state_singleton.create_session()
         self._add_item(session_id, "Classic Vanilla Shake", "large", 1, 4.99)
 
@@ -106,32 +105,31 @@ class ExtrasRuleTests(unittest.TestCase):
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Whipped Cream",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )
         )
-        self.assertEqual(result.destination, ToolResultDirection.TO_BOTH)
-        summary = order_state_singleton.get_order_summary(session_id)
-        self.assertEqual(len(summary.items), 2)
+        self.assertEqual(result.destination, ToolResultDirection.TO_SERVER)
+        self.assertIn("extras", result.text.lower())
 
-    def test_allow_extra_when_mixed_order_has_slush(self):
-        """Extras allowed when order has both fries AND a drink."""
+    def test_allow_extra_when_mixed_order_has_burger(self):
+        """Extras allowed when order has both fries AND a burger."""
         session_id = order_state_singleton.create_session()
         self._add_item(session_id, "Fries", "medium", 1, 2.79)
-        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
+        self._add_item(session_id, "Big Mac", "standard", 1, 5.99)
 
         result = asyncio.run(
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Flavor Add-In",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )
@@ -144,7 +142,6 @@ class ExtrasRuleTests(unittest.TestCase):
         """Even multiple sides should not unlock extras."""
         session_id = order_state_singleton.create_session()
         self._add_item(session_id, "Fries", "large", 3, 3.29)
-        self._add_item(session_id, "Onion Rings", "medium", 1, 2.99)
 
         result = asyncio.run(
             update_order(
@@ -161,20 +158,20 @@ class ExtrasRuleTests(unittest.TestCase):
         self.assertEqual(result.destination, ToolResultDirection.TO_SERVER)
         self.assertIn("extras", result.text.lower())
 
-    def test_allow_extra_with_multiple_drinks(self):
-        """Multiple drinks in the order — extras should still be allowed."""
+    def test_allow_extra_with_burger_and_drink(self):
+        """Extra patty should be allowed when a burger is in the order alongside drinks."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Coca-Cola", "small", 1, 2.49)
-        self._add_item(session_id, "Sprite", "large", 1, 3.49)
+        self._add_item(session_id, "Big Mac", "standard", 1, 5.99)
+        self._add_item(session_id, "Coca-Cola", "large", 1, 3.49)
 
         result = asyncio.run(
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Whipped Cream",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )
@@ -186,16 +183,16 @@ class ExtrasRuleTests(unittest.TestCase):
     def test_block_extra_message_differs_with_blocked_base(self):
         """When order has only blocked-category items, the apology should mention them."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Chili Cheese Coney", "standard", 1, 3.99)
+        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
 
         result = asyncio.run(
             update_order(
                 {
                     "action": "add",
-                    "item_name": "Flavor Add-In",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )
@@ -225,23 +222,23 @@ class ExtrasRuleTests(unittest.TestCase):
         self.assertEqual(len(summary.items), 2)
 
     def test_remove_action_bypasses_extra_check(self):
-        """Removing an extra should work even without a qualifying drink."""
+        """Removing an extra should work even without a qualifying burger."""
         session_id = order_state_singleton.create_session()
-        self._add_item(session_id, "Coca-Cola", "medium", 1, 2.99)
-        self._add_item(session_id, "Flavor Add-In", "standard", 1, 0.50)
+        self._add_item(session_id, "Big Mac", "standard", 1, 5.99)
+        self._add_item(session_id, "Extra Patty", "standard", 1, 1.50)
 
-        # Now remove the drink, leaving only the extra
-        order_state_singleton.handle_order_update(session_id, "remove", "Coca-Cola", "medium", 1, 2.99)
+        # Now remove the burger, leaving only the extra
+        order_state_singleton.handle_order_update(session_id, "remove", "Big Mac", "standard", 1, 5.99)
 
         # Removing the extra should still work (remove is not gated)
         result = asyncio.run(
             update_order(
                 {
                     "action": "remove",
-                    "item_name": "Flavor Add-In",
+                    "item_name": "Extra Patty",
                     "size": "standard",
                     "quantity": 1,
-                    "price": 0.50,
+                    "price": 1.50,
                 },
                 session_id,
             )

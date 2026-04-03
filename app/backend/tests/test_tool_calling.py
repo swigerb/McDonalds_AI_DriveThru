@@ -509,17 +509,18 @@ class UpsellHintTests(unittest.TestCase):
         }, sid))
         self.assertTrue("combo" in result.text.lower() or "upsell" in result.text.lower())
 
-    def test_drink_triggers_addon_upsell(self):
+    def test_drink_triggers_food_upsell(self):
         sid = _make_session()
         result = _run(update_order({
             "action": "add", "item_name": "Coca-Cola",
             "size": "medium", "quantity": 1, "price": 1.99,
         }, sid))
         self.assertTrue(
-            "flavor" in result.text.lower()
-            or "add-in" in result.text.lower()
+            "food" in result.text.lower()
+            or "burger" in result.text.lower()
+            or "mcnuggets" in result.text.lower()
             or "upsell" in result.text.lower()
-            or "side" in result.text.lower()
+            or "fries" in result.text.lower()
         )
 
     def test_side_triggers_drink_upsell(self):
@@ -643,8 +644,6 @@ class IsExtraItemTests(unittest.TestCase):
     """Test extra item detection."""
 
     def test_recognized_extras(self):
-        self.assertTrue(_is_extra_item("Flavor Add-In"))
-        self.assertTrue(_is_extra_item("Whipped Cream"))
         self.assertTrue(_is_extra_item("Extra Patty"))
         self.assertTrue(_is_extra_item("Extra Cheese"))
         self.assertTrue(_is_extra_item("Add Bacon"))
@@ -654,9 +653,13 @@ class IsExtraItemTests(unittest.TestCase):
         self.assertFalse(_is_extra_item("Fries"))
         self.assertFalse(_is_extra_item("Coca-Cola"))
 
+    def test_removed_sonic_extras(self):
+        self.assertFalse(_is_extra_item("Flavor Add-In"))
+        self.assertFalse(_is_extra_item("Whipped Cream"))
+
     def test_case_insensitive(self):
         self.assertTrue(_is_extra_item("EXTRA PATTY"))
-        self.assertTrue(_is_extra_item("whipped cream"))
+        self.assertTrue(_is_extra_item("extra cheese"))
 
 
 class InferCategoryTests(unittest.TestCase):
@@ -702,17 +705,17 @@ class ExtrasValidationTests(unittest.TestCase):
     def test_extra_blocked_without_base_item(self):
         sid = _make_session()
         result = _run(update_order({
-            "action": "add", "item_name": "Flavor Add-In",
-            "size": "standard", "quantity": 1, "price": 0.79,
+            "action": "add", "item_name": "Extra Patty",
+            "size": "standard", "quantity": 1, "price": 1.50,
         }, sid))
         self.assertEqual(result.destination, ToolResultDirection.TO_SERVER)
 
-    def test_extra_allowed_with_drink_in_order(self):
+    def test_extra_allowed_with_burger_in_order(self):
         sid = _make_session()
-        order_state_singleton.handle_order_update(sid, "add", "Coca-Cola", "medium", 1, 1.99)
+        order_state_singleton.handle_order_update(sid, "add", "Big Mac", "standard", 1, 5.99)
         result = _run(update_order({
-            "action": "add", "item_name": "Flavor Add-In",
-            "size": "standard", "quantity": 1, "price": 0.79,
+            "action": "add", "item_name": "Extra Patty",
+            "size": "standard", "quantity": 1, "price": 1.50,
         }, sid))
         self.assertEqual(result.destination, ToolResultDirection.TO_BOTH)
 
@@ -720,8 +723,8 @@ class ExtrasValidationTests(unittest.TestCase):
         sid = _make_session()
         order_state_singleton.handle_order_update(sid, "add", "Fries", "medium", 1, 3.79)
         result = _run(update_order({
-            "action": "add", "item_name": "Flavor Add-In",
-            "size": "standard", "quantity": 1, "price": 0.79,
+            "action": "add", "item_name": "Extra Patty",
+            "size": "standard", "quantity": 1, "price": 1.50,
         }, sid))
         self.assertEqual(result.destination, ToolResultDirection.TO_SERVER)
 
