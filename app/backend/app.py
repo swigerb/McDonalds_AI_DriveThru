@@ -529,10 +529,16 @@ if __name__ == "__main__":
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 8000))
     _conn_cfg = _cfg.get("connection", {})
+
+    # Show a clickable URL (0.0.0.0 is not clickable in terminals)
+    display_host = "localhost" if host in ("0.0.0.0", "::") else host
+    print(f"\n  🍔 McDonald's AI Drive-Thru → http://{display_host}:{port}\n")
+
     web.run_app(
         create_app(),
         host=host,
         port=port,
         shutdown_timeout=_conn_cfg.get("shutdown_timeout", 10.0),
         keepalive_timeout=_conn_cfg.get("keepalive_timeout", 75.0),
+        print=lambda _: None,  # suppress default "Running on" message
     )
