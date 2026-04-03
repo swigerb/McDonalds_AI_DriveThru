@@ -32,6 +32,7 @@ from audio_pipeline import (
     create_verbose_file_handler as _create_verbose_file_handler,
     remove_verbose_file_handler as _remove_verbose_file_handler,
     _VERBOSE_GLOBAL,
+    _VERBOSE_LOG_FILE_GLOBAL,
 )
 
 logger = logging.getLogger("mcdonalds-drive-thru.local")
@@ -249,6 +250,23 @@ class LocalPhi4Processor(AbstractProcessor):
         # ── Verbose logging per-connection state ──
         verbose = _VERBOSE_GLOBAL
         session_file_handler: logging.FileHandler | None = None
+
+        # Auto-create session log file if verbose log-to-file is enabled via env config
+        if _VERBOSE_LOG_FILE_GLOBAL:
+            verbose = True
+            vlogger.setLevel(logging.DEBUG)
+            if not any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in vlogger.handlers):
+                _h = logging.StreamHandler()
+                _h.setFormatter(logging.Formatter("%(message)s"))
+                vlogger.addHandler(_h)
+            session_file_handler = _create_verbose_file_handler()
+            vlogger.addHandler(session_file_handler)
+            logger.info("Verbose log-to-file auto-enabled for session %s (config/env)", session_id)
+            _vlog(verbose,
+                  "\n╔══════════════════════════════════════╗\n"
+                  "║  LOG TO FILE: %-8s              ║\n"
+                  "╚══════════════════════════════════════╝",
+                  "ENABLED")
 
         # Emit initial session token metadata (same format as cloud mode)
         await ws.send_json({

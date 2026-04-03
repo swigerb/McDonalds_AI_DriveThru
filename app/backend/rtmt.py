@@ -39,6 +39,7 @@ from audio_pipeline import (
     _PASSTHROUGH_SERVER_TYPES,
     _PASSTHROUGH_CLIENT_TYPES,
     _VERBOSE_GLOBAL,
+    _VERBOSE_LOG_FILE_GLOBAL,
     _VERBOSE_RESULT_TRUNCATE,
 )
 
@@ -432,6 +433,23 @@ class RTMiddleTier:
         audio_frame_count = 0  # Counter for verbose audio frame logging
         # Per-connection file handler for verbose log-to-file (set by frontend or env var)
         session_file_handler: logging.FileHandler | None = None
+
+        # Auto-create session log file if verbose log-to-file is enabled via env config
+        if _VERBOSE_LOG_FILE_GLOBAL:
+            verbose = True
+            vlogger.setLevel(logging.DEBUG)
+            if not any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in vlogger.handlers):
+                _h = logging.StreamHandler()
+                _h.setFormatter(logging.Formatter("%(message)s"))
+                vlogger.addHandler(_h)
+            session_file_handler = _create_verbose_file_handler()
+            vlogger.addHandler(session_file_handler)
+            logger.info("Verbose log-to-file auto-enabled (config/env)")
+            _vlog(verbose,
+                  "\n╔══════════════════════════════════════╗\n"
+                  "║  LOG TO FILE: %-8s              ║\n"
+                  "╚══════════════════════════════════════╝",
+                  "ENABLED")
 
         # Echo suppression — delegates to EchoSuppressor
         echo = EchoSuppressor()
