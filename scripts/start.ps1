@@ -17,12 +17,24 @@ try {
     # Fix onnxruntime for GPU (DirectML) — faster-whisper pulls in CPU variant which conflicts
     if ($GPU) {
         Write-Host ""
-        Write-Host "GPU mode: swapping onnxruntime CPU → DirectML..."
+        Write-Host "GPU mode: checking onnxruntime variant..."
         $pipPath = Join-Path $repoRoot ".venv/scripts/pip.exe"
         if ($IsLinux -or $IsMacOS) { $pipPath = Join-Path $repoRoot ".venv/bin/pip" }
-        & $pipPath uninstall onnxruntime -y 2>$null
-        & $pipPath install --force-reinstall --no-deps onnxruntime-directml==1.24.4 --quiet
-        Write-Host "GPU mode: onnxruntime-directml ready"
+        
+        # Check if onnxruntime-directml is already the active variant
+        $dmlInstalled = & $pipPath show onnxruntime-directml 2>$null
+        if ($dmlInstalled) {
+            Write-Host "GPU mode: onnxruntime-directml already installed — skipping swap"
+        } else {
+            Write-Host "GPU mode: swapping onnxruntime CPU → DirectML..."
+            & $pipPath uninstall onnxruntime -y 2>$null
+            & $pipPath install --force-reinstall --no-deps onnxruntime-directml==1.24.4 --quiet
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "WARNING: Could not install onnxruntime-directml (offline?). GPU may not be available."
+            } else {
+                Write-Host "GPU mode: onnxruntime-directml ready"
+            }
+        }
         Write-Host ""
     }
 
