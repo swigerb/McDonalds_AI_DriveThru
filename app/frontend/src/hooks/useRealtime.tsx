@@ -92,15 +92,10 @@ export default function useRealTime({
             return;
         }
         console.log("[WS] Fetching session token...");
-        if (!localMode) {
-            fetchSessionToken().then((token) => {
-                console.log("[WS] Session token:", token ? "obtained" : "not required");
-                setSessionToken(token);
-            });
-        } else {
-            console.log("[LOCAL-MODE] Skipping session token fetch — not needed offline");
-            setSessionToken(null);
-        }
+        fetchSessionToken().then((token) => {
+            console.log("[WS] Session token:", token ? "obtained" : "not required");
+            setSessionToken(token);
+        });
     }, [localMode]);
 
     const buildWsEndpoint = () => {

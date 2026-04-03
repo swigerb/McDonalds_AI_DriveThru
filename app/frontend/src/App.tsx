@@ -164,9 +164,9 @@ function McDonaldsApp() {
         },
         onWebSocketError: event => {
             console.error("[WS] WebSocket error:", event);
-            if (localMode) {
-                toast("Cannot connect to local server. Is the backend running?");
-            }
+            // Don't show toast on background auto-connect errors — only when user
+            // actively tries to start a session (handled in handleMicClick).
+            // The auto-reconnect will keep trying silently.
         },
         onReceivedError: message => console.error("error", message),
         onReceivedResponseCreated: () => {
