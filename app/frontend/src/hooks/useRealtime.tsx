@@ -117,6 +117,8 @@ export default function useRealTime({
     const wsEndpoint = buildWsEndpoint();
 
     const retryCountRef = useRef(0);
+    const [retryCount, setRetryCount] = useState(0);
+    const prevReadyStateRef = useRef<ReadyState | null>(null);
     // Ref to break circular dependency: callbacks need sendJsonMessage,
     // but sendJsonMessage comes from useWebSocket which takes the callbacks.
     const sendJsonMessageRef = useRef<(msg: object) => void>(() => {});
@@ -185,10 +187,12 @@ export default function useRealTime({
         onOpen: () => {
             console.log("[WS] Connection opened", localMode ? "(local mode)" : "(cloud mode)", "→", wsEndpoint);
             retryCountRef.current = 0;
+            setRetryCount(0);
             onWebSocketOpen?.();
         },
         onClose: (event) => {
             console.log("[WS] Connection closed", { code: event.code, reason: event.reason, localMode });
+            setRetryCount(prev => prev + 1);
             // Auth failure → refresh token and let reconnect use the new one
             // Skip in local mode — no Azure auth needed
             if (!localMode && (event.code === 4001 || event.reason?.includes("expired"))) {
@@ -214,6 +218,23 @@ export default function useRealTime({
     useEffect(() => {
         sendJsonMessageRef.current = sendJsonMessage;
     }, [sendJsonMessage]);
+
+    // Log readyState transitions for diagnostics
+    useEffect(() => {
+        const labels: Record<number, string> = {
+            [ReadyState.CONNECTING]: "CONNECTING",
+            [ReadyState.OPEN]: "OPEN",
+            [ReadyState.CLOSING]: "CLOSING",
+            [ReadyState.CLOSED]: "CLOSED",
+            [-1]: "UNINSTANTIATED"
+        };
+        const prev = prevReadyStateRef.current;
+        const prevLabel = prev !== null ? (labels[prev] ?? `UNKNOWN(${prev})`) : "NONE";
+        const currLabel = labels[readyState] ?? `UNKNOWN(${readyState})`;
+        console.log(`[WS-DIAG] readyState changed: ${prevLabel} → ${currLabel}`);
+        console.log(`[WS-DIAG] WebSocket URL: ${wsEndpoint}`);
+        prevReadyStateRef.current = readyState;
+    }, [readyState, wsEndpoint]);
 
     const startSession = () => {
         console.log("[WS] Starting session. readyState:", readyState, readyState === ReadyState.OPEN ? "OPEN" : "NOT OPEN");
@@ -280,5 +301,5 @@ export default function useRealTime({
         sendJsonMessage({ type: "extension.set_piper_voice", voice });
     };
 
-    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice, sendLocalModeToggle, sendPiperVoiceChoice, readyState };
+    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice, sendLocalModeToggle, sendPiperVoiceChoice, readyState, wsEndpoint, retryCount, maxRetries: MAX_RETRIES };
 }

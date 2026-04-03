@@ -222,73 +222,79 @@ async def create_app() -> web.Application:
     llm_key = os.environ.get("AZURE_OPENAI_EASTUS2_API_KEY")
     search_key = os.environ.get("AZURE_SEARCH_API_KEY")
 
-    # Cloud processor setup — skip when running in local-only mode
+    # Cloud processor setup — skip when running in local-only mode.
+    # Wrapped in try/except: if ANYTHING fails here (credential issues,
+    # Azure unreachable, token warmup hang), we STILL create the
+    # ProcessorRouter and register /realtime for local-only operation.
     rtmt = None
+    conn_cfg = _cfg.get("connection", {})
+    model_cfg = _cfg.get("model", {})
+    app_secret = os.urandom(32)
     if not missing_vars:
-        credential = None
-        if not llm_key or not search_key:
-            if tenant_id := os.environ.get("AZURE_TENANT_ID"):
-                logger.info("Using AzureDeveloperCliCredential with tenant_id %s", tenant_id)
-                credential = AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
-            else:
-                logger.info("Using DefaultAzureCredential")
-                credential = DefaultAzureCredential()
+        try:
+            credential = None
+            if not llm_key or not search_key:
+                if tenant_id := os.environ.get("AZURE_TENANT_ID"):
+                    logger.info("Using AzureDeveloperCliCredential with tenant_id %s", tenant_id)
+                    credential = AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
+                else:
+                    logger.info("Using DefaultAzureCredential")
+                    credential = DefaultAzureCredential()
 
-        llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
-        search_credential = AzureKeyCredential(search_key) if search_key else credential
+            llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
+            search_credential = AzureKeyCredential(search_key) if search_key else credential
 
-        conn_cfg = _cfg.get("connection", {})
-
-        model_cfg = _cfg.get("model", {})
-        rtmt = RTMiddleTier(
-            credentials=llm_credential,
-            endpoint=llm_endpoint,
-            deployment=llm_deployment,
-            voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
-            prompt_loader=prompt_loader,
-        )
-        # Generate a random secret for HMAC session tokens
-        app_secret = os.urandom(32)
-        rtmt.app_secret = app_secret
-        if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
-            rtmt.api_version = api_version
-        else:
-            rtmt.api_version = model_cfg.get("api_version", "2024-10-01-preview")
-        rtmt.temperature = model_cfg.get("temperature", 0.6)
-        rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
-
-        # System message: prefer externalized YAML prompt, fall back to hardcoded
-        if prompt_loader is not None:
-            rtmt.system_message = prompt_loader.get_system_prompt()
-        else:
-            rtmt.system_message = (
-                "You are a McDonald's crew member — friendly, efficient, and FAST. You take drive-thru orders at the world's most famous restaurant.\n\n"
-                "GREETING:\n"
-                "- Welcome to McDonald's! I'm your digital assistant. What can I get started for you today?\n\n"
-                "VOICE STYLE:\n"
-                "- You ARE the crew member — NEVER explain what you would say. Just SAY it directly.\n"
-                "- Warm, upbeat, efficient — the 'I'm Lovin' It' energy\n"
-                "- ONE or TWO short sentences max per response\n"
+            rtmt = RTMiddleTier(
+                credentials=llm_credential,
+                endpoint=llm_endpoint,
+                deployment=llm_deployment,
+                voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
+                prompt_loader=prompt_loader,
             )
+            rtmt.app_secret = app_secret
+            if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
+                rtmt.api_version = api_version
+            else:
+                rtmt.api_version = model_cfg.get("api_version", "2024-10-01-preview")
+            rtmt.temperature = model_cfg.get("temperature", 0.6)
+            rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
 
-        attach_tools_rtmt(
-            rtmt,
-            credentials=search_credential,
-            search_endpoint=os.environ.get("AZURE_SEARCH_ENDPOINT"),
-            search_index=os.environ.get("AZURE_SEARCH_INDEX"),
-            semantic_configuration=os.environ.get("AZURE_SEARCH_SEMANTIC_CONFIGURATION") or "menuSemanticConfig",
-            identifier_field=os.environ.get("AZURE_SEARCH_IDENTIFIER_FIELD") or "id",
-            content_field=os.environ.get("AZURE_SEARCH_CONTENT_FIELD") or "description",
-            embedding_field=os.environ.get("AZURE_SEARCH_EMBEDDING_FIELD") or "embedding",
-            title_field=os.environ.get("AZURE_SEARCH_TITLE_FIELD") or "name",
-            use_vector_query=_get_bool_env("AZURE_SEARCH_USE_VECTOR_QUERY", True),
-            prompt_loader=prompt_loader,
-        )
+            # System message: prefer externalized YAML prompt, fall back to hardcoded
+            if prompt_loader is not None:
+                rtmt.system_message = prompt_loader.get_system_prompt()
+            else:
+                rtmt.system_message = (
+                    "You are a McDonald's crew member — friendly, efficient, and FAST. You take drive-thru orders at the world's most famous restaurant.\n\n"
+                    "GREETING:\n"
+                    "- Welcome to McDonald's! I'm your digital assistant. What can I get started for you today?\n\n"
+                    "VOICE STYLE:\n"
+                    "- You ARE the crew member — NEVER explain what you would say. Just SAY it directly.\n"
+                    "- Warm, upbeat, efficient — the 'I'm Lovin' It' energy\n"
+                    "- ONE or TWO short sentences max per response\n"
+                )
+
+            attach_tools_rtmt(
+                rtmt,
+                credentials=search_credential,
+                search_endpoint=os.environ.get("AZURE_SEARCH_ENDPOINT"),
+                search_index=os.environ.get("AZURE_SEARCH_INDEX"),
+                semantic_configuration=os.environ.get("AZURE_SEARCH_SEMANTIC_CONFIGURATION") or "menuSemanticConfig",
+                identifier_field=os.environ.get("AZURE_SEARCH_IDENTIFIER_FIELD") or "id",
+                content_field=os.environ.get("AZURE_SEARCH_CONTENT_FIELD") or "description",
+                embedding_field=os.environ.get("AZURE_SEARCH_EMBEDDING_FIELD") or "embedding",
+                title_field=os.environ.get("AZURE_SEARCH_TITLE_FIELD") or "name",
+                use_vector_query=_get_bool_env("AZURE_SEARCH_USE_VECTOR_QUERY", True),
+                prompt_loader=prompt_loader,
+            )
+            logger.info("✅ Cloud processor (RTMiddleTier) created successfully")
+        except Exception as exc:
+            logger.error(
+                "⚠️ Cloud processor creation failed: %s — continuing with local-only mode", exc,
+                exc_info=True,
+            )
+            rtmt = None
     else:
-        conn_cfg = _cfg.get("connection", {})
-        model_cfg = _cfg.get("model", {})
-        app_secret = os.urandom(32)
-        logger.info("Cloud processor (RTMiddleTier) skipped — Azure env vars not set")
+        logger.info("⚠️ Cloud processor unavailable (Azure env vars not set)")
 
     app = web.Application(
         middlewares=[_compression_middleware],
@@ -361,6 +367,35 @@ async def create_app() -> web.Application:
 
     router = ProcessorRouter(cloud_processor=rtmt, local_processor=local_processor)
     router.attach_to_app(app, "/realtime")
+    logger.info("✅ /realtime WebSocket route registered")
+    logger.info(
+        "✅ Local processor available" if local_processor is not None
+        else "⚠️ Local processor unavailable"
+    )
+    logger.info(
+        "✅ Cloud processor available" if rtmt is not None
+        else "⚠️ Cloud processor unavailable (offline)"
+    )
+
+    # ── WebSocket Test Endpoint ──
+    # Minimal echo WebSocket — proves WebSocket infrastructure works
+    # independently of the /realtime handler.  If the frontend can
+    # connect to /api/ws-test but not /realtime, the problem is in the
+    # realtime handler, not the server's WebSocket support.
+    async def ws_test_handler(request: web.Request) -> web.WebSocketResponse:
+        ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True)
+        await ws.prepare(request)
+        logger.info("[ws-test] WebSocket test connection opened")
+        await ws.send_json({"type": "ws-test.connected", "message": "WebSocket echo test active"})
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                await ws.send_str(msg.data)
+            elif msg.type == aiohttp.WSMsgType.BINARY:
+                await ws.send_bytes(msg.data)
+            elif msg.type in (aiohttp.WSMsgType.ERROR, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING):
+                break
+        logger.info("[ws-test] WebSocket test connection closed")
+        return ws
 
     # ── HMAC Session Token Endpoint ──
     async def get_session_token(_request: web.Request) -> web.Response:
@@ -500,6 +535,7 @@ async def create_app() -> web.Application:
         web.get('/api/local-mode/voices', local_mode_voices),
         web.post('/api/local-mode/toggle', local_mode_toggle),
         web.get('/api/diagnostics', diagnostics_handler),
+        web.get('/api/ws-test', ws_test_handler),
     ])
     app.router.add_static(
         '/',

@@ -101,3 +101,14 @@ _No sessions yet._
 - **console.error preserved:** All `console.error("[MIC]", ...)` and `console.error("[WS]", ...)` lines untouched — developer logging intact.
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
 - ✅ All 13 tests pass (`vitest run`)
+
+### 2025-07-25: WebSocket Diagnostic Indicator for Local Mode
+- **What:** Added a real-time WebSocket connection diagnostic indicator below the mic button (local mode only) and a "Connection" section in the Session Tokens panel. Added `[WS-DIAG]` console logging at every readyState transition and mic click.
+- **Problem:** Brian kept getting "Cannot connect to local server" with no visibility into what the WebSocket was actually doing — no URL, no state, no retry count.
+- **Files modified:** `useRealtime.tsx` (expose `wsEndpoint`, `retryCount`, `maxRetries`; track retryCount state; log readyState transitions with `[WS-DIAG]` prefix), `App.tsx` (diagnostic indicator below mic, Connection section in SessionTokenPanel, `readyStateLabel` helper, `[WS-DIAG]` logs on mic click)
+- **Mic diagnostic indicator:** Small gray mono text below StatusMessage, only when `localMode=true`. Shows `🔌 WS: Connected ✅` or `🔌 WS: Disconnected ❌ — retrying (3/10)` plus the full WebSocket URL.
+- **SessionTokenPanel update:** Now renders when `showSessionTokens && (sessionIdentifiers || localMode)` — so in local mode, the panel appears even before a session starts. Shows Connection section with colored state label (green=connected, red=disconnected, amber=retrying) and the WebSocket URL.
+- **Console logging:** `[WS-DIAG] readyState changed: CONNECTING → OPEN` on every transition, plus `[WS-DIAG] WebSocket URL: ...` alongside it. Filter browser console by `[WS-DIAG]` to see only connection diagnostics.
+- **Retry tracking:** `retryCount` state in useRealtime increments on every `onClose`, resets to 0 on `onOpen`. Displayed as `retrying (N/10)` in UI.
+- ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
+- ✅ All 15 tests pass (`vitest run`)

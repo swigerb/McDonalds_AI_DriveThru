@@ -65,6 +65,16 @@ const heroCallouts = [
     { label: "Crew Pick", value: "Quarter Pounder® w/ Cheese", accent: "#27251F" }
 ];
 
+const readyStateLabel = (state: ReadyState): string => {
+    switch (state) {
+        case ReadyState.CONNECTING: return "Connecting...";
+        case ReadyState.OPEN: return "Connected ✅";
+        case ReadyState.CLOSING: return "Closing...";
+        case ReadyState.CLOSED: return "Disconnected ❌";
+        default: return "Not started";
+    }
+};
+
 function McDonaldsApp() {
     const [isRecording, setIsRecording] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -309,6 +319,7 @@ function McDonaldsApp() {
 
     const onToggleListening = async () => {
         console.log("[MIC] Toggle clicked. isRecording:", isRecording, "localMode:", localMode, "readyState:", realtime.readyState);
+        console.log("[WS-DIAG] Mic clicked, readyState:", readyStateLabel(realtime.readyState), "wsEndpoint:", realtime.wsEndpoint);
 
         if (!isRecording) {
             // Check WebSocket connection before proceeding
@@ -317,6 +328,7 @@ function McDonaldsApp() {
                     ? "Cannot connect to local server. Is the backend running?"
                     : "WebSocket not connected. Please check your connection and try again.";
                 console.error("[MIC] WebSocket not connected! readyState:", realtime.readyState);
+                console.log("[WS-DIAG] Mic clicked, readyState:", readyStateLabel(realtime.readyState), "(not OPEN — showing toast)");
                 toast(errorMsg);
                 return;
             }
@@ -452,7 +464,17 @@ function McDonaldsApp() {
                     </div>
                 </div>
 
-                {sessionIdentifiers && showSessionTokens && <SessionTokenPanel identifiers={sessionIdentifiers} history={tokenHistory} />}
+                {showSessionTokens && (sessionIdentifiers || localMode) && (
+                    <SessionTokenPanel
+                        identifiers={sessionIdentifiers}
+                        history={tokenHistory}
+                        wsReadyState={realtime.readyState}
+                        wsEndpoint={realtime.wsEndpoint}
+                        retryCount={realtime.retryCount}
+                        maxRetries={realtime.maxRetries}
+                        localMode={localMode}
+                    />
+                )}
 
                 <BrandHero />
 
@@ -510,6 +532,19 @@ function McDonaldsApp() {
                                     )}
                                 </Button>
                                 <StatusMessage isRecording={isRecording} />
+                                {localMode && (
+                                    <div className="mt-2 max-w-xs text-center font-mono text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+                                        <div>
+                                            🔌 WS: {readyStateLabel(realtime.readyState)}
+                                            {realtime.readyState === ReadyState.CLOSED && realtime.retryCount > 0 && (
+                                                <span> — retrying ({realtime.retryCount}/{realtime.maxRetries})</span>
+                                            )}
+                                        </div>
+                                        <div className="truncate text-[10px] text-gray-300 dark:text-gray-600">
+                                            {realtime.wsEndpoint}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </Card>
@@ -639,15 +674,46 @@ function HeroHighlightCard({ title, detail, tone }: { title: string; detail: str
 
 const SessionTokenPanel = memo(function SessionTokenPanel({
     identifiers,
-    history
+    history,
+    wsReadyState,
+    wsEndpoint: panelWsEndpoint,
+    retryCount: panelRetryCount,
+    maxRetries: panelMaxRetries,
+    localMode: panelLocalMode
 }: {
-    identifiers: SessionIdentifiersState;
+    identifiers: SessionIdentifiersState | null;
     history: SessionIdentifiersState[];
+    wsReadyState?: ReadyState;
+    wsEndpoint?: string;
+    retryCount?: number;
+    maxRetries?: number;
+    localMode?: boolean;
 }) {
     const [expanded, setExpanded] = useState(false);
 
     return (
         <div className="rounded-xl border border-white/30 bg-white/90 font-mono text-xs shadow-sm dark:border-white/10 dark:bg-[#27251F]/90">
+            {panelLocalMode && wsReadyState !== undefined && (
+                <div className="border-b border-white/20 px-3 py-2 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[#27251F] dark:text-[#FFBC0D]">Connection:</span>
+                        <span className={wsReadyState === ReadyState.OPEN ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}>
+                            {readyStateLabel(wsReadyState)}
+                        </span>
+                        {wsReadyState === ReadyState.CLOSED && (panelRetryCount ?? 0) > 0 && (
+                            <span className="text-amber-500 dark:text-amber-400">
+                                retrying ({panelRetryCount}/{panelMaxRetries})
+                            </span>
+                        )}
+                    </div>
+                    {panelWsEndpoint && (
+                        <div className="mt-0.5 truncate text-[10px] text-gray-400 dark:text-gray-500">
+                            🔌 {panelWsEndpoint}
+                        </div>
+                    )}
+                </div>
+            )}
+            {identifiers && (<>
             <button
                 type="button"
                 onClick={() => setExpanded(prev => !prev)}
@@ -703,6 +769,7 @@ const SessionTokenPanel = memo(function SessionTokenPanel({
                     </motion.div>
                 )}
             </AnimatePresence>
+            </>)}
         </div>
     );
 });

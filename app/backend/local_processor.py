@@ -160,6 +160,7 @@ class LocalPhi4Processor(AbstractProcessor):
         )
 
         # Lazy-load models on first connection if not already loaded
+        model_load_failed = False
         if not self._model_loaded and not self._loading:
             try:
                 pipeline_logger.info("[%s] Lazy-loading local models (first connection)...", session_id)
@@ -167,6 +168,7 @@ class LocalPhi4Processor(AbstractProcessor):
                 pipeline_logger.info("[%s] Local models loaded successfully", session_id)
             except Exception as exc:
                 pipeline_logger.error("[%s] Failed to load local models: %s", session_id, exc, exc_info=True)
+                model_load_failed = True
                 await ws.send_json({
                     "type": _MSG_SESSION_CREATED,
                     "session": {"id": session_id, "model": "phi-4-onnx", "voice": "unavailable"},
@@ -175,29 +177,33 @@ class LocalPhi4Processor(AbstractProcessor):
                     ws,
                     f"Local mode model loading failed: {exc}. Please switch to cloud mode.",
                 )
-                return
+                # DON'T return — keep the WebSocket alive in degraded mode.
+                # Returning here would close the socket, triggering auto-reconnect,
+                # which creates a rapid connect→fail→close cycle that prevents
+                # readyState from ever being OPEN when the user clicks the mic.
 
-        # Send session.created
-        tool_names = list(self.tools.keys())
-        pipeline_logger.info(
-            "[%s] Sending session.created (model=%s, voice=%s, tools=%s)",
-            session_id,
-            f"phi-4-onnx ({self._model.device_name})" if self._model else "phi-4-onnx",
-            self.voice_choice or "local",
-            tool_names,
-        )
-        await ws.send_json({
-            "type": _MSG_SESSION_CREATED,
-            "session": {
-                "id": session_id,
-                "model": f"phi-4-onnx ({self._model.device_name})" if self._model else "phi-4-onnx",
-                "voice": self.voice_choice or "local",
-                "instructions": "",
-                "tools": tool_names,
-                "tool_choice": "auto" if tool_names else "none",
-                "max_response_output_tokens": self.max_tokens,
-            },
-        })
+        # Send session.created (skip if already sent during model load failure)
+        if not model_load_failed:
+            tool_names = list(self.tools.keys())
+            pipeline_logger.info(
+                "[%s] Sending session.created (model=%s, voice=%s, tools=%s)",
+                session_id,
+                f"phi-4-onnx ({self._model.device_name})" if self._model else "phi-4-onnx",
+                self.voice_choice or "local",
+                tool_names,
+            )
+            await ws.send_json({
+                "type": _MSG_SESSION_CREATED,
+                "session": {
+                    "id": session_id,
+                    "model": f"phi-4-onnx ({self._model.device_name})" if self._model else "phi-4-onnx",
+                    "voice": self.voice_choice or "local",
+                    "instructions": "",
+                    "tools": tool_names,
+                    "tool_choice": "auto" if tool_names else "none",
+                    "max_response_output_tokens": self.max_tokens,
+                },
+            })
 
         # Per-connection state
         audio_buffer = bytearray()
@@ -279,7 +285,12 @@ class LocalPhi4Processor(AbstractProcessor):
                         is_speaking = False
                         cancel_event.clear()
 
-                        if not processing_lock.locked():
+                        if model_load_failed:
+                            await self._send_text_response(
+                                ws,
+                                "Local models are not loaded. Please switch to cloud mode in settings.",
+                            )
+                        elif not processing_lock.locked():
                             asyncio.ensure_future(
                                 self._process_utterance_safe(
                                     utterance, ws, session_id, cancel_event, processing_lock,
@@ -301,7 +312,12 @@ class LocalPhi4Processor(AbstractProcessor):
                         silence_samples = 0
                         is_speaking = False
                         cancel_event.clear()
-                        if not processing_lock.locked():
+                        if model_load_failed:
+                            await self._send_text_response(
+                                ws,
+                                "Local models are not loaded. Please switch to cloud mode in settings.",
+                            )
+                        elif not processing_lock.locked():
                             asyncio.ensure_future(
                                 self._process_utterance_safe(
                                     utterance, ws, session_id, cancel_event, processing_lock,

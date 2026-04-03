@@ -159,7 +159,10 @@ class RTMiddleTier:
             self.key = credentials.key
         else:
             self._token_provider = get_bearer_token_provider(credentials, "https://cognitiveservices.azure.com/.default")
-            self._token_provider() # Warm up during startup so we have a token cached when the first request arrives
+            try:
+                self._token_provider()  # Warm up — cache a token for the first request
+            except Exception as exc:
+                logger.warning("Token warmup failed (offline?): %s — will retry on first request", exc)
 
     def _get_auth_token(self) -> str:
         """Return the cached token, falling back to a synchronous call if needed."""

@@ -98,6 +98,12 @@ class ProcessorRouter:
         This replaces the direct ``rtmt.attach_to_app()`` call in app.py.
         """
         app.router.add_get(path, self._websocket_handler)
+        pipeline_logger.info(
+            "WebSocket route registered at %s (cloud=%s, local=%s)",
+            path,
+            "yes" if self._cloud is not None else "no",
+            "yes" if self._local is not None else "no",
+        )
 
     @property
     def cloud(self) -> RTMiddleTier | None:
