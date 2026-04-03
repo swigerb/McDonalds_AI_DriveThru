@@ -61,7 +61,7 @@ class Phi4ModelManager:
         self,
         model_path: str,
         device: str = "auto",
-        max_length: int = 256,
+        max_length: int = 8192,
         temperature: float = 0.6,
     ) -> None:
         self._model_path = model_path

@@ -259,13 +259,12 @@ class PiperTTSEngine:
             self._voice.synthesize(
                 text,
                 audio_buffer,
-                sentence_silence=0.1,
                 length_scale=self._length_scale,
             )
         except TypeError:
             # Older piper-tts versions may not accept length_scale kwarg
             try:
-                self._voice.synthesize(text, audio_buffer, sentence_silence=0.1)
+                self._voice.synthesize(text, audio_buffer)
             except Exception as exc:
                 logger.error("Piper synthesis failed: %s", exc)
                 return b""

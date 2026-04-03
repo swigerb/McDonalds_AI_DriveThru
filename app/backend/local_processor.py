@@ -116,7 +116,7 @@ class LocalPhi4Processor(AbstractProcessor):
         self.tools: dict[str, Tool] = {}
         self.system_message: str | None = None
         self.temperature: float | None = self._config.get("temperature", 0.6)
-        self.max_tokens: int | None = self._config.get("max_length", 256)
+        self.max_tokens: int | None = self._config.get("max_length", 8192)
         self.voice_choice: str | None = self._config.get("tts_default_voice") or self._config.get("tts_model")
 
         self._model_path: str | None = self._config.get("model_path")
@@ -591,7 +591,7 @@ class LocalPhi4Processor(AbstractProcessor):
             self._model = _Phi4ModelManager(
                 model_path=self._model_path or "./models/phi4-multimodal",
                 device=self._device,
-                max_length=self.max_tokens or 256,
+                max_length=self.max_tokens or 8192,
                 temperature=self.temperature or 0.6,
             )
             await self._model.load()
