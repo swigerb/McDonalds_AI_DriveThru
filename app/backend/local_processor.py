@@ -284,6 +284,7 @@ class LocalPhi4Processor(AbstractProcessor):
 
                     # Half-duplex: drop incoming audio while Phi-4 is generating
                     if self._generating:
+                        pipeline_logger.debug("[%s] Audio frame dropped (half-duplex: generating)", session_id)
                         continue
 
                     chunk = base64.b64decode(audio_b64)
@@ -304,6 +305,9 @@ class LocalPhi4Processor(AbstractProcessor):
                     else:
                         silence_samples += len(chunk) // _BYTES_PER_SAMPLE
 
+                    # Minimum utterance duration: 0.5s at 24kHz stereo = 24000 bytes
+                    _MIN_UTTERANCE_BYTES = int(_FRONTEND_SAMPLE_RATE * _BYTES_PER_SAMPLE * 0.5)
+
                     # Silence exceeded threshold after speech → process utterance
                     if (
                         is_speaking
@@ -323,6 +327,15 @@ class LocalPhi4Processor(AbstractProcessor):
                         silence_samples = 0
                         is_speaking = False
                         cancel_event.clear()
+
+                        # Skip very short utterances (< 0.5s) — likely noise
+                        if len(utterance) < _MIN_UTTERANCE_BYTES:
+                            utterance_dur = len(utterance) / (_FRONTEND_SAMPLE_RATE * _BYTES_PER_SAMPLE)
+                            pipeline_logger.info(
+                                "[%s] Utterance too short (%.2fs) — likely noise, skipping",
+                                session_id, utterance_dur,
+                            )
+                            continue
 
                         if model_load_failed:
                             _vlog(verbose,
@@ -361,7 +374,15 @@ class LocalPhi4Processor(AbstractProcessor):
                         silence_samples = 0
                         is_speaking = False
                         cancel_event.clear()
-                        if model_load_failed:
+
+                        # Skip very short committed utterances (< 0.5s) — likely noise
+                        if len(utterance) < _MIN_UTTERANCE_BYTES:
+                            utterance_dur = len(utterance) / (_FRONTEND_SAMPLE_RATE * _BYTES_PER_SAMPLE)
+                            pipeline_logger.info(
+                                "[%s] Committed utterance too short (%.2fs) — likely noise, skipping",
+                                session_id, utterance_dur,
+                            )
+                        elif model_load_failed:
                             _vlog(verbose,
                                   "─── [DROPPED] Committed utterance dropped — model_load_failed=True ───\n"
                                   "  %s", model_load_error_detail or "Models not loaded")
@@ -403,7 +424,12 @@ class LocalPhi4Processor(AbstractProcessor):
                         _vlog(verbose,
                               "─── [Lifecycle] Greeting trigger=session.update ───\n"
                               "  Text: %s", greeting_text)
-                        await self._send_text_response(ws, greeting_text)
+                        self._generating = True
+                        try:
+                            await self._send_text_response(ws, greeting_text)
+                        finally:
+                            self._generating = False
+                            pipeline_logger.debug("[%s] Greeting TTS complete — half-duplex unlocked", session_id)
 
                 elif msg_type == "response.cancel":
                     logger.debug("Cancel requested (session=%s)", session_id)
@@ -771,7 +797,16 @@ class LocalPhi4Processor(AbstractProcessor):
         else:
             pipeline_logger.warning("[%s] No STT engine loaded — cannot transcribe audio", session_id)
 
-        # 2. Send response.created
+        # 2. Guard: skip inference if transcription is empty
+        if not customer_text:
+            pipeline_logger.warning("[%s] Whisper returned empty transcription — asking customer to repeat", session_id)
+            await self._send_text_response(
+                ws,
+                "I didn't catch that, could you say that again?",
+            )
+            return
+
+        # 3. Send response.created
         await ws.send_json({
             "type": _MSG_RESPONSE_CREATED,
             "response": {"id": response_id},
