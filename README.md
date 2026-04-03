@@ -453,14 +453,15 @@ The McDonald's AI Drive-Thru supports a fully offline **Local Mode** that runs e
 
 ### Overview
 
-Local Mode delivers a complete AI drive-thru experience on consumer hardware. The app swaps Azure OpenAI services for a self-hosted inference stack: **Phi-4-mini** (3.8B LLM), **Faster-Whisper** (STT), and **Piper TTS** (speech synthesis). When toggled on in the settings panel, guests enjoy the same natural, multilingual ordering conversation — powered entirely by your GPU.
+Local Mode delivers a complete AI drive-thru experience on consumer hardware. The app swaps Azure OpenAI services for a self-hosted inference stack: **Phi-4-mini-instruct** (3.8B LLM, text-only), **Whisper base.en** (STT on CPU), and **Piper TTS** (speech synthesis). When toggled on in the settings panel, guests enjoy the same natural, multilingual ordering conversation — powered entirely by your GPU.
 
 ### Architecture
 
 **Local Mode Architecture:**
-- **LLM**: Phi-4-mini-instruct (3.8B params, INT4 ONNX) via `onnxruntime-genai-directml`
-- **STT**: Faster-Whisper (tiny model, ~75MB) for local speech-to-text
-- **TTS**: Piper TTS (Amy voice, en_US-amy-medium) with 0.7 length_scale for upbeat energy
+- **LLM**: Phi-4-mini-instruct (3.8B params, INT4 ONNX) via `onnxruntime-genai-directml` — text-only model downloaded from `microsoft/Phi-4-mini-instruct-onnx`
+- **STT**: Whisper base.en on CPU (not tiny) for better food vocabulary accuracy — ~200ms transcription for short utterances
+- **TTS**: Piper TTS (Amy voice, en_US) with 0.7 length_scale for faster, upbeat energy
+- **Pipeline**: Sequential — Whisper STT → Phi-4-mini → Piper TTS with half-duplex audio (mic muted during AI response)
 - **Hardware**: DirectML on Windows 11 — works with NVIDIA RTX, AMD, Intel Arc GPUs
 
 **Component Comparison:**
@@ -468,13 +469,19 @@ Local Mode delivers a complete AI drive-thru experience on consumer hardware. Th
 | Component | Cloud Mode | Local Mode |
 |-----------|-----------|-----------|
 | **Speech Understanding** | Azure OpenAI GPT-4o Realtime | Phi-4-mini-instruct (ONNX INT4) |
-| **Customer Transcription** | Whisper-1 (via Azure OpenAI) | Faster-Whisper (tiny model) |
+| **Customer Transcription** | Whisper-1 (via Azure OpenAI) | Whisper base.en (CPU) |
 | **Text Generation** | GPT-4o Realtime | Phi-4-mini-instruct (ONNX INT4) |
-| **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, en_US) |
+| **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, en_US, 0.7 length_scale) |
 | **Menu Search** | Azure AI Search (semantic + vector) | Local in-memory search (keyword matching) |
 | **Order Management** | Same | Same (runs locally in both modes) |
 
 The backend uses a **ProcessorRouter** that delegates WebSocket connections to either `RTMiddleTier` (cloud) or `LocalPhi4Processor` (local) based on the user's toggle. Both implement the same WebSocket protocol, so the frontend works identically in both modes.
+
+**System Prompt (Enriched ~610 tokens):**
+- Full menu with numbered meals and approximate prices
+- Meal/combo logic (sandwich + fries + drink)
+- Upsell rules, dessert offers, and order readback instructions
+- Phi-4-mini uses natural language (no tool calling) to handle ordering and conversation flow
 
 ### Performance
 
@@ -495,11 +502,18 @@ Local mode prioritizes responsiveness for real-time demos. The <10ms time-to-fir
 | Component | VRAM |
 |-----------|------|
 | **Phi-4-mini INT4** | ~3.0 GB |
-| **Whisper-tiny** | ~0.08 GB |
+| **Whisper base.en (CPU)** | 0 GB (runs on CPU) |
 | **Piper TTS** | ~0.1 GB |
 | **KV Cache + OS** | ~1.5 GB |
 
-This budget fits comfortably on consumer GPUs (RTX 4060, RTX 4070, AMD 7700XT, Intel Arc A750).
+**⚠️ VRAM Warning:** Windows apps (Edge, Teams, VS Code, etc.) consume 3-5GB VRAM. For best performance:
+- Close non-essential apps before running local mode
+- Run `nvidia-smi` to check VRAM — aim for under 3GB used before starting
+- If VRAM is starved, inference can slow to 42s instead of 6s
+
+**Why Whisper on CPU?** The base.en model (forced to CPU via `stt_device: "cpu"`) frees ~0.5-1.0 GB GPU VRAM for the Phi-4 KV cache, enabling longer conversation history. CPU inference is still fast (~200ms for short utterances) and the model performs better on food-related vocabulary than smaller variants.
+
+This budget fits comfortably on consumer GPUs (RTX 4060, RTX 4070, AMD 7700XT, Intel Arc A750) **when other apps are closed**.
 
 ### How to Run
 
@@ -529,10 +543,10 @@ This budget fits comfortably on consumer GPUs (RTX 4060, RTX 4070, AMD 7700XT, I
 
 We evaluated multiple models for the best real-time demo experience:
 
-- **Phi-4-multimodal (5.6B)**: Too slow (~27s time-to-first-token on RTX 4060) — not viable for interactive ordering
-- **Phi-4-mini (3.8B)**: <10ms TTFT, ~7.8 tok/s — perfect for real-time demos ✓
-- **Whisper small/base**: 244 MB – 1.5 GB — chose tiny (~75 MB) for minimal VRAM footprint
-- **Piper Amy voice**: 0.7 length_scale for upbeat, energetic drive-thru personality
+- **Phi-4-multimodal (5.6B)**: Too slow (~27s time-to-first-token on RTX 4060) — not viable for interactive ordering; also requires audio-in preprocessing
+- **Phi-4-mini (3.8B)**: <10ms TTFT, ~7.8 tok/s — perfect for real-time demos ✓ (text-only; uses Whisper for STT)
+- **Whisper tiny vs. base.en**: Tiny model loses food vocabulary accuracy. Base.en on CPU provides better ordering accuracy without GPU overhead
+- **Piper Amy voice**: 0.7 length_scale for faster, energetic drive-thru personality (standard voice length_scale is 1.0)
 
 ### Frontend Experience
 
@@ -548,10 +562,13 @@ We evaluated multiple models for the best real-time demo experience:
 
 ### Known Limitations
 
-1. **Response latency** (~6s full response) is slower than cloud (~1-2s) — inherent to 3.8B model on consumer GPU
-2. **Half-duplex audio** — mic is muted while AI generates, preventing audio feedback loops
-3. **No tool calling** — Phi-4-mini handles ordering via natural language; no structured tool_call JSON
-4. **Piper TTS voice quality** — functional but less natural than cloud voices (shimmer/coral)
+1. **First inference warmup** (~30-40s DirectML startup) on initial response — subsequent responses ~6s in ideal VRAM conditions
+2. **Response latency** (~6s full response in good VRAM) is slower than cloud (~1-2s) — inherent to 3.8B model on consumer GPU; can degrade to 42s if VRAM is starved by other apps
+3. **Half-duplex audio** — mic is muted while AI generates, preventing audio feedback loops
+4. **No tool calling** — Phi-4-mini handles ordering via natural language; no structured tool_call JSON
+5. **STT accuracy** — Generally good, but complex food items may be misheard (e.g., "quarter pounder" occasionally)
+6. **Piper TTS voice quality** — Functional but less natural than cloud voices (shimmer/coral)
+7. **30s inference timeout** with graceful fallback to default response if model takes too long
 
 These tradeoffs are acceptable for demos, edge deployments, and air-gapped environments where zero cloud dependency is the priority.
 
