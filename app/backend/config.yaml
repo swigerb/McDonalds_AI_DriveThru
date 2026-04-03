@@ -73,7 +73,7 @@ local_mode:
     - en_US-lessac-medium
     - en_US-kristin-medium
   tts_model_path: "./models/piper"        # Piper model directory
-  stt_model: "tiny"                      # tiny | base | small | medium (tiny=~75MB, used as fallback only)
+  stt_model: "base.en"                    # base.en (~150MB) — English-only model, faster+more accurate than base for food item names
   stt_device: "auto"                      # auto | cuda | cpu (CUDA only)
   stt_compute_type: "int8"                # CTranslate2 quantization (int8/float16/float32)
   device: "auto"                          # auto | cuda | cpu | directml

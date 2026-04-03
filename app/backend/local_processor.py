@@ -79,6 +79,7 @@ _MSG_SESSION_UPDATED = "session.updated"
 _MSG_RESPONSE_CREATED = "response.created"
 _MSG_RESPONSE_DONE = "response.done"
 _MSG_AUDIO_DELTA = "response.audio.delta"
+_MSG_AUDIO_DONE = "response.audio.done"
 _MSG_TRANSCRIPT_DELTA = "response.audio_transcript.delta"
 _MSG_TRANSCRIPT_DONE = "response.audio_transcript.done"
 _MSG_TOOL_RESPONSE = "extension.middle_tier_tool_response"
@@ -907,6 +908,9 @@ class LocalPhi4Processor(AbstractProcessor):
             tts_ms = (time.monotonic() - tts_t0) * 1000
             pipeline_logger.info("[%s] Piper TTS completed in %.0fms (%d chunks)", session_id, tts_ms, chunk_count)
             _vlog(verbose, "[%s] Piper TTS: DONE in %.0fms — %d audio chunks", session_id, tts_ms, chunk_count)
+            # Signal audio stream complete (mirrors OpenAI Realtime API event
+            # forwarded by rtmt.py — frontend may rely on this for playback state)
+            await ws.send_json({"type": _MSG_AUDIO_DONE})
         elif speech_text:
             pipeline_logger.warning("[%s] TTS unavailable — text-only response", session_id)
 
@@ -1058,11 +1062,12 @@ class LocalPhi4Processor(AbstractProcessor):
         """Send a complete text-only response through the WebSocket.
 
         Mimics the message sequence the frontend expects from cloud mode:
-        response.created → transcript delta(s) → response.done
+        response.created → transcript delta(s) → audio deltas → audio.done → response.done
         """
         response_id = f"local-{uuid.uuid4().hex[:8]}"
         await ws.send_json({"type": _MSG_RESPONSE_CREATED, "response": {"id": response_id}})
         await ws.send_json({"type": _MSG_TRANSCRIPT_DELTA, "delta": text})
+        await ws.send_json({"type": _MSG_TRANSCRIPT_DONE, "transcript": text})
 
         # Synthesize audio if TTS is available
         if self._tts and self._tts.is_loaded:
@@ -1071,6 +1076,7 @@ class LocalPhi4Processor(AbstractProcessor):
                     "type": _MSG_AUDIO_DELTA,
                     "delta": base64.b64encode(audio_chunk).decode(),
                 })
+            await ws.send_json({"type": _MSG_AUDIO_DONE})
 
         await ws.send_json({
             "type": _MSG_RESPONSE_DONE,

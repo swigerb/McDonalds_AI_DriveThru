@@ -15,6 +15,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -75,6 +76,7 @@ class Phi4ModelManager:
         self._tokenizer_stream: Any = None
         self._device_name: str = "none"
         self._loaded = False
+        self._inference_count: int = 0
 
     # ── Public properties ───────────────────────────────────────────────────
 
@@ -177,8 +179,22 @@ class Phi4ModelManager:
         loop = asyncio.get_event_loop()
         queue: asyncio.Queue[str | None] = asyncio.Queue()
 
+        self._inference_count += 1
+        call_num = self._inference_count
+        is_warmup = call_num == 1
+
+        logger.info(
+            "Phi-4-mini inference #%d starting (warmup=%s, prompt=%d chars, max_length=%d, device=%s)",
+            call_num, is_warmup, len(prompt), self._max_length, self._device_name,
+        )
+        pipeline_logger.info(
+            "Phi-4-mini inference #%d (warmup=%s, prompt=%d chars, max_length=%d)",
+            call_num, is_warmup, len(prompt), self._max_length,
+        )
+
         def _run_inference() -> None:
             try:
+                t_start = time.monotonic()
                 params = _og.GeneratorParams(self._model)
                 params.set_search_options(
                     max_length=self._max_length,
@@ -195,12 +211,24 @@ class Phi4ModelManager:
                 # Text-only path: tokenize prompt and stream decode
                 tokens = self._tokenizer.encode(prompt)
                 generator.append_tokens(tokens)
+                t_first_token = None
                 stream = self._tokenizer_stream
                 while not generator.is_done():
                     generator.generate_next_token()
                     new_token = generator.get_next_tokens()
                     token_text = stream.decode(new_token[0])
                     if token_text:
+                        if t_first_token is None:
+                            t_first_token = time.monotonic()
+                            ttft_ms = (t_first_token - t_start) * 1000
+                            logger.info(
+                                "Phi-4-mini inference #%d time-to-first-token: %.0fms (warmup=%s)",
+                                call_num, ttft_ms, is_warmup,
+                            )
+                            pipeline_logger.info(
+                                "Phi-4-mini TTFT: %.0fms (inference #%d, warmup=%s)",
+                                ttft_ms, call_num, is_warmup,
+                            )
                         loop.call_soon_threadsafe(queue.put_nowait, token_text)
             except Exception as exc:
                 logger.error("Phi-4-mini inference error: %s", exc)
