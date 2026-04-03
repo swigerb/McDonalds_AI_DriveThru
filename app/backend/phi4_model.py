@@ -111,8 +111,18 @@ class Phi4ModelManager:
         logger.info("Loading Phi-4 model from %s (device=%s)", self._model_path, device)
         pipeline_logger.info("Phi-4 ONNX model loading from %s (device=%s)...", self._model_path, device)
         self._model = _og.Model(self._model_path)
-        self._processor = _og.MultiModalProcessor(self._model)
-        self._tokenizer = self._processor.tokenizer if hasattr(self._processor, "tokenizer") else _og.Tokenizer(self._model)
+
+        # MultiModalProcessor may not be available for all model formats.
+        # Fall back to Tokenizer-only mode (text inference without audio embeddings).
+        try:
+            self._processor = _og.MultiModalProcessor(self._model)
+            self._tokenizer = self._processor.tokenizer if hasattr(self._processor, "tokenizer") else _og.Tokenizer(self._model)
+            logger.info("MultiModalProcessor loaded (multimodal mode)")
+        except Exception as proc_exc:
+            logger.info("MultiModalProcessor unavailable (%s) — using text-only Tokenizer", proc_exc)
+            self._processor = None
+            self._tokenizer = _og.Tokenizer(self._model)
+
         self._device_name = device
         self._loaded = True
         logger.info("Phi-4 model loaded successfully (device=%s)", device)
@@ -162,20 +172,34 @@ class Phi4ModelManager:
 
         def _run_inference() -> None:
             try:
-                inputs = self._processor(prompt, audios=audio_array)
                 params = _og.GeneratorParams(self._model)
                 params.set_search_options(
                     max_length=self._max_length,
-                    temperature=self._temperature,
-                    do_sample=self._temperature > 0,
                 )
-                params.input_ids = inputs.input_ids if hasattr(inputs, "input_ids") else inputs
+                if self._temperature > 0:
+                    params.set_search_options(
+                        max_length=self._max_length,
+                        temperature=self._temperature,
+                        do_sample=True,
+                    )
 
                 generator = _og.Generator(self._model, params)
+
+                if self._processor is not None:
+                    # Multimodal path: audio + text
+                    inputs = self._processor(prompt, audios=audio_array)
+                    if hasattr(inputs, "input_ids"):
+                        generator.append_tokens(inputs.input_ids)
+                    else:
+                        generator.append_tokens(inputs)
+                else:
+                    # Text-only path: tokenize prompt
+                    tokens = self._tokenizer.encode(prompt)
+                    generator.append_tokens(tokens)
                 while not generator.is_done():
                     generator.generate_next_token()
-                    new_token_id = generator.get_last_tokens(1)
-                    token_text = self._tokenizer.decode(new_token_id)
+                    new_token_ids = generator.get_next_tokens()
+                    token_text = self._tokenizer.decode(new_token_ids)
                     if token_text:
                         loop.call_soon_threadsafe(queue.put_nowait, token_text)
             except Exception as exc:
