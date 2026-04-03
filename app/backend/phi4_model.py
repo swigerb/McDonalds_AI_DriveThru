@@ -1,30 +1,22 @@
-"""Phi-4-multimodal-instruct ONNX model manager for local inference.
+"""Phi-4-mini-instruct ONNX model manager for local inference.
 
-Manages the full lifecycle of a Phi-4 ONNX model: loading with
-auto-detected GPU support, streaming token generation from audio input,
+Manages the full lifecycle of a Phi-4-mini ONNX model: loading with
+auto-detected GPU support, streaming token generation from text input,
 and clean unloading.  All synchronous ONNX calls run in an asyncio
 executor to avoid blocking the event loop.
 
-Supports two inference paths:
-- **Multimodal (preferred):** Raw audio is fed directly to Phi-4 via its
-  built-in speech encoder, bypassing Whisper STT entirely (~1.5 GB VRAM saved).
-- **Text-only (fallback):** Pre-transcribed text is tokenized and fed to the
-  model when multimodal processing is unavailable.
+Text-only model: pre-transcribed text (from Whisper STT) is tokenized
+and fed to the model for response generation.
 """
 
 from __future__ import annotations
 
 import asyncio
-import io
 import json
 import logging
 import re
-import struct
-import wave
 from collections.abc import AsyncGenerator
 from typing import Any
-
-import numpy as np
 
 logger = logging.getLogger("mcdonalds-drive-thru.phi4")
 pipeline_logger = logging.getLogger("local-pipeline")
@@ -63,7 +55,7 @@ def _load_onnxruntime_genai() -> tuple[Any, str]:
 
 
 class Phi4ModelManager:
-    """Manages the Phi-4 ONNX model lifecycle — loading, inference, unloading."""
+    """Manages the Phi-4-mini ONNX model lifecycle — loading, inference, unloading."""
 
     def __init__(
         self,
@@ -83,7 +75,6 @@ class Phi4ModelManager:
         self._tokenizer_stream: Any = None
         self._device_name: str = "none"
         self._loaded = False
-        self._multimodal_available = False
 
     # ── Public properties ───────────────────────────────────────────────────
 
@@ -97,8 +88,8 @@ class Phi4ModelManager:
 
     @property
     def multimodal_available(self) -> bool:
-        """Whether the model supports direct audio input (bypassing STT)."""
-        return self._multimodal_available
+        """Always False — Phi-4-mini is text-only."""
+        return False
 
     # ── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -123,34 +114,19 @@ class Phi4ModelManager:
         if device == "auto":
             device = _OG_PROVIDER
 
-        logger.info("Loading Phi-4 model from %s (device=%s)", self._model_path, device)
-        pipeline_logger.info("Phi-4 ONNX model loading from %s (device=%s)...", self._model_path, device)
+        logger.info("Loading Phi-4-mini model from %s (device=%s)", self._model_path, device)
+        pipeline_logger.info("Phi-4-mini ONNX model loading from %s (device=%s)...", self._model_path, device)
         self._model = _og.Model(self._model_path)
 
-        # Multimodal processor: prefer model.create_multimodal_processor() (new API).
-        # Fall back to og.MultiModalProcessor(model) (legacy) or text-only Tokenizer.
-        try:
-            self._processor = self._model.create_multimodal_processor()
-            self._multimodal_available = True
-            logger.info("MultiModalProcessor loaded via create_multimodal_processor() (multimodal mode)")
-        except Exception:
-            try:
-                self._processor = _og.MultiModalProcessor(self._model)
-                self._multimodal_available = True
-                logger.info("MultiModalProcessor loaded via legacy constructor (multimodal mode)")
-            except Exception as proc_exc:
-                logger.info("MultiModalProcessor unavailable (%s) — using text-only Tokenizer", proc_exc)
-                self._processor = None
-                self._multimodal_available = False
-
-        # Tokenizer: always create standalone (verified working API)
+        # Phi-4-mini is text-only — no multimodal processor needed
+        self._processor = None
         self._tokenizer = _og.Tokenizer(self._model)
         self._tokenizer_stream = self._tokenizer.create_stream()
 
         self._device_name = device
         self._loaded = True
-        logger.info("Phi-4 model loaded successfully (device=%s, multimodal=%s)", device, self._multimodal_available)
-        pipeline_logger.info("Phi-4 model loaded successfully (device=%s, multimodal=%s)", device, self._multimodal_available)
+        logger.info("Phi-4-mini model loaded successfully (device=%s)", device)
+        pipeline_logger.info("Phi-4-mini model loaded successfully (device=%s)", device)
 
     async def unload(self) -> None:
         """Unload the model from memory."""
@@ -165,9 +141,8 @@ class Phi4ModelManager:
         self._tokenizer = None
         self._tokenizer_stream = None
         self._loaded = False
-        self._multimodal_available = False
         self._device_name = "none"
-        logger.info("Phi-4 model unloaded")
+        logger.info("Phi-4-mini model unloaded")
 
     # ── Inference ───────────────────────────────────────────────────────────
 
@@ -180,15 +155,15 @@ class Phi4ModelManager:
         user_message: str | None = None,
         conversation_history: list[tuple[str, str]] | None = None,
     ) -> AsyncGenerator[str, None]:
-        """Process audio input through Phi-4 multimodal and stream text tokens.
+        """Process text input through Phi-4-mini and stream text tokens.
 
         Args:
-            audio_pcm: Raw PCM audio bytes (16kHz, mono, int16)
+            audio_pcm: Raw PCM audio bytes (kept for API compatibility, not used)
             system_prompt: System message for the AI
             tool_schemas: Optional tool definitions for structured output
             timeout: Maximum seconds to wait for inference (default 30s).
                      If exceeded, yields a fallback message instead of hanging.
-            user_message: Transcribed user text (required for text-only mode)
+            user_message: Transcribed user text from Whisper STT
             conversation_history: Previous (role, text) turns for context
 
         Yields:
@@ -198,11 +173,9 @@ class Phi4ModelManager:
             raise RuntimeError("Model not loaded — call load() first")
 
         prompt = self._build_prompt(system_prompt, tool_schemas, user_message, conversation_history)
-        audio_array = self._pcm_bytes_to_numpy(audio_pcm)
 
         loop = asyncio.get_event_loop()
         queue: asyncio.Queue[str | None] = asyncio.Queue()
-        _timed_out = False
 
         def _run_inference() -> None:
             try:
@@ -219,52 +192,19 @@ class Phi4ModelManager:
 
                 generator = _og.Generator(self._model, params)
 
-                if self._multimodal_available and self._processor is not None:
-                    # Multimodal path: audio fed directly to Phi-4's speech encoder.
-                    # Convert PCM→WAV in memory so og.Audios can decode it.
-                    wav_bytes = self._pcm_to_wav_bytes(audio_pcm)
-                    audios = _og.Audios.open_bytes(wav_bytes)
-
-                    audio_prompt = self._build_audio_prompt(
-                        system_prompt, tool_schemas, conversation_history,
-                    )
-                    inputs = self._processor(audio_prompt, audios=audios)
-                    generator.set_inputs(inputs)
-
-                    # Use tokenizer's streaming decoder for token output
-                    stream = self._tokenizer.create_stream()
-                    while not generator.is_done():
-                        generator.generate_next_token()
-                        new_token = generator.get_next_tokens()
-                        token_text = stream.decode(new_token[0])
-                        if token_text:
-                            loop.call_soon_threadsafe(queue.put_nowait, token_text)
-                elif self._processor is not None:
-                    # Legacy multimodal path (processor exists but multimodal flag is off)
-                    inputs = self._processor(prompt, audios=audio_array)
-                    if hasattr(inputs, "input_ids"):
-                        generator.append_tokens(inputs.input_ids)
-                    else:
-                        generator.append_tokens(inputs)
-                    while not generator.is_done():
-                        generator.generate_next_token()
-                        new_token_ids = generator.get_next_tokens()
-                        token_text = self._tokenizer.decode(new_token_ids)
-                        if token_text:
-                            loop.call_soon_threadsafe(queue.put_nowait, token_text)
-                else:
-                    # Text-only path: tokenize prompt
-                    tokens = self._tokenizer.encode(prompt)
-                    generator.append_tokens(tokens)
-                    while not generator.is_done():
-                        generator.generate_next_token()
-                        new_token_ids = generator.get_next_tokens()
-                        token_text = self._tokenizer.decode(new_token_ids)
-                        if token_text:
-                            loop.call_soon_threadsafe(queue.put_nowait, token_text)
+                # Text-only path: tokenize prompt and stream decode
+                tokens = self._tokenizer.encode(prompt)
+                generator.append_tokens(tokens)
+                stream = self._tokenizer_stream
+                while not generator.is_done():
+                    generator.generate_next_token()
+                    new_token = generator.get_next_tokens()
+                    token_text = stream.decode(new_token[0])
+                    if token_text:
+                        loop.call_soon_threadsafe(queue.put_nowait, token_text)
             except Exception as exc:
-                logger.error("Phi-4 inference error: %s", exc)
-                pipeline_logger.error("Phi-4 inference error: %s", exc)
+                logger.error("Phi-4-mini inference error: %s", exc)
+                pipeline_logger.error("Phi-4-mini inference error: %s", exc)
                 loop.call_soon_threadsafe(
                     queue.put_nowait, f"[inference error: {exc}]"
                 )
@@ -299,58 +239,6 @@ class Phi4ModelManager:
             yield token
 
     # ── Internal helpers ────────────────────────────────────────────────────
-
-    @staticmethod
-    def _pcm_bytes_to_numpy(pcm: bytes) -> "np.ndarray":
-        """Convert raw PCM int16 bytes to float32 numpy array normalised to [-1, 1]."""
-        samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
-        return samples
-
-    @staticmethod
-    def _pcm_to_wav_bytes(pcm: bytes, sample_rate: int = 16000) -> bytes:
-        """Wrap raw PCM int16 bytes in a WAV container for og.Audios.open_bytes()."""
-        buf = io.BytesIO()
-        with wave.open(buf, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)  # int16
-            wf.setframerate(sample_rate)
-            wf.writeframes(pcm)
-        return buf.getvalue()
-
-    @staticmethod
-    def _build_audio_prompt(
-        system_prompt: str,
-        tool_schemas: list[dict] | None = None,
-        conversation_history: list[tuple[str, str]] | None = None,
-    ) -> str:
-        """Build prompt for multimodal audio-in mode.
-
-        Uses ``<|audio_1|>`` placeholder so Phi-4's speech encoder
-        processes the customer's audio directly — no STT step needed.
-        """
-        system_content = system_prompt
-
-        if tool_schemas:
-            system_content += (
-                "\n\nYou have access to the following tools. To call a tool, "
-                "output a JSON block wrapped in <tool_call> tags:\n"
-                "<tool_call>{\"name\": \"tool_name\", \"arguments\": {...}}</tool_call>\n\n"
-                "Available tools:\n"
-                + json.dumps(tool_schemas, indent=2)
-            )
-
-        parts: list[str] = [f"<|system|>\n{system_content}\n<|end|>"]
-
-        if conversation_history:
-            for role, text in conversation_history:
-                tag = "user" if role == "user" else "assistant"
-                parts.append(f"<|{tag}|>\n{text}\n<|end|>")
-
-        # Audio placeholder — Phi-4 will transcribe + understand in one pass
-        parts.append("<|user|>\n<|audio_1|>\n<|end|>")
-        parts.append("<|assistant|>")
-
-        return "\n".join(parts)
 
     @staticmethod
     def _build_prompt(

@@ -1,9 +1,9 @@
-"""Local Phi-4 ONNX processor for offline drive-thru mode.
+"""Local Phi-4-mini ONNX processor for offline drive-thru mode.
 
-Implements the full offline AI pipeline: incoming audio → Phi-4
-multimodal inference → tool execution → Piper TTS → audio response.
+Implements the full offline AI pipeline: incoming audio → Whisper STT →
+Phi-4-mini text inference → tool execution → Piper TTS → audio response.
 Audio format contract: frontend sends/expects 24 kHz PCM int16 mono
-base64.  Phi-4 expects 16 kHz — resampling is handled internally.
+base64.  Whisper and Phi-4-mini expect 16 kHz — resampling is handled internally.
 """
 
 from __future__ import annotations
@@ -567,18 +567,13 @@ class LocalPhi4Processor(AbstractProcessor):
             pipeline_logger.info("TTS status: %s", tts_status)
             print(f"[LOCAL] TTS status: {tts_status}")
 
-            # Skip Whisper STT when Phi-4's multimodal speech encoder is available.
-            # This saves ~1.5 GB VRAM by eliminating the separate STT model.
-            if self._model and self._model.multimodal_available:
-                pipeline_logger.info("Phi-4 multimodal audio active — skipping Whisper STT (saves ~1.5GB VRAM)")
-                print("[LOCAL] Phi-4 multimodal audio active — Whisper STT skipped (saves ~1.5GB VRAM)")
-            else:
-                pipeline_logger.info("Loading Whisper STT engine (multimodal unavailable)...")
-                print("[LOCAL] Loading Whisper STT engine (multimodal unavailable)...")
-                await self._load_stt()
-                stt_status = "loaded" if (self._stt and self._stt.is_loaded) else "unavailable"
-                pipeline_logger.info("STT status: %s", stt_status)
-                print(f"[LOCAL] STT status: {stt_status}")
+            # Always load Whisper STT — Phi-4-mini is text-only and needs STT
+            pipeline_logger.info("Loading Whisper-tiny STT engine...")
+            print("[LOCAL] Loading Whisper-tiny STT engine...")
+            await self._load_stt()
+            stt_status = "loaded" if (self._stt and self._stt.is_loaded) else "unavailable"
+            pipeline_logger.info("STT status: %s", stt_status)
+            print(f"[LOCAL] STT status: {stt_status}")
 
             self._model_loaded = True
             pipeline_logger.info("All local models loaded successfully")
@@ -605,7 +600,7 @@ class LocalPhi4Processor(AbstractProcessor):
 
         try:
             self._model = _Phi4ModelManager(
-                model_path=self._model_path or "./models/phi4-multimodal",
+                model_path=self._model_path or "./models/phi4-mini/gpu/gpu-int4-rtn-block-32",
                 device=self._device,
                 max_length=self.max_tokens or 2048,
                 temperature=self.temperature or 0.6,
@@ -750,19 +745,16 @@ class LocalPhi4Processor(AbstractProcessor):
         _vlog(verbose, "─── [UTTERANCE] session=%s response=%s audio=%d bytes ───",
               session_id, response_id, len(audio))
 
-        # Downsample 24 kHz → 16 kHz for Phi-4 and Whisper
+        # Downsample 24 kHz → 16 kHz for Whisper STT and Phi-4-mini
         audio_16k = _downsample_24k_to_16k(audio)
         pipeline_logger.debug("[%s] Downsampled 24kHz→16kHz: %d→%d bytes", session_id, len(audio), len(audio_16k))
         _vlog(verbose, "[%s] Audio received: %d bytes (24kHz) → %d bytes (16kHz)", session_id, len(audio), len(audio_16k))
 
-        # Determine inference mode: multimodal (audio-in) vs sequential (STT→LLM)
-        use_multimodal = self._model and self._model.multimodal_available
-
-        # 1. STT: only needed when multimodal is NOT available
+        # 1. STT: always run Whisper first, then pass text to Phi-4-mini
         customer_text: str | None = None
-        if not use_multimodal and self._stt:
-            pipeline_logger.info("[%s] Starting Whisper STT transcription (multimodal unavailable)", session_id)
-            _vlog(verbose, "[%s] Whisper STT: starting sequential transcription", session_id)
+        if self._stt:
+            pipeline_logger.info("[%s] Starting Whisper STT transcription", session_id)
+            _vlog(verbose, "[%s] Whisper STT: starting transcription", session_id)
             try:
                 customer_text = await self._stt.transcribe(audio_16k)
                 if customer_text:
@@ -776,14 +768,8 @@ class LocalPhi4Processor(AbstractProcessor):
                     pipeline_logger.debug("[%s] Whisper STT returned empty transcription", session_id)
             except Exception as exc:
                 pipeline_logger.warning("[%s] Customer transcription failed: %s", session_id, exc)
-        elif use_multimodal:
-            pipeline_logger.info("[%s] Multimodal mode — audio goes directly to Phi-4 (Whisper skipped)", session_id)
-            _vlog(verbose, "[%s] Multimodal: audio → Phi-4 directly (no STT step)", session_id)
-            # Show placeholder in frontend transcript panel since we skip STT
-            await ws.send_json({
-                "type": "conversation.item.input_audio_transcription.completed",
-                "transcript": "\U0001f3a4 Speaking...",
-            })
+        else:
+            pipeline_logger.warning("[%s] No STT engine loaded — cannot transcribe audio", session_id)
 
         # 2. Send response.created
         await ws.send_json({
@@ -797,17 +783,16 @@ class LocalPhi4Processor(AbstractProcessor):
                 "Local model is not loaded. Please wait for initialization to complete.")
             return
 
-        # 3. Run Phi-4 inference — half-duplex: mute audio input during generation
+        # 3. Run Phi-4-mini inference — half-duplex: mute audio input during generation
         system_prompt = self._get_local_system_prompt()
         tool_schemas = None
 
-        inference_mode = "multimodal (audio-in)" if use_multimodal else "text-only"
-        pipeline_logger.info("[%s] Starting Phi-4 inference [%s] (user_message=%s)...",
-                             session_id, inference_mode,
-                             repr(customer_text[:80]) if customer_text else "None (audio-in)")
-        _vlog(verbose, "[%s] Phi-4 inference: START [%s] (system_prompt=%d chars, user_message=%s, history=%d turns)",
-              session_id, inference_mode, len(system_prompt),
-              repr(customer_text[:80]) if customer_text else "None (audio-in)",
+        pipeline_logger.info("[%s] Starting Phi-4-mini inference [text-only] (user_message=%s)...",
+                             session_id,
+                             repr(customer_text[:80]) if customer_text else "None")
+        _vlog(verbose, "[%s] Phi-4-mini inference: START [text-only] (system_prompt=%d chars, user_message=%s, history=%d turns)",
+              session_id, len(system_prompt),
+              repr(customer_text[:80]) if customer_text else "None",
               len(self._conversation_history))
         t0 = time.monotonic()
         full_text = ""
@@ -833,8 +818,8 @@ class LocalPhi4Processor(AbstractProcessor):
             self._generating = False  # Half-duplex: re-enable VAD
 
         inference_ms = (time.monotonic() - t0) * 1000
-        pipeline_logger.info("[%s] Phi-4 inference completed in %.0fms (%d chars)", session_id, inference_ms, len(full_text))
-        _vlog(verbose, "[%s] Phi-4 inference: DONE in %.0fms — %d tokens, %d chars",
+        pipeline_logger.info("[%s] Phi-4-mini inference completed in %.0fms (%d chars)", session_id, inference_ms, len(full_text))
+        _vlog(verbose, "[%s] Phi-4-mini inference: DONE in %.0fms — %d tokens, %d chars",
               session_id, inference_ms, token_count, len(full_text))
 
         if cancel_event.is_set():
