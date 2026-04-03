@@ -137,6 +137,7 @@ class LocalPhi4Processor(AbstractProcessor):
         self._model_loaded: bool = False
         self._loading: bool = False
         self._current_task: asyncio.Task | None = None
+        self._generating: bool = False  # Half-duplex: True while Phi-4 is generating
 
         # Model load error tracking — surfaces via diagnostics and frontend
         self._model_load_error: str | None = None
@@ -280,6 +281,11 @@ class LocalPhi4Processor(AbstractProcessor):
                     audio_b64 = message.get("audio", "")
                     if not audio_b64:
                         continue
+
+                    # Half-duplex: drop incoming audio while Phi-4 is generating
+                    if self._generating:
+                        continue
+
                     chunk = base64.b64decode(audio_b64)
                     audio_buffer.extend(chunk)
                     audio_frame_count += 1
@@ -561,12 +567,18 @@ class LocalPhi4Processor(AbstractProcessor):
             pipeline_logger.info("TTS status: %s", tts_status)
             print(f"[LOCAL] TTS status: {tts_status}")
 
-            pipeline_logger.info("Loading Whisper STT engine...")
-            print("[LOCAL] Loading Whisper STT engine...")
-            await self._load_stt()
-            stt_status = "loaded" if (self._stt and self._stt.is_loaded) else "unavailable"
-            pipeline_logger.info("STT status: %s", stt_status)
-            print(f"[LOCAL] STT status: {stt_status}")
+            # Skip Whisper STT when Phi-4's multimodal speech encoder is available.
+            # This saves ~1.5 GB VRAM by eliminating the separate STT model.
+            if self._model and self._model.multimodal_available:
+                pipeline_logger.info("Phi-4 multimodal audio active — skipping Whisper STT (saves ~1.5GB VRAM)")
+                print("[LOCAL] Phi-4 multimodal audio active — Whisper STT skipped (saves ~1.5GB VRAM)")
+            else:
+                pipeline_logger.info("Loading Whisper STT engine (multimodal unavailable)...")
+                print("[LOCAL] Loading Whisper STT engine (multimodal unavailable)...")
+                await self._load_stt()
+                stt_status = "loaded" if (self._stt and self._stt.is_loaded) else "unavailable"
+                pipeline_logger.info("STT status: %s", stt_status)
+                print(f"[LOCAL] STT status: {stt_status}")
 
             self._model_loaded = True
             pipeline_logger.info("All local models loaded successfully")
@@ -743,10 +755,13 @@ class LocalPhi4Processor(AbstractProcessor):
         pipeline_logger.debug("[%s] Downsampled 24kHz→16kHz: %d→%d bytes", session_id, len(audio), len(audio_16k))
         _vlog(verbose, "[%s] Audio received: %d bytes (24kHz) → %d bytes (16kHz)", session_id, len(audio), len(audio_16k))
 
-        # 1. Run Whisper STT FIRST and await result (sequential — Phi-4 needs the text)
+        # Determine inference mode: multimodal (audio-in) vs sequential (STT→LLM)
+        use_multimodal = self._model and self._model.multimodal_available
+
+        # 1. STT: only needed when multimodal is NOT available
         customer_text: str | None = None
-        if self._stt:
-            pipeline_logger.info("[%s] Starting Whisper STT transcription (sequential — awaiting result)", session_id)
+        if not use_multimodal and self._stt:
+            pipeline_logger.info("[%s] Starting Whisper STT transcription (multimodal unavailable)", session_id)
             _vlog(verbose, "[%s] Whisper STT: starting sequential transcription", session_id)
             try:
                 customer_text = await self._stt.transcribe(audio_16k)
@@ -761,6 +776,9 @@ class LocalPhi4Processor(AbstractProcessor):
                     pipeline_logger.debug("[%s] Whisper STT returned empty transcription", session_id)
             except Exception as exc:
                 pipeline_logger.warning("[%s] Customer transcription failed: %s", session_id, exc)
+        elif use_multimodal:
+            pipeline_logger.info("[%s] Multimodal mode — audio goes directly to Phi-4 (Whisper skipped)", session_id)
+            _vlog(verbose, "[%s] Multimodal: audio → Phi-4 directly (no STT step)", session_id)
 
         # 2. Send response.created
         await ws.send_json({
@@ -774,33 +792,40 @@ class LocalPhi4Processor(AbstractProcessor):
                 "Local model is not loaded. Please wait for initialization to complete.")
             return
 
-        # 3. Run Phi-4 inference with user text (sequential — STT already completed)
+        # 3. Run Phi-4 inference — half-duplex: mute audio input during generation
         system_prompt = self._get_local_system_prompt()
         tool_schemas = None
 
-        pipeline_logger.info("[%s] Starting Phi-4 inference (user_message=%s)...",
-                             session_id, repr(customer_text[:80]) if customer_text else "None")
-        _vlog(verbose, "[%s] Phi-4 inference: START (system_prompt=%d chars, user_message=%s, history=%d turns)",
-              session_id, len(system_prompt),
-              repr(customer_text[:80]) if customer_text else "None",
+        inference_mode = "multimodal (audio-in)" if use_multimodal else "text-only"
+        pipeline_logger.info("[%s] Starting Phi-4 inference [%s] (user_message=%s)...",
+                             session_id, inference_mode,
+                             repr(customer_text[:80]) if customer_text else "None (audio-in)")
+        _vlog(verbose, "[%s] Phi-4 inference: START [%s] (system_prompt=%d chars, user_message=%s, history=%d turns)",
+              session_id, inference_mode, len(system_prompt),
+              repr(customer_text[:80]) if customer_text else "None (audio-in)",
               len(self._conversation_history))
         t0 = time.monotonic()
         full_text = ""
         token_count = 0
-        async for token in self._model.process_audio(
-            audio_16k, system_prompt, tool_schemas,
-            user_message=customer_text,
-            conversation_history=self._conversation_history[-self._max_history_turns * 2:] if self._conversation_history else None,
-        ):
-            if cancel_event.is_set():
-                pipeline_logger.info("[%s] Response cancelled (response=%s)", session_id, response_id)
-                break
-            full_text += token
-            token_count += 1
-            await ws.send_json({
-                "type": _MSG_TRANSCRIPT_DELTA,
-                "delta": token,
-            })
+
+        self._generating = True  # Half-duplex: mute VAD while generating
+        try:
+            async for token in self._model.process_audio(
+                audio_16k, system_prompt, tool_schemas,
+                user_message=customer_text,
+                conversation_history=self._conversation_history[-self._max_history_turns * 2:] if self._conversation_history else None,
+            ):
+                if cancel_event.is_set():
+                    pipeline_logger.info("[%s] Response cancelled (response=%s)", session_id, response_id)
+                    break
+                full_text += token
+                token_count += 1
+                await ws.send_json({
+                    "type": _MSG_TRANSCRIPT_DELTA,
+                    "delta": token,
+                })
+        finally:
+            self._generating = False  # Half-duplex: re-enable VAD
 
         inference_ms = (time.monotonic() - t0) * 1000
         pipeline_logger.info("[%s] Phi-4 inference completed in %.0fms (%d chars)", session_id, inference_ms, len(full_text))

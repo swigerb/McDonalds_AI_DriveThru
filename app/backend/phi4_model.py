@@ -4,15 +4,23 @@ Manages the full lifecycle of a Phi-4 ONNX model: loading with
 auto-detected GPU support, streaming token generation from audio input,
 and clean unloading.  All synchronous ONNX calls run in an asyncio
 executor to avoid blocking the event loop.
+
+Supports two inference paths:
+- **Multimodal (preferred):** Raw audio is fed directly to Phi-4 via its
+  built-in speech encoder, bypassing Whisper STT entirely (~1.5 GB VRAM saved).
+- **Text-only (fallback):** Pre-transcribed text is tokenized and fed to the
+  model when multimodal processing is unavailable.
 """
 
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import logging
 import re
 import struct
+import wave
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -74,6 +82,7 @@ class Phi4ModelManager:
         self._tokenizer: Any = None
         self._device_name: str = "none"
         self._loaded = False
+        self._multimodal_available = False
 
     # ── Public properties ───────────────────────────────────────────────────
 
@@ -84,6 +93,11 @@ class Phi4ModelManager:
     @property
     def device_name(self) -> str:
         return self._device_name
+
+    @property
+    def multimodal_available(self) -> bool:
+        """Whether the model supports direct audio input (bypassing STT)."""
+        return self._multimodal_available
 
     # ── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -112,21 +126,32 @@ class Phi4ModelManager:
         pipeline_logger.info("Phi-4 ONNX model loading from %s (device=%s)...", self._model_path, device)
         self._model = _og.Model(self._model_path)
 
-        # MultiModalProcessor may not be available for all model formats.
-        # Fall back to Tokenizer-only mode (text inference without audio embeddings).
+        # Multimodal processor: prefer model.create_multimodal_processor() (new API).
+        # Fall back to og.MultiModalProcessor(model) (legacy) or text-only Tokenizer.
         try:
-            self._processor = _og.MultiModalProcessor(self._model)
-            self._tokenizer = self._processor.tokenizer if hasattr(self._processor, "tokenizer") else _og.Tokenizer(self._model)
-            logger.info("MultiModalProcessor loaded (multimodal mode)")
-        except Exception as proc_exc:
-            logger.info("MultiModalProcessor unavailable (%s) — using text-only Tokenizer", proc_exc)
-            self._processor = None
+            self._processor = self._model.create_multimodal_processor()
+            self._multimodal_available = True
+            logger.info("MultiModalProcessor loaded via create_multimodal_processor() (multimodal mode)")
+        except Exception:
+            try:
+                self._processor = _og.MultiModalProcessor(self._model)
+                self._multimodal_available = True
+                logger.info("MultiModalProcessor loaded via legacy constructor (multimodal mode)")
+            except Exception as proc_exc:
+                logger.info("MultiModalProcessor unavailable (%s) — using text-only Tokenizer", proc_exc)
+                self._processor = None
+                self._multimodal_available = False
+
+        # Tokenizer: extract from processor or create standalone
+        if self._processor and hasattr(self._processor, "tokenizer"):
+            self._tokenizer = self._processor.tokenizer
+        else:
             self._tokenizer = _og.Tokenizer(self._model)
 
         self._device_name = device
         self._loaded = True
-        logger.info("Phi-4 model loaded successfully (device=%s)", device)
-        pipeline_logger.info("Phi-4 model loaded successfully (device=%s)", device)
+        logger.info("Phi-4 model loaded successfully (device=%s, multimodal=%s)", device, self._multimodal_available)
+        pipeline_logger.info("Phi-4 model loaded successfully (device=%s, multimodal=%s)", device, self._multimodal_available)
 
     async def unload(self) -> None:
         """Unload the model from memory."""
@@ -140,6 +165,7 @@ class Phi4ModelManager:
         self._processor = None
         self._tokenizer = None
         self._loaded = False
+        self._multimodal_available = False
         self._device_name = "none"
         logger.info("Phi-4 model unloaded")
 
@@ -193,23 +219,49 @@ class Phi4ModelManager:
 
                 generator = _og.Generator(self._model, params)
 
-                if self._processor is not None:
-                    # Multimodal path: audio + text
+                if self._multimodal_available and self._processor is not None:
+                    # Multimodal path: audio fed directly to Phi-4's speech encoder.
+                    # Convert PCM→WAV in memory so og.Audios can decode it.
+                    wav_bytes = self._pcm_to_wav_bytes(audio_pcm)
+                    audios = _og.Audios.open_bytes(wav_bytes)
+
+                    audio_prompt = self._build_audio_prompt(
+                        system_prompt, tool_schemas, conversation_history,
+                    )
+                    inputs = self._processor(audio_prompt, audios=audios)
+                    generator.set_inputs(inputs)
+
+                    # Use the processor's streaming decoder for token output
+                    stream = self._processor.create_stream()
+                    while not generator.is_done():
+                        generator.generate_next_token()
+                        new_token = generator.get_next_tokens()
+                        token_text = stream.decode(new_token[0])
+                        if token_text:
+                            loop.call_soon_threadsafe(queue.put_nowait, token_text)
+                elif self._processor is not None:
+                    # Legacy multimodal path (processor exists but multimodal flag is off)
                     inputs = self._processor(prompt, audios=audio_array)
                     if hasattr(inputs, "input_ids"):
                         generator.append_tokens(inputs.input_ids)
                     else:
                         generator.append_tokens(inputs)
+                    while not generator.is_done():
+                        generator.generate_next_token()
+                        new_token_ids = generator.get_next_tokens()
+                        token_text = self._tokenizer.decode(new_token_ids)
+                        if token_text:
+                            loop.call_soon_threadsafe(queue.put_nowait, token_text)
                 else:
                     # Text-only path: tokenize prompt
                     tokens = self._tokenizer.encode(prompt)
                     generator.append_tokens(tokens)
-                while not generator.is_done():
-                    generator.generate_next_token()
-                    new_token_ids = generator.get_next_tokens()
-                    token_text = self._tokenizer.decode(new_token_ids)
-                    if token_text:
-                        loop.call_soon_threadsafe(queue.put_nowait, token_text)
+                    while not generator.is_done():
+                        generator.generate_next_token()
+                        new_token_ids = generator.get_next_tokens()
+                        token_text = self._tokenizer.decode(new_token_ids)
+                        if token_text:
+                            loop.call_soon_threadsafe(queue.put_nowait, token_text)
             except Exception as exc:
                 logger.error("Phi-4 inference error: %s", exc)
                 pipeline_logger.error("Phi-4 inference error: %s", exc)
@@ -253,6 +305,52 @@ class Phi4ModelManager:
         """Convert raw PCM int16 bytes to float32 numpy array normalised to [-1, 1]."""
         samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
         return samples
+
+    @staticmethod
+    def _pcm_to_wav_bytes(pcm: bytes, sample_rate: int = 16000) -> bytes:
+        """Wrap raw PCM int16 bytes in a WAV container for og.Audios.open_bytes()."""
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # int16
+            wf.setframerate(sample_rate)
+            wf.writeframes(pcm)
+        return buf.getvalue()
+
+    @staticmethod
+    def _build_audio_prompt(
+        system_prompt: str,
+        tool_schemas: list[dict] | None = None,
+        conversation_history: list[tuple[str, str]] | None = None,
+    ) -> str:
+        """Build prompt for multimodal audio-in mode.
+
+        Uses ``<|audio_1|>`` placeholder so Phi-4's speech encoder
+        processes the customer's audio directly — no STT step needed.
+        """
+        system_content = system_prompt
+
+        if tool_schemas:
+            system_content += (
+                "\n\nYou have access to the following tools. To call a tool, "
+                "output a JSON block wrapped in <tool_call> tags:\n"
+                "<tool_call>{\"name\": \"tool_name\", \"arguments\": {...}}</tool_call>\n\n"
+                "Available tools:\n"
+                + json.dumps(tool_schemas, indent=2)
+            )
+
+        parts: list[str] = [f"<|system|>\n{system_content}\n<|end|>"]
+
+        if conversation_history:
+            for role, text in conversation_history:
+                tag = "user" if role == "user" else "assistant"
+                parts.append(f"<|{tag}|>\n{text}\n<|end|>")
+
+        # Audio placeholder — Phi-4 will transcribe + understand in one pass
+        parts.append("<|user|>\n<|audio_1|>\n<|end|>")
+        parts.append("<|assistant|>")
+
+        return "\n".join(parts)
 
     @staticmethod
     def _build_prompt(
