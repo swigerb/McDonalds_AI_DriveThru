@@ -779,6 +779,11 @@ class LocalPhi4Processor(AbstractProcessor):
         elif use_multimodal:
             pipeline_logger.info("[%s] Multimodal mode — audio goes directly to Phi-4 (Whisper skipped)", session_id)
             _vlog(verbose, "[%s] Multimodal: audio → Phi-4 directly (no STT step)", session_id)
+            # Show placeholder in frontend transcript panel since we skip STT
+            await ws.send_json({
+                "type": "conversation.item.input_audio_transcription.completed",
+                "transcript": "\U0001f3a4 Speaking...",
+            })
 
         # 2. Send response.created
         await ws.send_json({

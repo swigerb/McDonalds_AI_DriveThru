@@ -80,6 +80,7 @@ class Phi4ModelManager:
         self._model: Any = None
         self._processor: Any = None
         self._tokenizer: Any = None
+        self._tokenizer_stream: Any = None
         self._device_name: str = "none"
         self._loaded = False
         self._multimodal_available = False
@@ -142,11 +143,9 @@ class Phi4ModelManager:
                 self._processor = None
                 self._multimodal_available = False
 
-        # Tokenizer: extract from processor or create standalone
-        if self._processor and hasattr(self._processor, "tokenizer"):
-            self._tokenizer = self._processor.tokenizer
-        else:
-            self._tokenizer = _og.Tokenizer(self._model)
+        # Tokenizer: always create standalone (verified working API)
+        self._tokenizer = _og.Tokenizer(self._model)
+        self._tokenizer_stream = self._tokenizer.create_stream()
 
         self._device_name = device
         self._loaded = True
@@ -164,6 +163,7 @@ class Phi4ModelManager:
         self._model = None
         self._processor = None
         self._tokenizer = None
+        self._tokenizer_stream = None
         self._loaded = False
         self._multimodal_available = False
         self._device_name = "none"
@@ -231,8 +231,8 @@ class Phi4ModelManager:
                     inputs = self._processor(audio_prompt, audios=audios)
                     generator.set_inputs(inputs)
 
-                    # Use the processor's streaming decoder for token output
-                    stream = self._processor.create_stream()
+                    # Use tokenizer's streaming decoder for token output
+                    stream = self._tokenizer.create_stream()
                     while not generator.is_done():
                         generator.generate_next_token()
                         new_token = generator.get_next_tokens()
