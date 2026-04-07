@@ -168,8 +168,11 @@ class ProcessorRouter:
 
     # ── Internal routing ────────────────────────────────────────────────────
 
-    def _resolve_mode(self, request: web.Request) -> str:
+    def _resolve_mode(self, request: web.Request) -> tuple[str, bool]:
         """Determine the processor mode for this connection.
+
+        Returns (mode, explicit) where *explicit* is True when the mode
+        came from the ``?mode=`` query parameter (user's deliberate choice).
 
         Priority:
         1. ``?mode=local`` or ``?mode=cloud`` query parameter
@@ -178,10 +181,22 @@ class ProcessorRouter:
         """
         requested = request.query.get("mode", "").lower()
         if requested in ("cloud", "local"):
-            return requested
+            pipeline_logger.info(
+                "[VOICE/ROUTING] Mode resolved: %s (query=%s, runtime=%s, default=%s)",
+                requested, requested, self._runtime_mode, self._default_mode,
+            )
+            return requested, True
         if self._runtime_mode is not None:
-            return self._runtime_mode
-        return self._default_mode
+            pipeline_logger.info(
+                "[VOICE/ROUTING] Mode resolved: %s (query=<none>, runtime=%s, default=%s)",
+                self._runtime_mode, self._runtime_mode, self._default_mode,
+            )
+            return self._runtime_mode, False
+        pipeline_logger.info(
+            "[VOICE/ROUTING] Mode resolved: %s (query=<none>, runtime=<none>, default=%s)",
+            self._default_mode, self._default_mode,
+        )
+        return self._default_mode, False
 
     def invalidate_cloud_cache(self) -> None:
         """Mark the cached cloud reachability as stale.
@@ -271,11 +286,12 @@ class ProcessorRouter:
         self._active_connections += 1
         conn_id = self._ws_connection_count
 
-        mode = self._resolve_mode(request)
+        mode, explicit = self._resolve_mode(request)
         pipeline_logger.info(
-            "[conn-%d] WebSocket connection — resolved mode=%s (default=%s, runtime=%s, query=%s)",
+            "[conn-%d] WebSocket connection — resolved mode=%s explicit=%s (default=%s, runtime=%s, query=%s)",
             conn_id,
             mode,
+            explicit,
             self._default_mode,
             self._runtime_mode,
             request.query.get("mode", "<none>"),
@@ -287,7 +303,7 @@ class ProcessorRouter:
             # accept the WebSocket immediately with ZERO cloud dependency.
             if mode == "local" and self._local is not None:
                 pipeline_logger.info(
-                    "[conn-%d] FAST PATH — direct local routing, no cloud check", conn_id
+                    "[VOICE/ROUTING] [conn-%d] FAST PATH — LocalPhi4Processor handling connection (no cloud check, no auto-fallback)", conn_id
                 )
                 ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True)
                 await ws.prepare(request)
@@ -309,10 +325,13 @@ class ProcessorRouter:
                 return ws
 
             # ── Auto-fallback: cloud → local when offline ───────────────
-            if mode == "cloud" and self._local is not None:
+            # Only auto-fallback when mode was NOT explicitly requested by the
+            # user (e.g. via ?mode=cloud).  When the user deliberately chose
+            # cloud mode, respect that and let RTMiddleTier handle errors.
+            if mode == "cloud" and self._local is not None and not explicit:
                 if self._cloud is None:
                     pipeline_logger.warning(
-                        "[conn-%d] Cloud processor not configured — falling back to local mode",
+                        "[VOICE/ROUTING] [conn-%d] Cloud processor not configured — auto-fallback to LocalPhi4Processor",
                         conn_id,
                     )
                     mode = "local"
@@ -320,13 +339,13 @@ class ProcessorRouter:
                     cloud_ok = await self._check_cloud_reachable()
                     if not cloud_ok:
                         pipeline_logger.warning(
-                            "[conn-%d] Cloud endpoint unreachable (cached probe) — auto-falling back to local mode",
+                            "[VOICE/ROUTING] [conn-%d] Cloud endpoint unreachable (cached probe) — auto-fallback to LocalPhi4Processor",
                             conn_id,
                         )
                         mode = "local"
                     else:
                         pipeline_logger.info(
-                            "[conn-%d] Cloud endpoint reachable — proceeding with cloud mode",
+                            "[VOICE/ROUTING] [conn-%d] Cloud endpoint reachable — RTMiddleTier handling connection (no auto-fallback)",
                             conn_id,
                         )
 

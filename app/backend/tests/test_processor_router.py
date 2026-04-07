@@ -143,7 +143,9 @@ class ModeResolutionTests(unittest.TestCase):
             local_processor=_make_mock_local(),
         )
         req = _make_request("mode=local")
-        self.assertEqual(router._resolve_mode(req), "local")
+        mode, explicit = router._resolve_mode(req)
+        self.assertEqual(mode, "local")
+        self.assertTrue(explicit)
 
     @patch("processor_router._local_cfg", {"enabled": True})
     def test_query_param_mode_cloud(self):
@@ -154,7 +156,9 @@ class ModeResolutionTests(unittest.TestCase):
             local_processor=_make_mock_local(),
         )
         req = _make_request("mode=cloud")
-        self.assertEqual(router._resolve_mode(req), "cloud")
+        mode, explicit = router._resolve_mode(req)
+        self.assertEqual(mode, "cloud")
+        self.assertTrue(explicit)
 
     @patch("processor_router._local_cfg", {"enabled": True})
     def test_query_param_case_insensitive(self):
@@ -165,7 +169,9 @@ class ModeResolutionTests(unittest.TestCase):
             local_processor=_make_mock_local(),
         )
         req = _make_request("mode=LOCAL")
-        self.assertEqual(router._resolve_mode(req), "local")
+        mode, explicit = router._resolve_mode(req)
+        self.assertEqual(mode, "local")
+        self.assertTrue(explicit)
 
     @patch("processor_router._local_cfg", {})
     def test_no_query_param_uses_default(self):
@@ -173,7 +179,9 @@ class ModeResolutionTests(unittest.TestCase):
         from processor_router import ProcessorRouter
         router = ProcessorRouter(cloud_processor=_make_mock_cloud())
         req = _make_request("")
-        self.assertEqual(router._resolve_mode(req), "cloud")
+        mode, explicit = router._resolve_mode(req)
+        self.assertEqual(mode, "cloud")
+        self.assertFalse(explicit)
 
     @patch("processor_router._local_cfg", {})
     def test_invalid_mode_param_uses_default(self):
@@ -181,7 +189,9 @@ class ModeResolutionTests(unittest.TestCase):
         from processor_router import ProcessorRouter
         router = ProcessorRouter(cloud_processor=_make_mock_cloud())
         req = _make_request("mode=invalid")
-        self.assertEqual(router._resolve_mode(req), "cloud")
+        mode, explicit = router._resolve_mode(req)
+        self.assertEqual(mode, "cloud")
+        self.assertFalse(explicit)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
