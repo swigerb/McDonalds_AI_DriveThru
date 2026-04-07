@@ -112,3 +112,13 @@ _No sessions yet._
 - **Retry tracking:** `retryCount` state in useRealtime increments on every `onClose`, resets to 0 on `onOpen`. Displayed as `retrying (N/10)` in UI.
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
 - ✅ All 15 tests pass (`vitest run`)
+
+### 2025-07-25: Voice Preference Sync on Page Refresh
+- **What:** Fixed bug where stored voice preferences (`voiceChoice`, `piperVoice`) were not synced to backend on page refresh / session start.
+- **Root cause:** `startConversation()` synced local mode toggle, verbose logging, and log-to-file — but never sent voice preferences. Backend fell back to server defaults after refresh.
+- **Fix:** Added `realtime.sendVoiceChoice(voiceChoice)` and conditional `realtime.sendPiperVoiceChoice(piperVoice)` BEFORE `realtime.startSession()` in the non-AzureSpeech branch of `startConversation()`.
+- **Key ordering:** Voice must be sent BEFORE `startSession()` because `startSession()` sends `session.update`, and the backend intercepts that to inject `self.voice_choice`. If voice arrives after session.update, the backend uses its default.
+- **Pattern learned:** All localStorage-persisted preferences need explicit sync in `startConversation()` — localStorage only persists client-side state. The startup sync sequence is: (1) local mode toggle, (2) voice preferences, (3) `startSession()`, (4) verbose logging / log-to-file.
+- **Files modified:** `App.tsx` (4 lines added)
+- ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
+- ✅ All 15 tests pass (`vitest run`)
