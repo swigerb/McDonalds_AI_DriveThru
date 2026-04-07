@@ -122,3 +122,12 @@ _No sessions yet._
 - **Files modified:** `App.tsx` (4 lines added)
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
 - ✅ All 15 tests pass (`vitest run`)
+
+### 2025-07-25: Explicit Cloud Mode in WebSocket URL
+- **What:** Fixed `buildWsEndpoint()` in `useRealtime.tsx` to always include `?mode=cloud` when `localMode` is false.
+- **Root cause:** Cloud path built `/realtime` (or `/realtime?token=xxx`) WITHOUT a `?mode=` param. Backend's `ProcessorRouter._resolve_mode()` fell through to `_runtime_mode` → `_default_mode`, which could silently auto-fallback to local mode if the Azure endpoint was momentarily unreachable (cached for 30s).
+- **Fix:** Changed lines 113-117 so the cloud path always appends `&mode=cloud` (with token) or `?mode=cloud` (without token). Local path already had `?mode=local`.
+- **Pattern learned:** Frontend must ALWAYS send an explicit `?mode=` query param on the WebSocket URL so the backend's mode resolver never falls through to potentially-stale defaults. Both local and cloud paths now do this.
+- **Files modified:** `useRealtime.tsx` (3-line change in `buildWsEndpoint()`)
+- ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
+- ✅ All 15 tests pass (`vitest run`)
