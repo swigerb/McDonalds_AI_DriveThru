@@ -662,6 +662,363 @@ Clicking the mic button while offline in local mode produced total silence — n
 ### Trade-offs
 
 - Hardcoded `localhost:8000` — matches current backend config. If port changes, this needs updating.
+
+---
+
+## Voice Switch Must Push session.update to OpenAI (2026-07-24)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+The `extension.set_voice` WebSocket handler in `rtmt.py` stored the new voice choice in `self.voice_choice` but never sent a `session.update` to the OpenAI Realtime API. Because the frontend only sends `session.update` once at session initialization, mid-session voice changes were silently ignored — the user picked a new voice in the UI but the AI kept speaking in the old one.
+
+### Decision
+
+Any extension handler that modifies OpenAI session parameters (voice, temperature, etc.) must immediately send a `session.update` message to the upstream `target_ws` WebSocket. Storing state locally on the `RTMiddleTier` instance is necessary for future reconnects but is **not sufficient** to change the live session.
+
+### Implementation
+
+After `self.voice_choice = new_voice`, we now build and send:
+```json
+{"type": "session.update", "session": {"voice": "<new_voice>"}}
+```
+via `await target_ws.send_str(...)`, with standard logger + `_vlog()` calls for observability.
+
+### Impact
+
+- **File changed:** `app/backend/rtmt.py` (lines ~557-574)
+- **Risk:** Low — only adds a WebSocket send inside an existing validated code path
+- **Team note:** If Birdie adds more extension handlers that change session params (e.g., temperature, modalities), the same pattern applies — store locally AND push `session.update`.
+
+---
+
+## Local Mode: Session Tokens, Verbose Logging & File Logging (2026-07-22)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+
+Local mode now supports the same three observability features as cloud mode:
+
+#### 1. Session Tokens
+- LocalPhi4Processor emits `extension.session_metadata` (on connection) and `extension.round_trip_token` (after each response.done) — identical JSON format to cloud mode.
+- Frontend SessionTokenPanel renders local mode tokens identically to cloud tokens.
+- Token format: `{uuid}-{round:04d}` (same as `order_state._format_round_trip_token`).
+- Local mode tracks its own session_token and round_trip_index independently from OrderState (no dependency on order_state_singleton).
+
+#### 2. Verbose Logging
+- LocalPhi4Processor handles `extension.set_verbose_logging` WebSocket message and toggles per-connection verbose flag.
+- Uses the shared `mcdonalds-verbose` logger and `vlog()` from `audio_pipeline.py`.
+- Verbose messages at every pipeline step: audio received, STT start, inference start/end (timing + token count), tool execution, TTS start/end (chunk count), round trip advancement.
+
+#### 3. Log to File
+- LocalPhi4Processor handles `extension.set_log_to_file` WebSocket message.
+- Reuses `create_verbose_file_handler()` / `remove_verbose_file_handler()` from `audio_pipeline.py`.
+- Logs written to `app/backend/logs/verbose-*.log` — no network dependency, fully offline.
+- File handler cleaned up on WebSocket disconnect.
+
+### Trade-offs
+
+- Local mode session tokens are not tied to `order_state_singleton` — this avoids coupling but means the token UUID is different from the order session ID. This is acceptable because local mode has its own session lifecycle.
+- `_process_utterance` and `_process_utterance_safe` gained optional `session_state` and `verbose` parameters with defaults — backward compatible with existing tests.
+
+---
+
+## Meal Size Upgrade via 'modify' Action (2026-07-22)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+
+Added a `"modify"` action to the `update_order` tool for in-place meal size changes. When the AI needs to change a meal's size (e.g., Medium → Large), it calls `update_order` with `action: "modify"` instead of remove + add. This preserves all meal components (entree, fries, drink) and updates their size prefixes automatically.
+
+### Rationale
+
+The old remove+add pattern caused drinks to be ejected as separate charged line items during size upgrades. The `modify` action keeps everything in place — no data loss, no double-charging.
+
+### Impact
+
+- **order_state.py:** New `"modify"` handler in `handle_order_update()` + `_update_component_size()` helper
+- **tools.py:** `update_order` schema now accepts `"modify"` in the action enum; delta text handles size change messaging
+- **system_prompt.yaml:** New MEAL_SIZE_CHANGES section (priority 12.5) instructs AI to use `modify` for size changes; ORDERING and SUGGESTIVE_SELLING updated to ask about size during meal conversion
+- **Tests:** 6 new tests covering upgrade, downgrade, breakfast, combo synonym, and no-double-charge scenarios
+
+### Who Should Know
+
+- **Birdie:** The frontend `OrderSummary` component already renders `components` arrays — no frontend change needed. The meal item's display/price/components update in place.
+- **Ronald:** The `modify` action follows the same tool-calling flow (search → update_order). System prompt changes may need review for prompt engineering quality.
+
+---
+
+## Combo = Meal Synonym Support (2026-07-21)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+
+"Combo" and "Meal" are treated as identical synonyms across the entire backend. Both terms trigger the same component auto-population (entree + fries/hash browns), drink absorption, combo conversion, and combo pivot logic.
+
+### Rationale
+
+Drive-thru customers commonly say "combo" instead of "meal" (e.g., "Big Mac combo", "number 3 combo large"). The backend `_is_meal()` function only matched "meal", so "Combo"-named items missed the fries auto-population and component breakdown. This made the order screen inconsistent depending on which word the AI chose.
+
+### Impact
+
+- **order_state.py:** `_is_meal()` now matches both "meal" and "combo" — functionally equivalent to `_is_meal_or_combo()` for McDonald's
+- **System prompt:** New COMBO_MEAL_SYNONYMS section (priority 9) instructs the AI to always translate "combo" → "Meal" in tool calls while mirroring the customer's terminology in speech
+- **Tests:** 7 new combo synonym tests, 8 existing tests updated to reflect new behavior
+- **tools.py:** No changes needed — regex patterns already match "combo" for meal number expansion
+
+### Who Should Know
+
+- **Birdie:** Frontend order display should handle items named with either "Combo" or "Meal" — both will have components populated
+- **Ronald:** System prompt priority numbers shifted (9→23 instead of 9→22) due to new section insertion
+
+---
+
+## Local Mode Uses Separate Short Prompt (No Tools) (2026-07-23)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+Phi-4 INT4 on DirectML hangs on inference when given the full 12,899-char cloud system prompt (~3,768 tokens). The prefill phase never completes — no tokens are ever generated.
+
+### Decision
+
+Local mode uses a completely separate, drastically shorter system prompt (`local_system_prompt.yaml`, 885 chars / ~221 tokens) and passes NO tool schemas to inference.
+
+#### Rationale
+
+1. **INT4 models can't handle large prompts** — the quantized model chokes on prefill beyond ~1000 tokens in reasonable time on consumer GPUs
+2. **Tool calling is unreliable on INT4** — structured JSON output from a 4-bit quantized model is inconsistent; tool schemas in the prompt waste tokens
+3. **93% prompt reduction** makes inference feasible on DirectML with acceptable latency
+4. **30s timeout** prevents infinite hangs if prompt is still too large — returns graceful fallback
+
+#### What local mode loses
+
+- No structured tool calling (search, update_order, etc.)
+- No detailed combo/meal logic, size upgrade rules
+- No menu number mappings
+- No compliance/brand language enforcement
+
+#### What local mode keeps
+
+- McDonald's drive-thru persona
+- Basic ordering flow (confirm items, suggest meals, ask about sizes)
+- Natural conversational style
+- Menu-only boundaries
+
+### Impact
+
+- **Frontend:** No changes needed
+- **Cloud mode:** Completely unaffected — uses full prompt + tools as before
+- **Local mode:** Should complete inference instead of hanging
+- **Tests:** Zero regressions (692 pass, 7 pre-existing failures)
+
+### Files Changed
+
+- `app/backend/prompts/mcdonalds/local_system_prompt.yaml` (NEW)
+- `app/backend/prompt_loader.py` (added `get_local_system_prompt()`)
+- `app/backend/local_processor.py` (use local prompt, no tool schemas)
+- `app/backend/phi4_model.py` (30s inference timeout)
+
+---
+
+## Multimodal Audio-In & VRAM Optimization (2026-07-23)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+RTX 4060 with 8GB VRAM was near capacity:
+- Phi-4 INT4: ~3.5GB
+- Faster-Whisper STT (small): ~1.5GB
+- Piper TTS: ~0.1GB
+- Total: ~5.1GB + OS (1GB) + KV cache → DirectML paging to system RAM
+
+### Decision
+
+**Multimodal audio-in implemented.** Phi-4's built-in speech encoder processes customer audio directly, eliminating Whisper STT entirely.
+
+### What Changed
+
+1. **phi4_model.py** — New multimodal API: `model.create_multimodal_processor()`, PCM→WAV conversion via `_pcm_to_wav_bytes()`, `og.Audios.open_bytes()` for audio loading, `generator.set_inputs()` + `proc.create_stream()` for inference.
+
+2. **local_processor.py** — Whisper loading skipped when `model.multimodal_available` is True. Half-duplex mode: `self._generating` flag mutes VAD during inference.
+
+3. **config.yaml** — `stt_model: "tiny"` (fallback only), `max_length: 1024`.
+
+### VRAM Savings
+
+| Before | After | Savings |
+|--------|-------|---------|
+| Phi-4 ~3.5GB | Phi-4 ~3.5GB | — |
+| Whisper ~1.5GB | Skipped | **~1.5GB** |
+| Piper ~0.1GB | Piper ~0.1GB | — |
+| KV cache (2048 tokens) | KV cache (1024 tokens) | ~200MB |
+| **Total: ~5.1GB** | **Total: ~3.6GB** | **~1.7GB** |
+
+New headroom: ~3.4GB free on 8GB GPU (vs ~1.9GB before).
+
+### API Discoveries
+
+- `og.MultiModalProcessor(model)` constructor removed; use `model.create_multimodal_processor()`
+- `og.Audios.open_bytes()` requires a single WAV-formatted bytes object (not a list, not raw PCM)
+- Token decoding: `proc.create_stream()` → `stream.decode(token_id)` (not tokenizer)
+- `model.create_tokenizer()` doesn't exist; get tokenizer from processor
+
+### Trade-offs
+
+- Phi-4's speech recognition is slightly less accurate than Whisper-small for noisy drive-thru audio, but acceptable for order-taking
+- Customer transcription in the Guest Conversation panel now shows the AI's interpretation rather than Whisper's verbatim transcript
+- Half-duplex means the customer can't interrupt mid-response (barge-in still works via cancel event, but audio isn't buffered during generation)
+
+---
+
+## Sequential STT→LLM Pipeline for Text-Only Local Mode (2026-07-23)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+In local mode with the INT4 Phi-4 ONNX model, `MultiModalProcessor` is unavailable — the model runs in text-only mode. The pipeline was running Whisper STT and Phi-4 inference in **parallel**, meaning the LLM generated responses without ever seeing the customer's words.
+
+### Decision
+
+1. **Sequential pipeline** — Whisper STT runs first and is awaited. The transcribed text is then included in the Phi-4 prompt as a `<|user|>` turn. This adds ~2-5 seconds of STT latency before inference starts, but the model actually knows what the customer said.
+
+2. **Proper chat template** — `_build_prompt()` now produces `<|system|>...<|end|><|user|>...<|end|><|assistant|>` format instead of dumping raw text. This matches Phi-4's expected chat format.
+
+3. **Conversation history (3 turns)** — Stored on the processor instance as `(role, text)` tuples. Essential for drive-thru flow where customers add to orders incrementally ("I'll also have a Coke").
+
+4. **max_length 8192→2048** — Prompt is ~400 tokens, response ~200. 2048 cuts KV cache overhead with no functional loss.
+
+### Trade-offs
+
+- STT-first adds latency vs. parallel execution. But parallel was broken — the model couldn't respond to what it never heard.
+- Conversation history is per-processor-instance, not per-session. If multiple WebSocket sessions share a processor, history could bleed. Current architecture is 1:1 so this is fine for now.
+- If `MultiModalProcessor` becomes available in the future, the parallel path with native audio embeddings would be faster and should be revisited.
+
+---
+
+## TTS Speed & AI Transcript in Local Mode (2026-07-23)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+Local mode just started working — two problems surfaced:
+
+1. **TTS voice was slow/lethargic** — `length_scale: 0.9` in config.yaml produced sluggish speech compared to cloud mode's "Coral" voice.
+2. **AI responses didn't appear in Guest Conversation panel** — frontend extracts AI text from `response.done` events at `response.output[0].content[0].transcript`, but local_processor.py was emitting `output` without a `content` array.
+
+### Decision
+
+1. **Lowered `tts_length_scale` from 0.9 → 0.7.** This produces noticeably faster, drive-thru-appropriate speech. The Piper engine clamps to [0.5, 2.0] so 0.7 is safely within range. Can be tuned further — 0.65 would be even faster if 0.7 still feels sluggish.
+
+2. **Added `content: [{type: "text", transcript: <text>}]` to all `response.done` events** across three emission sites in local_processor.py. This matches the Azure Realtime API structure the frontend already parses.
+
+### Impact
+
+- **Birdie (Frontend):** No frontend changes needed — the fix is purely backend. AI text will now appear in the Guest Conversation panel automatically.
+- **Testing:** These are runtime WebSocket behaviors not covered by unit tests. Verify manually by running local mode and checking the conversation panel.
+- **Future:** If we want real-time streaming transcript (word-by-word appearing), the `response.audio_transcript.delta` events are already being sent — we'd just need a frontend handler.
+
+---
+
+## McDonald's Upsell Rules Replace Sonic Add-In Logic (2026-07-23)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+The system prompt, tools.py, and hints.yaml contained Sonic-style "flavor add-in" and "whipped cream" upsell logic inherited from the original Sonic codebase. Brian directed that McDonald's should never ask about drink add-ins or flavor customizations.
+
+### Decision
+
+#### Removed
+- "Flavor Add-In" and "Whipped Cream" from EXTRAS_KEYWORDS (tools.py)
+- Drink add-in upsell hints from hints.yaml and hardcoded fallbacks in tools.py
+- "Extras: flavor add-in $0.50, whipped cream $0.50" from system prompt ORDERING section
+- Sonic-specific blocked categories ("hot dogs & tots") from extras validation
+
+#### Added — Three Upsell Rules in System Prompt (SUGGESTIVE_SELLING, priority 14)
+
+1. **Meal Upsell:** Burger/sandwich alone → offer meal. Fries alone → suggest sandwich. Drink alone → suggest food. Skip if already ordered a meal.
+2. **Dessert Upsell:** When guest says "that's it" and no dessert on order, offer ONE random dessert (McFlurry Oreo/M&M's, Baked Apple Pie, Hot Fudge Sundae). Only once per order.
+3. **Never:** Ask about flavor add-ins, drink customizations beyond size, or Sonic-style mods.
+
+#### Updated Categories
+- ALLOWED_EXTRA_CATEGORIES: burgers & sandwiches, chicken & mcnuggets, combos
+- BLOCKED_EXTRA_CATEGORIES: drinks, shakes, sides, desserts, sweets & treats
+
+### Impact
+
+- **Birdie:** No frontend changes needed — upsell logic is entirely in the AI prompt and backend tool hints
+- **Ronald:** System prompt priority 14 (SUGGESTIVE_SELLING) is the main behavioral change — review if AI responses need tuning
+- **Hamburglar:** 3 test files updated — all "Flavor Add-In"/"Whipped Cream" test cases replaced with "Extra Patty"/"Extra Cheese"
+- **All:** 696 tests pass, zero regressions from changes
+
+---
+
+## Local Mode WebSocket Resilience Pattern (2026-07-22)
+
+**Author:** Grimace (Backend Dev)  
+**Status:** Implemented
+
+### Context
+
+Recurring bug: toggling Local Mode ON and clicking the microphone always showed "Cannot connect to local server." The WebSocket never reached OPEN state.
+
+### Root Cause (Three Layers)
+
+1. **RTMiddleTier token warmup crash** — `self._token_provider()` in the constructor threw when Azure AD was unreachable, crashing `create_app()` before the ProcessorRouter or `/realtime` route was created.
+2. **No try/except around cloud processor creation** — any failure in credential setup, RTMiddleTier init, or tool attachment crashed the entire startup, even though local mode doesn't need any of those.
+3. **Model load failure caused rapid WS connect/disconnect cycle** — `handle_websocket` returned immediately on model load failure, closing the socket. Auto-reconnect fired, failed again, etc. The OPEN window was too brief for the user to ever click the mic.
+
+### Decision
+
+- **Never let cloud processor failures prevent local mode from working.** The entire RTMiddleTier creation block in `app.py` is now wrapped in try/except. If it fails, `rtmt=None` and local-only mode proceeds.
+- **Keep WebSocket alive on degraded mode.** When local model loading fails, the WebSocket stays open in a degraded message loop. Audio processing responds with text error messages instead of crashing the connection.
+- **Token warmup is non-fatal.** `self._token_provider()` warmup in rtmt.py is now wrapped in try/except — failure is logged as a warning, and the token will be fetched on first request instead.
+- **Always confirm route registration at startup.** Explicit log lines confirm `/realtime` registration and processor availability.
+- **Diagnostic echo WebSocket at `/api/ws-test`** for isolating WebSocket infrastructure issues from handler logic.
+
+### Impact
+
+- Backend always starts, even with zero Azure credentials
+- `/realtime` route is always registered
+- Local mode WebSocket stays OPEN even when models fail to load
+- Zero test regressions (694 pass, same 2 pre-existing failures)
+
+---
+
+## User Directive: Remove Sonic Flavor Add-Ins (2026-04-03)
+
+**Author:** Brian Swiger (via Copilot)  
+**Status:** Implemented
+
+### Decision
+
+No flavor add-ins for drinks (remove Sonic-style logic). Instead:
+1. Always upsell to a meal if customer orders just a burger, fries, or drink
+2. Always offer a random dessert (McFlurry or Baked Apple Pie) if no dessert ordered
+3. Never ask "Want to add a flavor add-in to that drink?"
+
+### Rationale
+
+User request — McDonald's doesn't do drink flavor add-ins like Sonic.
 - `ReadyState` re-exported from `useRealtime.tsx` for consumer convenience (avoids direct `react-use-websocket` import in App.tsx).
 
 ---

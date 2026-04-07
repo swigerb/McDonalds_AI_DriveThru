@@ -57,6 +57,8 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - WhisperSTTEngine._detect_device() tries torch→ctranslate2→CPU priority — mock with `builtins.__import__` side_effect that selectively raises ImportError (same pattern as Phi4)
 - WhisperSTTEngine.transcribe() runs _sync_transcribe via run_in_executor — mock model.transcribe return as `(iter([segments]), info)` tuple
 - LocalPhi4Processor._process_utterance() creates transcription_task via asyncio.create_task for parallel STT+Phi4 — test parallelism by gating Phi-4 with Events
+- To test code inside `_forward_messages()` nested functions (like voice change handler), mock the full aiohttp.ClientSession→ws_connect→target_ws chain with async context managers (MagicMock + AsyncMock for __aenter__/__aexit__), use `_AsyncIter` for WebSocket iteration, and mock `rtmt._sessions` to skip greeting/session lifecycle noise
+- The `continue` in the voice handler is at the `if ext_msg.get("type")` level, not inside the valid-voice check — so ALL extension.set_voice messages are consumed (valid or not), never forwarded to OpenAI
 
 ## Team Updates (2026-04-02T16:30Z)
 
