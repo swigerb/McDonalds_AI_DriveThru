@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+import aiohttp
 from aiohttp import web
 from order_state import order_state_singleton
 
@@ -48,6 +49,24 @@ def _make_mock_ws():
     ws.send_str = AsyncMock()
     ws.close = AsyncMock()
     return ws
+
+
+class _AsyncIter:
+    """Async iterator adapter for a regular list — enables ``async for`` on mocks."""
+
+    def __init__(self, items):
+        self._items = list(items)
+        self._index = 0
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self._index >= len(self._items):
+            raise StopAsyncIteration
+        item = self._items[self._index]
+        self._index += 1
+        return item
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -817,6 +836,159 @@ class PassthroughTypeSetsTests(unittest.TestCase):
 
     def test_client_types_is_frozenset(self):
         self.assertIsInstance(_PASSTHROUGH_CLIENT_TYPES, frozenset)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VOICE CHANGE (extension.set_voice) TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
+    """Test extension.set_voice handling inside the WebSocket forwarding loop.
+
+    Verifies that:
+    - Valid voice changes update voice_choice
+    - Pre-session: voice is deferred (no separate session.update to OpenAI)
+    - Mid-session: voice change sends session.update to OpenAI immediately
+    - The extension message is consumed (not forwarded to OpenAI)
+    - Invalid voice names are rejected without sending session.update
+    """
+
+    def _make_rtmt(self, **kwargs):
+        from azure.core.credentials import AzureKeyCredential
+        cred = AzureKeyCredential("test-key")
+        return RTMiddleTier(
+            endpoint="https://fake.openai.azure.com",
+            deployment="gpt-4o-realtime",
+            credentials=cred,
+            **kwargs,
+        )
+
+    def _make_ws_msg(self, data):
+        """Create a mock aiohttp WSMessage with TEXT type."""
+        msg = MagicMock()
+        msg.type = aiohttp.WSMsgType.TEXT
+        msg.data = data
+        return msg
+
+    async def _run_voice_scenario(self, voice_msg_data, initial_voice=None, pre_session_update=False):
+        """Run _forward_messages with voice message(s).
+
+        If pre_session_update=True, sends a session.update BEFORE the voice message
+        to simulate a mid-session voice change (session_configured=True).
+
+        Returns (rtmt, target_ws) for assertions.
+        """
+        rtmt = self._make_rtmt(voice_choice=initial_voice)
+
+        # Build message sequence
+        messages = []
+        if pre_session_update:
+            # Send a session.update first so session_configured becomes True
+            session_update_msg = json.dumps({
+                "type": "session.update",
+                "session": {"turn_detection": {"type": "server_vad"}},
+            })
+            messages.append(self._make_ws_msg(session_update_msg))
+        messages.append(self._make_ws_msg(voice_msg_data))
+
+        # Client WebSocket (browser → server)
+        client_ws = _make_mock_ws()
+        client_ws.headers = {}
+        client_ws.__aiter__ = MagicMock(return_value=_AsyncIter(messages))
+
+        # Target WebSocket (server → OpenAI) — records all send_str calls
+        target_ws = MagicMock()
+        target_ws.send_str = AsyncMock()
+        target_ws.close = AsyncMock()
+        target_ws.closed = True
+        target_ws.__aiter__ = MagicMock(return_value=_AsyncIter([]))
+
+        # Mock aiohttp.ClientSession → session.ws_connect → target_ws
+        ws_connect_ctx = MagicMock()
+        ws_connect_ctx.__aenter__ = AsyncMock(return_value=target_ws)
+        ws_connect_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = MagicMock()
+        mock_session.ws_connect = MagicMock(return_value=ws_connect_ctx)
+
+        client_session_ctx = MagicMock()
+        client_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        client_session_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        # Mock session manager — greeting already sent, skip lifecycle noise
+        rtmt._sessions = MagicMock()
+        rtmt._sessions.get_session_id.return_value = "test-session-id"
+        rtmt._sessions.has_sent_greeting.return_value = True
+
+        with patch("aiohttp.ClientSession", return_value=client_session_ctx):
+            await rtmt._forward_messages(client_ws)
+
+        return rtmt, target_ws
+
+    async def test_valid_voice_updates_voice_choice(self):
+        """extension.set_voice with valid voice updates self.voice_choice."""
+        msg = json.dumps({"type": "extension.set_voice", "voice": "coral"})
+        rtmt, _ = await self._run_voice_scenario(msg)
+        self.assertEqual(rtmt.voice_choice, "coral")
+
+    async def test_pre_session_voice_deferred(self):
+        """Pre-session extension.set_voice defers — no session.update to OpenAI."""
+        msg = json.dumps({"type": "extension.set_voice", "voice": "ash"})
+        _, target_ws = await self._run_voice_scenario(msg)
+        # No messages should be sent to OpenAI (voice is deferred)
+        target_ws.send_str.assert_not_called()
+
+    async def test_mid_session_voice_sends_session_update(self):
+        """Mid-session extension.set_voice sends session.update to OpenAI."""
+        msg = json.dumps({"type": "extension.set_voice", "voice": "ash"})
+        _, target_ws = await self._run_voice_scenario(msg, pre_session_update=True)
+        sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list]
+        voice_updates = [s for s in sent if s.get("type") == "session.update" and "voice" in s.get("session", {})]
+        # The last session.update with voice should be the mid-session voice change
+        self.assertTrue(any(u["session"]["voice"] == "ash" for u in voice_updates))
+
+    async def test_extension_message_not_forwarded(self):
+        """extension.set_voice is consumed — not forwarded to OpenAI."""
+        msg = json.dumps({"type": "extension.set_voice", "voice": "coral"})
+        _, target_ws = await self._run_voice_scenario(msg)
+        sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list
+                if c.args[0]]
+        # Raw extension message must NOT appear
+        ext_msgs = [s for s in sent if s.get("type") == "extension.set_voice"]
+        self.assertEqual(len(ext_msgs), 0)
+
+    async def test_invalid_voice_no_session_update(self):
+        """Invalid voice name does NOT trigger session.update or change voice_choice."""
+        msg = json.dumps({"type": "extension.set_voice", "voice": "INVALID"})
+        rtmt, target_ws = await self._run_voice_scenario(msg, initial_voice="shimmer")
+        self.assertEqual(rtmt.voice_choice, "shimmer")
+        target_ws.send_str.assert_not_called()
+
+    async def test_each_valid_voice_accepted(self):
+        """All 8 valid voice names are accepted and update voice_choice."""
+        for voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+            with self.subTest(voice=voice):
+                msg = json.dumps({"type": "extension.set_voice", "voice": voice})
+                rtmt, _ = await self._run_voice_scenario(msg)
+                self.assertEqual(rtmt.voice_choice, voice)
+
+    async def test_each_valid_voice_mid_session(self):
+        """All 8 valid voice names send session.update when mid-session."""
+        for voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+            with self.subTest(voice=voice):
+                msg = json.dumps({"type": "extension.set_voice", "voice": voice})
+                rtmt, target_ws = await self._run_voice_scenario(msg, pre_session_update=True)
+                self.assertEqual(rtmt.voice_choice, voice)
+                sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list]
+                voice_updates = [s for s in sent if s.get("type") == "session.update"
+                                 and s.get("session", {}).get("voice") == voice]
+                self.assertTrue(len(voice_updates) >= 1, f"Expected session.update with voice={voice}")
+
+    async def test_missing_voice_key_defaults_to_shimmer(self):
+        """When voice key is absent, defaults to shimmer (valid)."""
+        msg = json.dumps({"type": "extension.set_voice"})
+        rtmt, _ = await self._run_voice_scenario(msg)
+        self.assertEqual(rtmt.voice_choice, "shimmer")
 
 
 if __name__ == "__main__":

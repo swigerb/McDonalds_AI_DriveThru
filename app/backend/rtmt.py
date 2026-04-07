@@ -497,6 +497,12 @@ class RTMiddleTier:
 
                 async def from_client_to_server():
                     nonlocal verbose, audio_frame_count, session_file_handler
+                    # Track whether the full session.update (with tools/instructions)
+                    # has been forwarded to OpenAI.  Before that point, voice changes
+                    # are stored locally and piggy-backed on the upcoming session.update
+                    # to avoid a race where a voice-only session.update triggers
+                    # session.updated → greeting fires before tools are configured.
+                    session_configured = False
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             # Track activity for idle timeout
@@ -560,8 +566,23 @@ class RTMiddleTier:
                                     if ext_msg.get("type") == "extension.set_voice":
                                         new_voice = ext_msg.get("voice", "shimmer")
                                         if new_voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+                                            previous_voice = self.voice_choice
                                             self.voice_choice = new_voice
-                                            logger.info("Voice changed to %s for session %s", new_voice, session_id)
+                                            logger.info("[VOICE] Voice change request: %s → %s (session %s)", previous_voice, new_voice, session_id)
+                                            if session_configured:
+                                                # Mid-session voice change — send immediately
+                                                session_update = json.dumps({
+                                                    "type": "session.update",
+                                                    "session": {"voice": new_voice},
+                                                })
+                                                await target_ws.send_str(session_update)
+                                                logger.info("[VOICE] Sent session.update to OpenAI (session %s): %s", session_id, session_update)
+                                                _vlog(verbose, "─── [Voice Change] Sent session.update voice=%s to OpenAI ───", new_voice)
+                                            else:
+                                                # Pre-session: voice will be included in the
+                                                # upcoming full session.update (with tools/instructions)
+                                                logger.info("[VOICE] Deferred — will include in next session.update (session %s)", session_id)
+                                                _vlog(verbose, "─── [Voice Change] Deferred voice=%s (session not yet configured) ───", new_voice)
                                         continue  # Don't forward to OpenAI
                                 except (json.JSONDecodeError, KeyError):
                                     pass
@@ -580,6 +601,9 @@ class RTMiddleTier:
                             new_msg = await self._process_message_to_server(msg, ws, verbose)
                             if new_msg is not None:
                                 await target_ws.send_str(new_msg)
+                            # Mark session as configured after the first full session.update
+                            if not session_configured and _MARKER_SESSION_UPDATE in msg.data and _MARKER_SESSION_UPDATED not in msg.data:
+                                session_configured = True
                             # Fallback greeting trigger
                             if not greeting_sent and _MARKER_SESSION_UPDATE in msg.data and _MARKER_SESSION_UPDATED not in msg.data:
                                 logger.info("Fallback greeting: session.update forwarded — sending greeting without waiting for session.updated")
