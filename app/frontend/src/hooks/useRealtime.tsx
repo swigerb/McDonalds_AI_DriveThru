@@ -111,7 +111,10 @@ export default function useRealTime({
             return `${aoaiEndpointOverride}/openai/realtime?api-key=${aoaiApiKeyOverride}&deployment=${aoaiModelOverride}&api-version=2024-10-01-preview`;
         }
         const base = `/realtime`;
-        return sessionToken ? `${base}?token=${encodeURIComponent(sessionToken)}` : base;
+        if (sessionToken) {
+            return `${base}?token=${encodeURIComponent(sessionToken)}&mode=cloud`;
+        }
+        return `${base}?mode=cloud`;
     };
 
     const wsEndpoint = buildWsEndpoint();
@@ -289,6 +292,7 @@ export default function useRealTime({
     };
 
     const sendVoiceChoice = (voice: string) => {
+        console.log(`[VOICE] Sending voice choice to backend: ${voice}`);
         sendJsonMessage({ type: "extension.set_voice", voice });
     };
 
@@ -298,6 +302,7 @@ export default function useRealTime({
     };
 
     const sendPiperVoiceChoice = (voice: string) => {
+        console.log(`[VOICE] Sending Piper voice choice to backend: ${voice}`);
         sendJsonMessage({ type: "extension.set_piper_voice", voice });
     };
 

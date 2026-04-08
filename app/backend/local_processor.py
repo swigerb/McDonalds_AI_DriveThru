@@ -457,17 +457,20 @@ class LocalPhi4Processor(AbstractProcessor):
                 elif msg_type == "extension.set_voice":
                     new_voice = message.get("voice")
                     if new_voice:
+                        previous_voice = self.voice_choice
                         self.voice_choice = new_voice
-                        logger.info("Voice changed to %s", new_voice)
+                        logger.info("[VOICE] Cloud voice change request: %s → %s (session %s, ignored in local mode)", previous_voice, new_voice, session_id)
 
                 elif msg_type == "extension.set_piper_voice":
                     voice_id = message.get("voice") or message.get("voice_id", "")
+                    previous_piper = self.voice_choice
+                    logger.info("[VOICE] Piper voice change request: %s → %s (session %s)", previous_piper, voice_id, session_id)
                     available = self._config.get("tts_available_voices", [])
                     if not available:
                         from piper_tts import PIPER_VOICES
                         available = list(PIPER_VOICES.keys())
                     if voice_id not in available:
-                        logger.warning("Rejected voice switch to '%s' — not in allowed list", voice_id)
+                        logger.warning("[VOICE] Rejected Piper voice switch to '%s' — not in allowed list (session %s)", voice_id, session_id)
                         await ws.send_json({
                             "type": "extension.piper_voice_error",
                             "error": f"Voice '{voice_id}' not available",
@@ -476,11 +479,13 @@ class LocalPhi4Processor(AbstractProcessor):
                         success = await self._tts.set_voice(voice_id)
                         if success:
                             self.voice_choice = voice_id
+                            logger.info("[VOICE] Piper voice changed successfully: %s (session %s)", voice_id, session_id)
                             await ws.send_json({
                                 "type": "extension.piper_voice_changed",
                                 "voice": voice_id,
                             })
                         else:
+                            logger.warning("[VOICE] Piper voice load FAILED for '%s' (session %s)", voice_id, session_id)
                             await ws.send_json({
                                 "type": "extension.piper_voice_error",
                                 "error": f"Failed to load voice '{voice_id}'",
@@ -805,10 +810,11 @@ class LocalPhi4Processor(AbstractProcessor):
                 if customer_text:
                     pipeline_logger.info("[%s] Whisper STT transcription: '%s'", session_id, customer_text[:100])
                     _vlog(verbose, "[%s] Whisper STT result: '%s'", session_id, customer_text[:100])
-                    await ws.send_json({
-                        "type": "conversation.item.input_audio_transcription.completed",
-                        "transcript": customer_text,
-                    })
+                    if not ws.closed:
+                        await ws.send_json({
+                            "type": "conversation.item.input_audio_transcription.completed",
+                            "transcript": customer_text,
+                        })
                 else:
                     pipeline_logger.debug("[%s] Whisper STT returned empty transcription", session_id)
             except Exception as exc:
@@ -819,13 +825,16 @@ class LocalPhi4Processor(AbstractProcessor):
         # 2. Guard: skip inference if transcription is empty
         if not customer_text:
             pipeline_logger.warning("[%s] Whisper returned empty transcription — asking customer to repeat", session_id)
-            await self._send_text_response(
-                ws,
-                "I didn't catch that, could you say that again?",
-            )
+            if not ws.closed:
+                await self._send_text_response(
+                    ws,
+                    "I didn't catch that, could you say that again?",
+                )
             return
 
         # 3. Send response.created
+        if ws.closed:
+            return
         await ws.send_json({
             "type": _MSG_RESPONSE_CREATED,
             "response": {"id": response_id},
@@ -833,8 +842,9 @@ class LocalPhi4Processor(AbstractProcessor):
 
         if not self._model or not self._model.is_loaded:
             pipeline_logger.error("[%s] Model not loaded — cannot process utterance", session_id)
-            await self._send_transcript_and_done(ws, response_id,
-                "Local model is not loaded. Please wait for initialization to complete.")
+            if not ws.closed:
+                await self._send_transcript_and_done(ws, response_id,
+                    "Local model is not loaded. Please wait for initialization to complete.")
             return
 
         # 3. Run Phi-4-mini inference — half-duplex: mute audio input during generation
@@ -862,6 +872,9 @@ class LocalPhi4Processor(AbstractProcessor):
                 if cancel_event.is_set():
                     pipeline_logger.info("[%s] Response cancelled (response=%s)", session_id, response_id)
                     break
+                if ws.closed:
+                    pipeline_logger.info("[%s] WebSocket closed during inference streaming", session_id)
+                    break
                 full_text += token
                 token_count += 1
                 await ws.send_json({
@@ -877,10 +890,11 @@ class LocalPhi4Processor(AbstractProcessor):
               session_id, inference_ms, token_count, len(full_text))
 
         if cancel_event.is_set():
-            await ws.send_json({
-                "type": _MSG_RESPONSE_DONE,
-                "response": {"id": response_id, "status": "cancelled"},
-            })
+            if not ws.closed:
+                await ws.send_json({
+                    "type": _MSG_RESPONSE_DONE,
+                    "response": {"id": response_id, "status": "cancelled"},
+                })
             return
 
         # 4. Check for tool calls in the response
@@ -903,10 +917,11 @@ class LocalPhi4Processor(AbstractProcessor):
         speech_text = re.sub(r"<tool_call>.*?</tool_call>", "", speech_text, flags=re.DOTALL).strip()
 
         # 5. Send transcript done
-        await ws.send_json({
-            "type": _MSG_TRANSCRIPT_DONE,
-            "transcript": speech_text,
-        })
+        if not ws.closed:
+            await ws.send_json({
+                "type": _MSG_TRANSCRIPT_DONE,
+                "transcript": speech_text,
+            })
 
         # 6. Synthesize speech from text (if TTS available)
         if self._tts and self._tts.is_loaded and speech_text:
@@ -918,6 +933,9 @@ class LocalPhi4Processor(AbstractProcessor):
                 if cancel_event.is_set():
                     pipeline_logger.info("[%s] TTS synthesis cancelled", session_id)
                     break
+                if ws.closed:
+                    pipeline_logger.info("[%s] WebSocket closed during TTS streaming", session_id)
+                    break
                 chunk_count += 1
                 await ws.send_json({
                     "type": _MSG_AUDIO_DELTA,
@@ -928,28 +946,30 @@ class LocalPhi4Processor(AbstractProcessor):
             _vlog(verbose, "[%s] Piper TTS: DONE in %.0fms — %d audio chunks", session_id, tts_ms, chunk_count)
             # Signal audio stream complete (mirrors OpenAI Realtime API event
             # forwarded by rtmt.py — frontend may rely on this for playback state)
-            await ws.send_json({"type": _MSG_AUDIO_DONE})
+            if not ws.closed:
+                await ws.send_json({"type": _MSG_AUDIO_DONE})
         elif speech_text:
             pipeline_logger.warning("[%s] TTS unavailable — text-only response", session_id)
 
         # 7. Send response.done
         pipeline_logger.info("[%s] Response complete (response=%s)", session_id, response_id)
-        await ws.send_json({
-            "type": _MSG_RESPONSE_DONE,
-            "response": {
-                "id": response_id,
-                "output": [{
-                    "type": "message",
-                    "role": "assistant",
-                    "content": [{"type": "text", "transcript": speech_text}],
-                }],
-                "status": "completed",
-                "usage": {
-                    "total_tokens": token_count,
-                    "output_tokens": token_count,
+        if not ws.closed:
+            await ws.send_json({
+                "type": _MSG_RESPONSE_DONE,
+                "response": {
+                    "id": response_id,
+                    "output": [{
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "text", "transcript": speech_text}],
+                    }],
+                    "status": "completed",
+                    "usage": {
+                        "total_tokens": token_count,
+                        "output_tokens": token_count,
+                    },
                 },
-            },
-        })
+            })
 
         # 8. Store conversation history for multi-turn context
         if customer_text:
@@ -966,12 +986,13 @@ class LocalPhi4Processor(AbstractProcessor):
         rt_idx = session_state["round_trip_index"]
         st = session_state["session_token"]
         rt_token = f"{st}-{rt_idx:04d}"
-        await ws.send_json({
-            "type": _MSG_ROUND_TRIP_TOKEN,
-            "sessionToken": st,
-            "roundTripIndex": rt_idx,
-            "roundTripToken": rt_token,
-        })
+        if not ws.closed:
+            await ws.send_json({
+                "type": _MSG_ROUND_TRIP_TOKEN,
+                "sessionToken": st,
+                "roundTripIndex": rt_idx,
+                "roundTripToken": rt_token,
+            })
         _vlog(verbose,
               "─── [ROUND TRIP] #%d ───\n"
               "Token: %s\n"
@@ -1082,6 +1103,8 @@ class LocalPhi4Processor(AbstractProcessor):
         Mimics the message sequence the frontend expects from cloud mode:
         response.created → transcript delta(s) → audio deltas → audio.done → response.done
         """
+        if ws.closed:
+            return
         response_id = f"local-{uuid.uuid4().hex[:8]}"
         await ws.send_json({"type": _MSG_RESPONSE_CREATED, "response": {"id": response_id}})
         await ws.send_json({"type": _MSG_TRANSCRIPT_DELTA, "delta": text})
@@ -1112,6 +1135,8 @@ class LocalPhi4Processor(AbstractProcessor):
         self, ws: web.WebSocketResponse, response_id: str, text: str
     ) -> None:
         """Send transcript delta + response.done for a simple text message."""
+        if ws.closed:
+            return
         await ws.send_json({"type": _MSG_TRANSCRIPT_DELTA, "delta": text})
         await ws.send_json({
             "type": _MSG_RESPONSE_DONE,

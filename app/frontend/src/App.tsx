@@ -358,6 +358,13 @@ function McDonaldsApp() {
                     realtime.sendLocalModeToggle(true);
                 }
 
+                // Sync stored voice preferences BEFORE session.update
+                console.log(`[VOICE] Startup sync — voiceChoice=${voiceChoice}, localMode=${localMode}, piperVoice=${piperVoice}`);
+                realtime.sendVoiceChoice(voiceChoice);
+                if (localMode) {
+                    realtime.sendPiperVoiceChoice(piperVoice);
+                }
+
                 realtime.startSession();
                 if (verboseLogging) {
                     realtime.sendVerboseLogging(true);
