@@ -1,0 +1,15 @@
+docs: Record Grimace voice logging initiative completion
+
+Orchestration and session logs document comprehensive [VOICE] and
+[VOICE/ROUTING] logging added across backend and frontend components.
+
+Voice pipeline now has full audit trail for all events:
+- rtmt.py: Real-time processing instrumentation
+- processor_router.py: Routing logic audit trail
+- local_processor.py: Local processor state tracking
+- useRealtime.tsx: Frontend lifecycle hooks
+- App.tsx: Application-level integration
+
+Frontend rebuilt with all changes.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
