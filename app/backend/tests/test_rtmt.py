@@ -943,9 +943,13 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
         msg = json.dumps({"type": "extension.set_voice", "voice": "ash"})
         _, target_ws = await self._run_voice_scenario(msg, pre_session_update=True)
         sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list]
-        voice_updates = [s for s in sent if s.get("type") == "session.update" and "voice" in s.get("session", {})]
-        # The last session.update with voice should be the mid-session voice change
-        self.assertTrue(any(u["session"]["voice"] == "ash" for u in voice_updates))
+        voice_updates = [s for s in sent if s.get("type") == "session.update"]
+        # GA format places voice at session.audio.output.voice
+        self.assertTrue(any(
+            u["session"].get("audio", {}).get("output", {}).get("voice") == "ash"
+            or u["session"].get("voice") == "ash"
+            for u in voice_updates
+        ))
 
     async def test_extension_message_not_forwarded(self):
         """extension.set_voice is consumed — not forwarded to OpenAI."""
@@ -980,8 +984,10 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
                 rtmt, target_ws = await self._run_voice_scenario(msg, pre_session_update=True)
                 self.assertEqual(rtmt.voice_choice, voice)
                 sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list]
+                # GA format: session.audio.output.voice; legacy: session.voice
                 voice_updates = [s for s in sent if s.get("type") == "session.update"
-                                 and s.get("session", {}).get("voice") == voice]
+                                 and (s.get("session", {}).get("audio", {}).get("output", {}).get("voice") == voice
+                                      or s.get("session", {}).get("voice") == voice)]
                 self.assertTrue(len(voice_updates) >= 1, f"Expected session.update with voice={voice}")
 
     async def test_missing_voice_key_defaults_to_shimmer(self):

@@ -108,7 +108,7 @@ export default function useRealTime({
             return url;
         }
         if (useDirectAoaiApi) {
-            return `${aoaiEndpointOverride}/openai/realtime?api-key=${aoaiApiKeyOverride}&deployment=${aoaiModelOverride}&api-version=2024-10-01-preview`;
+            return `${aoaiEndpointOverride}/openai/v1/realtime?api-key=${aoaiApiKeyOverride}&model=${aoaiModelOverride}`;
         }
         const base = `/realtime`;
         if (sessionToken) {

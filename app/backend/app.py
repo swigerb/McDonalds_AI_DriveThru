@@ -260,10 +260,6 @@ async def create_app() -> web.Application:
                 prompt_loader=prompt_loader,
             )
             rtmt.app_secret = app_secret
-            if api_version := os.environ.get("AZURE_OPENAI_REALTIME_API_VERSION"):
-                rtmt.api_version = api_version
-            else:
-                rtmt.api_version = model_cfg.get("api_version", "2024-10-01-preview")
             rtmt.temperature = model_cfg.get("temperature", 0.6)
             rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
 
@@ -281,6 +277,12 @@ async def create_app() -> web.Application:
                     "- ONE or TWO short sentences max per response\n"
                 )
 
+            # Determine semantic ranker availability (free SKU → disabled)
+            semantic_ranker_level = os.environ.get("AZURE_SEARCH_SEMANTIC_RANKER", "standard").lower()
+            use_semantic_ranker = semantic_ranker_level != "disabled"
+            if not use_semantic_ranker:
+                logger.info("Semantic ranker disabled (AZURE_SEARCH_SEMANTIC_RANKER=%s)", semantic_ranker_level)
+
             attach_tools_rtmt(
                 rtmt,
                 credentials=search_credential,
@@ -292,6 +294,7 @@ async def create_app() -> web.Application:
                 embedding_field=os.environ.get("AZURE_SEARCH_EMBEDDING_FIELD") or "embedding",
                 title_field=os.environ.get("AZURE_SEARCH_TITLE_FIELD") or "name",
                 use_vector_query=_get_bool_env("AZURE_SEARCH_USE_VECTOR_QUERY", True),
+                use_semantic_ranker=use_semantic_ranker,
                 prompt_loader=prompt_loader,
             )
             logger.info("✅ Cloud processor (RTMiddleTier) created successfully")

@@ -295,6 +295,8 @@ async def search(
     embedding_field: str,
     use_vector_query: bool,
     args: Any,
+    *,
+    use_semantic_ranker: bool = True,
 ) -> ToolResult:
     """Execute a hybrid Azure AI Search query with caching and safe fallbacks."""
 
@@ -327,24 +329,39 @@ async def search(
         "sizes",
     ]
 
+    # Determine query type — semantic ranker is unavailable on free SKU
+    query_type = "semantic" if use_semantic_ranker else "simple"
+    sem_config = semantic_configuration if use_semantic_ranker else None
+
     try:
         search_results = await search_client.search(
             search_text=query,
-            query_type="semantic",
-            semantic_configuration_name=semantic_configuration,
+            query_type=query_type,
+            semantic_configuration_name=sem_config,
             top=_search_cfg.get("top_results", 3),
             vector_queries=vector_queries or None,
             select=select_fields,
         )
     except HttpResponseError as exc:
+        # Runtime fallback: if semantic ranker returns HTTP 400 (e.g. free SKU),
+        # retry without it rather than failing the query entirely.
+        if exc.status_code == 400 and use_semantic_ranker:
+            logger.warning("Semantic ranker unavailable (HTTP 400) — retrying without: %s", exc.message)
+            search_results = await search_client.search(
+                search_text=query,
+                query_type="simple",
+                top=_search_cfg.get("top_results", 3),
+                vector_queries=vector_queries or None,
+                select=select_fields,
+            )
         # Gracefully handle schema/field mismatches (e.g., invalid $select fields) by retrying with a minimal projection.
-        if "Could not find a property named" in str(exc):
+        elif "Could not find a property named" in str(exc):
             logger.warning("Retrying search with minimal fields after select mismatch: %s", exc)
             fallback_select = [identifier_field or "id", content_field or "description"]
             search_results = await search_client.search(
                 search_text=query,
-                query_type="semantic",
-                semantic_configuration_name=semantic_configuration,
+                query_type=query_type,
+                semantic_configuration_name=sem_config,
                 top=3,
                 vector_queries=vector_queries or None,
                 select=[f for f in fallback_select if f],
@@ -641,6 +658,7 @@ def attach_tools_rtmt(
     embedding_field: str,
     title_field: str,
     use_vector_query: bool,
+    use_semantic_ranker: bool = True,
     prompt_loader=None,
 ) -> None:
     """Attach search and order tools to the RTMiddleTier instance."""
@@ -667,7 +685,7 @@ def attach_tools_rtmt(
         credentials.get_token("https://search.azure.com/.default")  # warm up prior to first call
     search_client = SearchClient(search_endpoint, search_index, credentials, user_agent="RTMiddleTier")
 
-    rtmt.tools["search"] = Tool(schema=_search_schema, target=lambda args: search(search_client, semantic_configuration, identifier_field, content_field, embedding_field, use_vector_query, args))
+    rtmt.tools["search"] = Tool(schema=_search_schema, target=lambda args: search(search_client, semantic_configuration, identifier_field, content_field, embedding_field, use_vector_query, args, use_semantic_ranker=use_semantic_ranker))
     rtmt.tools["update_order"] = Tool(schema=_update_order_schema, target=lambda args, session_id: update_order(args, session_id))
     rtmt.tools["get_order"] = Tool(schema=_get_order_schema, target=lambda args, session_id: get_order(args, session_id))
     rtmt.tools["reset_order"] = Tool(schema=_reset_order_schema, target=lambda args, session_id: reset_order(args, session_id))

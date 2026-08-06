@@ -114,6 +114,20 @@ param azureContainerAppsWorkloadProfile string
 param acaIdentityName string = '${environmentName}-aca-identity'
 param containerRegistryName string = '${replace(environmentName, '-', '')}acr'
 
+// --- EasyAuth (Entra ID) parameters ---
+@description('Enable Entra ID authentication on the Container App. Requires authClientId and a pre-provisioned aad-client-secret.')
+param enableAuth bool = false
+
+@description('Entra ID application (client) ID for EasyAuth. Leave empty to skip auth configuration.')
+param authClientId string = ''
+
+@description('Entra ID tenant ID used to build the OpenID issuer URL. Defaults to the deployment subscription tenant.')
+param authTenantId string = tenant().tenantId
+
+@secure()
+@description('Entra ID client secret. Stored as Container App secret "aad-client-secret". Provision via azd env or out-of-band — never commit to source.')
+param authClientSecret string = ''
+
 // Figure out if we're running as a user or service principal
 var principalType = empty(runningOnGh) && empty(runningOnAdo) ? 'User' : 'ServicePrincipal'
 
@@ -202,6 +216,7 @@ module acaBackend 'core/host/container-app-upsert.bicep' = {
     containerMaxReplicas: 5
     healthProbePath: '/health'
     enableWebSocket: true
+    secrets: enableAuth && !empty(authClientSecret) ? { 'aad-client-secret': authClientSecret } : {}
     env: {
       AZURE_SEARCH_ENDPOINT: reuseExistingSearch
         ? searchEndpoint
@@ -213,6 +228,9 @@ module acaBackend 'core/host/container-app-upsert.bicep' = {
       AZURE_SEARCH_TITLE_FIELD: searchTitleField
       AZURE_SEARCH_EMBEDDING_FIELD: searchEmbeddingField
       AZURE_SEARCH_USE_VECTOR_QUERY: searchUseVectorQuery
+      // Free SKU has no semantic ranker; the app must not request one or every
+      // query returns HTTP 400.
+      AZURE_SEARCH_SEMANTIC_RANKER: actualSearchServiceSemanticRankerLevel
       AZURE_OPENAI_EASTUS2_ENDPOINT: reuseExistingOpenAi ? openAiEndpoint : openAi.outputs.endpoint
       AZURE_OPENAI_REALTIME_DEPLOYMENT: reuseExistingOpenAi ? openAiRealtimeDeployment : openAiDeployments[0].name
       AZURE_OPENAI_REALTIME_VOICE_CHOICE: openAiRealtimeVoiceChoice
@@ -223,14 +241,26 @@ module acaBackend 'core/host/container-app-upsert.bicep' = {
   }
 }
 
+// EasyAuth (Entra ID) — opt-in, gated on enableAuth && non-empty clientId
+module containerAppAuth 'core/security/container-app-auth.bicep' = if (enableAuth && !empty(authClientId)) {
+  name: 'container-app-auth'
+  scope: resourceGroup
+  params: {
+    containerAppName: acaBackend.outputs.name
+    clientId: authClientId
+    tenantId: authTenantId
+    clientSecretSettingName: 'aad-client-secret'
+  }
+}
+
 var embedModel = 'text-embedding-3-large'
 var openAiDeployments = [
   {
-    name: 'gpt-4o-realtime-preview'
+    name: 'gpt-realtime-1.5'
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o-realtime-preview'
-      version: '2024-10-01'
+      name: 'gpt-realtime-1.5'
+      version: '2026-02-23'
     }
     sku: {
       name: 'GlobalStandard'
@@ -420,6 +450,7 @@ output AZURE_SEARCH_CONTENT_FIELD string = searchContentField
 output AZURE_SEARCH_TITLE_FIELD string = searchTitleField
 output AZURE_SEARCH_EMBEDDING_FIELD string = searchEmbeddingField
 output AZURE_SEARCH_USE_VECTOR_QUERY bool = searchUseVectorQuery
+output AZURE_SEARCH_SEMANTIC_RANKER string = actualSearchServiceSemanticRankerLevel
 
 output AZURE_STORAGE_ENDPOINT string = 'https://${storage.outputs.name}.blob.core.windows.net'
 output AZURE_STORAGE_ACCOUNT string = storage.outputs.name
