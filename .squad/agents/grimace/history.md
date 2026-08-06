@@ -23,6 +23,23 @@ _No sessions yet._
 - ✅ Both agents' outcomes: SUCCESS
 - **Pending:** Decision merge, git commit, history summarization check
 
+### 2026-08-06: Stage 1 — Python Dependency Security + Lint
+
+**Task:** Fix 44 pip-audit vulnerabilities, modernise deps, drive ruff to zero
+
+**Actions:**
+- **pip-audit 44→0**: aiohttp 3.10.11→3.14.3, python-dotenv 1.0.1→1.2.2, cryptography pinned >=50.0.0,<51; also bumped azure-identity 1.19→1.25.3, azure-search-documents 11.6→12.0.0, azure-storage-blob 12.24→12.30, cffi 1.17→2.1.1, rich 13.9→15.0.0
+- **azure-search-documents 12.0.0 API migration** in `setup_intvect.py`: AzureOpenAIParameters→AzureOpenAIVectorizerParameters, `azure_open_ai_parameters=`→`parameters=`, `resource_uri`→`resource_url`, `deployment_id`→`deployment_name`
+- **ruff 141→0**: auto-fixed 123 (I001/F541/UP015/UP006/UP017/UP041/F401), suppressed 9 intentional F841 in notebooks, added targeted noqa to availability-probe imports and ambiguous-but-idiomatic script var
+- Added `lint.isort.combine-as-imports = true` and `per-file-ignores` for notebooks to pyproject.toml
+- Backend tests: 690→697 passed (7 pre-existing app/config failures now pass with updated deps)
+
+**F841 analysis (no latent bugs found):**
+- `resp` in processor_router.py: consumed by async context manager — correct
+- `config_before` in test_config_loader.py: setup step to initialise singleton — intentional
+- `ws` in test_local_processor.py: side-effect calls for crash-resistance tests — intentional
+- `response` in notebooks: upload return value for optional debugging — intentional
+
 ## Team Updates (2026-04-02T16:30Z)
 
 ### Offline Mode Phase Completion

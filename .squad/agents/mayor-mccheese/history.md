@@ -48,5 +48,17 @@
 - ✅ **Phase 4 (Mayor McCheese):** Model asset management complete — download script (Python + PowerShell), docker-compose local, config defaults
 - ✅ **Piper Voices (Mayor McCheese):** Voice download automation — all 4 voices via `--voices` flag, skip-if-exists logic
 - **Decisions Merged:** #38 captured (local model asset management)
+
+### 2026-08-06: Stage 1 — Squad Upgrade + Dependencies + Lint + Node Bump
+
+**Task:** Modernise platform tooling, dependencies, and lint hygiene (stage 1 of 2)
+
+**Actions:**
+- Upgraded Squad 0.9.4 → 0.11.0 (`squad upgrade`), fixed stale teamRoot → `"."`
+- `squad doctor`: 0 failures
+- Bumped Node 20 → 22 in Dockerfile, devcontainer, azure-dev workflow
+- Node feature version :1 → :2 in devcontainer.json
+
+**Outcome:** All infra/DevOps changes committed on `dev` branch.
 - **Tests:** All 423 passing, zero regressions, zero production image impact
 - **Next:** Models ready for on-demand download, ready for developer setup

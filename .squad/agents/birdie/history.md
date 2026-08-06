@@ -131,3 +131,17 @@ _No sessions yet._
 - **Files modified:** `useRealtime.tsx` (3-line change in `buildWsEndpoint()`)
 - ✅ TypeScript compiles cleanly (`tsc --noEmit` — zero errors)
 - ✅ All 15 tests pass (`vitest run`)
+
+### 2026-08-06: Stage 1 — Frontend Modernisation (React 19, Tailwind 4, Vite 6)
+
+**Task:** Upgrade frontend stack while preserving McDonald's UI and voice picker
+
+**Actions:**
+- React 18→19, Vite 5→6, Vitest 1→2, Tailwind 3→4, TypeScript 5.5→5.9, jsdom 24→29, i18next 23→26, @testing-library/react 14→16
+- Removed unused `react-draggable` dependency (`findDOMNode` incompatible with React 19, never imported)
+- Swapped `Github` icon (dropped in lucide-react 1.x) → `FaGithub` from react-icons
+- Tailwind 4 CSS-first migration: `@import "tailwindcss"`, `@theme` block, `@plugin`, `@custom-variant dark`; deleted `tailwind.config.js`, removed `autoprefixer`
+- Fixed React 19 `useRef()` strict-arity: `useRef<Recorder>()` → `useRef<Recorder | undefined>(undefined)`
+- All 15 tests pass, `tsc -b` clean, `npm run build` succeeds
+- CSS size: 39.36 kB → 56.05 kB (Tailwind 4 includes more utilities by default; gzip 7.83→10.07 kB)
+- McDonald's brand vars (--brand-red, #FFBC0D, #DB0007) confirmed in built CSS
