@@ -12,28 +12,23 @@ import logging
 import os
 import re
 import time
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from config_loader import get_config
-from order_state import order_state_singleton, is_happy_hour
 from rtmt import Tool, ToolResult, ToolResultDirection
 from tools import (
-    MEAL_NUMBER_MAP,
-    BREAKFAST_MEAL_NUMBER_MAP,
-    MOCK_MACHINE_STATUS,
     _ICE_CREAM_MACHINE_KEYWORDS,
+    MOCK_MACHINE_STATUS,
     _expand_meal_number_query,
     _format_size_human_readable,
-    search_tool_schema,
-    update_order_tool_schema,
-    get_order_tool_schema,
-    reset_order_tool_schema,
-    update_order,
     get_order,
+    get_order_tool_schema,
     reset_order,
-    validate_customization,
+    reset_order_tool_schema,
+    search_tool_schema,
+    update_order,
+    update_order_tool_schema,
 )
 
 logger = logging.getLogger("mcdonalds-drive-thru.local-search")

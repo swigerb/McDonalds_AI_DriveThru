@@ -19,7 +19,7 @@ SIZE_ORDER = ["small", "medium", "large"]
 
 def load_production_items():
     """Load the comprehensive menu JSON (flat menuItems format)."""
-    with open(PRODUCTION_FILE, "r", encoding="utf-8") as f:
+    with open(PRODUCTION_FILE, encoding="utf-8") as f:
         data = json.load(f)
     items = {}
     for category in data.get("menuItems", []):
@@ -31,7 +31,7 @@ def load_production_items():
 def update_menu():
     prod_items = load_production_items()
 
-    with open(MENU_FILE, "r", encoding="utf-8") as f:
+    with open(MENU_FILE, encoding="utf-8") as f:
         menu_data = json.load(f)
 
     updated_count = 0

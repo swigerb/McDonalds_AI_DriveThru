@@ -112,7 +112,7 @@ class ReloadConfigTests(unittest.TestCase):
         self.assertIsInstance(config, dict)
 
     def test_reload_returns_fresh_object(self):
-        config_before = get_config()
+        _config_before = get_config()  # noqa: F841 — pre-load singleton before reload
         config_after = reload_config()
         # After reload, get_config() should return the new object
         config_current = get_config()

@@ -43,7 +43,7 @@ def std(price: float) -> list[dict]:
     return [{"size": "Standard", "price": price}]
 
 
-def sml(s: float, m: float, l: float) -> list[dict]:
+def sml(s: float, m: float, l: float) -> list[dict]:  # noqa: E741 — l for "large" is idiomatic here
     """Small / Medium / Large prices."""
     return [
         {"size": "Small", "price": s},
@@ -1110,7 +1110,7 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
 # Summary
 # ---------------------------------------------------------------------------
 print(f"\n{'='*60}")
-print(f"  McDonald's Menu JSON — Build Complete")
+print("  McDonald's Menu JSON — Build Complete")
 print(f"{'='*60}")
 print(f"  Output : {OUTPUT_PATH}")
 file_size_kb = os.path.getsize(OUTPUT_PATH) / 1024

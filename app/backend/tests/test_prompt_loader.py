@@ -6,11 +6,9 @@ delta templates, and error paths (missing brand, malformed YAML).
 """
 
 import json
-import os
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import mock_open, patch
 
 import pytest
 

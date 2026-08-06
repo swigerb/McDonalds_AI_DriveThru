@@ -13,27 +13,25 @@ import base64
 import json
 import logging
 import re
-import struct
 import time
 import uuid
-from collections.abc import AsyncGenerator
 from typing import Any
 
-import numpy as np
 import aiohttp
+import numpy as np
 from aiohttp import web
 
+from audio_pipeline import (
+    _VERBOSE_GLOBAL,
+    _VERBOSE_LOG_FILE_GLOBAL,
+    create_verbose_file_handler as _create_verbose_file_handler,
+    remove_verbose_file_handler as _remove_verbose_file_handler,
+    vlog as _vlog,
+    vlogger,
+)
 from config_loader import get_config
 from processor_base import AbstractProcessor
 from rtmt import Tool, ToolResult, ToolResultDirection
-from audio_pipeline import (
-    vlog as _vlog,
-    vlogger,
-    create_verbose_file_handler as _create_verbose_file_handler,
-    remove_verbose_file_handler as _remove_verbose_file_handler,
-    _VERBOSE_GLOBAL,
-    _VERBOSE_LOG_FILE_GLOBAL,
-)
 
 logger = logging.getLogger("mcdonalds-drive-thru.local")
 pipeline_logger = logging.getLogger("local-pipeline")
@@ -45,15 +43,15 @@ LOCAL_MODE_AVAILABLE = False
 try:
     # Check for any onnxruntime_genai variant
     try:
-        import onnxruntime_genai_cuda  # type: ignore
+        import onnxruntime_genai_cuda  # noqa: F401 — availability probe
         LOCAL_MODE_AVAILABLE = True
     except ImportError:
         try:
-            import onnxruntime_genai_directml  # type: ignore
+            import onnxruntime_genai_directml  # noqa: F401 — availability probe
             LOCAL_MODE_AVAILABLE = True
         except ImportError:
             try:
-                import onnxruntime_genai  # type: ignore
+                import onnxruntime_genai  # noqa: F401 — availability probe
                 LOCAL_MODE_AVAILABLE = True
             except ImportError:
                 pass
@@ -703,7 +701,10 @@ class LocalPhi4Processor(AbstractProcessor):
         global _WhisperSTTEngine
         if _WhisperSTTEngine is None:
             try:
-                from whisper_stt import WhisperSTTEngine as _WhisperSTTEngine, WHISPER_AVAILABLE
+                from whisper_stt import (
+                    WHISPER_AVAILABLE,
+                    WhisperSTTEngine as _WhisperSTTEngine,
+                )
             except ImportError as exc:
                 err = f"whisper_stt module not importable: {exc}"
                 self._stt_load_error = err

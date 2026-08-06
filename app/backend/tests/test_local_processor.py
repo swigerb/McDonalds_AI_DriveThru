@@ -20,28 +20,26 @@ import asyncio
 import base64
 import json
 import sys
-import struct
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from aiohttp import web
 import aiohttp
+from aiohttp import web
 
 from local_processor import (
+    _BYTES_PER_SAMPLE,
+    _FRONTEND_SAMPLE_RATE,
+    _PHI4_SAMPLE_RATE,
     LocalPhi4Processor,
     _compute_energy,
     _downsample_24k_to_16k,
-    _FRONTEND_SAMPLE_RATE,
-    _PHI4_SAMPLE_RATE,
-    _BYTES_PER_SAMPLE,
 )
-from rtmt import Tool, ToolResult, ToolResultDirection
-
+from rtmt import Tool
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -327,7 +325,7 @@ class WebSocketProtocolTests(unittest.IsolatedAsyncioTestCase):
         proc._config["tts_available_voices"] = ["en_US-amy-medium", "en_US-lessac-medium"]
         proc._tts = MagicMock()
         proc._tts.set_voice = AsyncMock(return_value=True)
-        ws = await self._run_with_messages(proc, [
+        await self._run_with_messages(proc, [
             {"type": "extension.set_piper_voice", "voice": "en_US-lessac-medium"}
         ])
         proc._tts.set_voice.assert_awaited_once_with("en_US-lessac-medium")
@@ -337,7 +335,7 @@ class WebSocketProtocolTests(unittest.IsolatedAsyncioTestCase):
         """response.cancel sets the cancel event (tested indirectly)."""
         proc = self._make_processor()
         # Just verify no crash — cancel event is per-connection
-        ws = await self._run_with_messages(proc, [
+        await self._run_with_messages(proc, [
             {"type": "response.cancel"}
         ])
         # Should complete without error

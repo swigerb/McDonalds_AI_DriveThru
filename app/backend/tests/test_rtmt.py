@@ -11,33 +11,33 @@ import sys
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import aiohttp
 from aiohttp import web
-from order_state import order_state_singleton
 
-# ── Imports under test ──
-from session_manager import SessionManager, ContextMonitor
 from audio_pipeline import (
-    EchoSuppressor,
-    ECHO_COOLDOWN_SEC,
-    TYPE_RE,
-    RESPONSE_CREATE_MSG,
-    INPUT_AUDIO_CLEAR_MSG,
-    _PASSTHROUGH_SERVER_TYPES,
     _PASSTHROUGH_CLIENT_TYPES,
+    _PASSTHROUGH_SERVER_TYPES,
+    ECHO_COOLDOWN_SEC,
+    INPUT_AUDIO_CLEAR_MSG,
+    RESPONSE_CREATE_MSG,
+    TYPE_RE,
+    EchoSuppressor,
 )
+from order_state import order_state_singleton
 from rtmt import (
     RTMiddleTier,
+    RTToolCall,
     Tool,
     ToolResult,
     ToolResultDirection,
-    RTToolCall,
 )
 
+# ── Imports under test ──
+from session_manager import ContextMonitor, SessionManager
 
 # ── Helpers ──
 

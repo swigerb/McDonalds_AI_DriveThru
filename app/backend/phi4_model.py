@@ -243,7 +243,7 @@ class Phi4ModelManager:
 
         try:
             first_token = await asyncio.wait_for(queue.get(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(
                 "Phi-4 inference timed out after %.0fs (prompt=%d chars). "
                 "System prompt may be too large for local INT4 model.",

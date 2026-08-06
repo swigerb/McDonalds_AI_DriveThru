@@ -8,8 +8,8 @@ from azure.identity import AzureDeveloperCliCredential
 from azure.search.documents.indexes import SearchIndexClient, SearchIndexerClient
 from azure.search.documents.indexes.models import (
     AzureOpenAIEmbeddingSkill,
-    AzureOpenAIParameters,
     AzureOpenAIVectorizer,
+    AzureOpenAIVectorizerParameters,
     FieldMapping,
     HnswAlgorithmConfiguration,
     HnswParameters,
@@ -102,10 +102,10 @@ def setup_index(azure_credential, index_name, azure_search_endpoint, azure_stora
                     ],
                     vectorizers=[
                         AzureOpenAIVectorizer(
-                            name="openai_vectorizer",
-                            azure_open_ai_parameters=AzureOpenAIParameters(
-                                resource_uri=azure_openai_embedding_endpoint,
-                                deployment_id=azure_openai_embedding_deployment,
+                            vectorizer_name="openai_vectorizer",
+                            parameters=AzureOpenAIVectorizerParameters(
+                                resource_url=azure_openai_embedding_endpoint,
+                                deployment_name=azure_openai_embedding_deployment,
                                 model_name=azure_openai_embedding_model
                             )
                         )

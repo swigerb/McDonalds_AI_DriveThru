@@ -13,11 +13,8 @@ import asyncio
 import base64
 import hashlib
 import hmac
-import json
-import os
 import sys
 import time
-import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,9 +23,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aiohttp import web
+
 from order_state import order_state_singleton
 from session_manager import SessionManager
-
 
 # ---------------------------------------------------------------------------
 # Helpers — lightweight stubs for security interfaces

@@ -16,26 +16,21 @@ Covers:
 All tests mock piper.voice — no actual model files needed.
 """
 
-import asyncio
-import io
 import sys
-import struct
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from piper_tts import (
-    PiperTTSEngine,
     PIPER_VOICES,
-    _split_sentences,
+    PiperTTSEngine,
     _resample_pcm,
-    _PIPER_AVAILABLE,
+    _split_sentences,
 )
-
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 

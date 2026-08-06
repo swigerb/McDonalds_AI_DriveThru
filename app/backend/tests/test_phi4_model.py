@@ -13,17 +13,14 @@ Covers:
   - PCM conversion, prompt building, tool call parsing
 """
 
-import asyncio
-import json
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from phi4_model import Phi4ModelManager, _load_onnxruntime_genai
-
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -285,8 +282,9 @@ class PCMConversionTests(unittest.TestCase):
     """Test _pcm_bytes_to_numpy static method."""
 
     def test_converts_int16_to_float32(self):
-        import numpy as np
         import struct
+
+        import numpy as np
         pcm = struct.pack("<4h", 0, 16384, -16384, 32767)
         result = Phi4ModelManager._pcm_bytes_to_numpy(pcm)
         self.assertEqual(result.dtype, np.float32)

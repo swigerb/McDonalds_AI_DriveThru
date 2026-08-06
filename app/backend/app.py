@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 
 from config_loader import get_config, get_local_mode_config
 from local_search import attach_local_tools
-from prompt_loader import PromptLoader
 from processor_router import ProcessorRouter
+from prompt_loader import PromptLoader
 from rtmt import RTMiddleTier, create_hmac_token
 from tools import attach_tools_rtmt
 
@@ -174,7 +174,7 @@ async def create_app() -> web.Application:
             local_config[_path_key] = str(_repo_root / _raw.lstrip("./"))
 
     try:
-        from local_processor import LocalPhi4Processor, LOCAL_MODE_AVAILABLE
+        from local_processor import LOCAL_MODE_AVAILABLE, LocalPhi4Processor
         if LOCAL_MODE_AVAILABLE:
             local_processor = LocalPhi4Processor(config=local_config)
             attach_local_tools(local_processor, prompt_loader=prompt_loader)

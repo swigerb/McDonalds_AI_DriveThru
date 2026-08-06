@@ -12,28 +12,27 @@ import sys
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from order_state import order_state_singleton
 from rtmt import ToolResult, ToolResultDirection
 from tools import (
-    _SearchCache,
-    _search_cache,
-    _is_extra_item,
-    _format_size_human_readable,
-    _infer_category,
-    validate_customization,
-    search,
-    update_order,
-    get_order,
-    reset_order,
     MAX_QUANTITY_PER_ITEM,
     MAX_TOTAL_ITEMS,
     MOCK_MACHINE_STATUS,
+    _format_size_human_readable,
+    _infer_category,
+    _is_extra_item,
+    _search_cache,
+    _SearchCache,
+    get_order,
+    reset_order,
+    search,
+    update_order,
+    validate_customization,
 )
-
 
 # ── Helpers ──
 

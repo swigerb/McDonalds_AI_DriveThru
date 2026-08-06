@@ -9,7 +9,6 @@ Author: Birdperson (Tester)
 """
 
 import re
-import sys
 import unittest
 from pathlib import Path
 
@@ -204,7 +203,7 @@ class TestRebrandVerification(unittest.TestCase):
                 hits.append(f"  README.md:{line_no}  →  {line.strip()}")
         self.assertEqual(
             hits, [],
-            f"\nREADME.md still references Dunkin:\n" + "\n".join(hits),
+            "\nREADME.md still references Dunkin:\n" + "\n".join(hits),
         )
 
     def test_frontend_index_html_title_contains_mcdonalds(self):
@@ -231,7 +230,7 @@ class TestRebrandVerification(unittest.TestCase):
                 hits.append(f"  index.html:{line_no}  →  {line.strip()}")
         self.assertEqual(
             hits, [],
-            f"\nindex.html still references Dunkin:\n" + "\n".join(hits),
+            "\nindex.html still references Dunkin:\n" + "\n".join(hits),
         )
 
     def test_backend_system_prompt_mentions_mcdonalds(self):
@@ -275,7 +274,7 @@ class TestRebrandVerification(unittest.TestCase):
 
         self.assertEqual(
             hits, [],
-            f"\nsystem_message in app.py still references Dunkin:\n" + "\n".join(hits),
+            "\nsystem_message in app.py still references Dunkin:\n" + "\n".join(hits),
         )
 
     def test_backend_system_prompt_no_sonic(self):
@@ -299,7 +298,7 @@ class TestRebrandVerification(unittest.TestCase):
 
         self.assertEqual(
             hits, [],
-            f"\nsystem_message in app.py still references Sonic:\n" + "\n".join(hits),
+            "\nsystem_message in app.py still references Sonic:\n" + "\n".join(hits),
         )
 
     def test_backend_system_prompt_uses_crew_member_not_carhop(self):

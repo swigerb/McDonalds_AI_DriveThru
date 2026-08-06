@@ -10,7 +10,7 @@ import sys
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -27,16 +27,13 @@ _MENU_ITEMS = local_search_mod._MENU_ITEMS
 _score_item = local_search_mod._score_item
 _tokenize = local_search_mod._tokenize
 
-from tools import (
-    search_tool_schema,
-    update_order_tool_schema,
+from tools import (  # noqa: E402
+    MOCK_MACHINE_STATUS,
     get_order_tool_schema,
     reset_order_tool_schema,
-    MOCK_MACHINE_STATUS,
-    _ICE_CREAM_MACHINE_KEYWORDS,
-    MEAL_NUMBER_MAP,
+    search_tool_schema,
+    update_order_tool_schema,
 )
-
 
 # ── Helpers ──
 
@@ -279,7 +276,6 @@ class ResultFormatParityTests(unittest.TestCase):
     def test_result_contains_id_bracket_format(self):
         """Results must have [id]: prefix."""
         result = _run(local_search({"query": "Big Mac"}))
-        import re
         self.assertRegex(result.text, r"\[[^\]]+\]:")
 
     def test_result_contains_item_field(self):
@@ -303,7 +299,6 @@ class ResultFormatParityTests(unittest.TestCase):
     def test_full_format_string_pattern(self):
         """Verify the complete format: [id]: Item: name, Category: cat, Available Sizes: ..."""
         result = _run(local_search({"query": "Coca-Cola"}))
-        import re
         pattern = r"\[[^\]]+\]: Item: .+, Category: .+, Available Sizes: .+"
         self.assertRegex(result.text, pattern)
 
@@ -375,7 +370,6 @@ class SizeFormattingTests(unittest.TestCase):
     def test_price_format_in_sizes(self):
         """Sizes should contain dollar-sign price formatting."""
         result = _run(local_search({"query": "Coca-Cola"}))
-        import re
         # Match ($X.XX) pattern
         self.assertRegex(result.text, r"\(\$\d+\.\d{2}\)")
 

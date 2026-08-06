@@ -54,7 +54,7 @@ def validate_credentials(config: dict) -> bool:
 def export_menu(config: dict, output_path: Path) -> bool:
     """Export menu items from Azure Search to JSON file."""
     try:
-        console.print(f"[cyan]Connecting to Azure Search...[/cyan]")
+        console.print("[cyan]Connecting to Azure Search...[/cyan]")
         console.print(f"  Endpoint: {config['endpoint']}")
         console.print(f"  Index: {config['index']}")
 
@@ -64,7 +64,7 @@ def export_menu(config: dict, output_path: Path) -> bool:
             credential=AzureKeyCredential(config["api_key"]),
         )
 
-        console.print(f"[cyan]Searching for all documents...[/cyan]")
+        console.print("[cyan]Searching for all documents...[/cyan]")
         results = client.search(
             search_text="*",
             select=["id", "name", "category", "description", "sizes"],
@@ -95,7 +95,7 @@ def export_menu(config: dict, output_path: Path) -> bool:
         table.add_row("Status", "✓ Success")
 
         console.print(table)
-        console.print(f"\n[green]✓ Menu export complete![/green]")
+        console.print("\n[green]✓ Menu export complete![/green]")
 
         return True
 

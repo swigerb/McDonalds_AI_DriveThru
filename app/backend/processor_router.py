@@ -17,9 +17,7 @@ Design invariants:
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 import time
 from typing import TYPE_CHECKING
 
@@ -240,7 +238,7 @@ class ProcessorRouter:
                 connect=self._CLOUD_CHECK_TIMEOUT_CONNECT,
             )
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(endpoint, ssl=True) as resp:
+                async with session.get(endpoint, ssl=True) as resp:  # noqa: F841 — response consumed by context manager
                     self._cloud_reachable = True
                     self._last_cloud_check = now
                     pipeline_logger.info("Cloud reachability probe: REACHABLE")

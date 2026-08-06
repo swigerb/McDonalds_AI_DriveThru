@@ -15,11 +15,10 @@ Covers:
 All tests mock faster_whisper.WhisperModel — no real model needed.
 """
 
-import asyncio
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -44,7 +43,6 @@ class WhisperAvailableFlagTests(unittest.TestCase):
         # The real environment doesn't have faster_whisper, so the flag
         # should already be False.  We verify the guard logic by checking
         # the module-level value set after the failed import attempt.
-        import importlib
         import whisper_stt
 
         # Force-reload with faster_whisper unavailable
@@ -55,7 +53,7 @@ class WhisperAvailableFlagTests(unittest.TestCase):
 
     def test_whisper_model_ref_none_when_unavailable(self):
         """_WhisperModel should be None when faster_whisper not installed."""
-        from whisper_stt import _WhisperModel, WHISPER_AVAILABLE
+        from whisper_stt import WHISPER_AVAILABLE, _WhisperModel
         if not WHISPER_AVAILABLE:
             self.assertIsNone(_WhisperModel)
 
@@ -402,7 +400,7 @@ class TranscriptionTests(unittest.IsolatedAsyncioTestCase):
         # The fact that we can await it from an async test proves
         # it runs in the executor.  We verify _sync_transcribe is called.
         with patch.object(engine, "_sync_transcribe", wraps=engine._sync_transcribe) as mock_sync:
-            result = await engine.transcribe(audio)
+            await engine.transcribe(audio)
             mock_sync.assert_called_once()
 
     async def test_vad_filter_enabled(self):

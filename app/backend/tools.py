@@ -13,7 +13,7 @@ from azure.search.documents.aio import SearchClient
 from azure.search.documents.models import VectorizableTextQuery
 
 from config_loader import get_config
-from order_state import order_state_singleton, is_happy_hour
+from order_state import is_happy_hour, order_state_singleton
 from rtmt import RTMiddleTier, Tool, ToolResult, ToolResultDirection
 
 logger = logging.getLogger(__name__)

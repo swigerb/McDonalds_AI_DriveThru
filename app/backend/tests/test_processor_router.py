@@ -11,18 +11,16 @@ Covers:
   - Query parameter mode override (?mode=local)
 """
 
-import asyncio
-import json
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from aiohttp import web
-from processor_base import AbstractProcessor
 
+from processor_base import AbstractProcessor
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -48,7 +46,7 @@ def _make_mock_local():
 def _make_request(query_string=""):
     """Create a mock aiohttp Request with optional query parameters."""
     req = MagicMock(spec=web.Request)
-    from multidict import CIMultiDict, MultiDict
+    from multidict import MultiDict
     if query_string:
         params = {}
         for part in query_string.split("&"):
