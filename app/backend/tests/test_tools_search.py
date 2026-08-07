@@ -140,6 +140,31 @@ class SearchToolTests(unittest.TestCase):
         self.assertEqual(call_count, 2)
         self.assertIn("[5]", result.text)
 
+    def test_bad_identifier_field_does_not_crash(self):
+        """Regression: when identifier_field is truthy but wrong, the fallback uses
+        safe literal field names and the retry failure is handled gracefully rather
+        than raising an unhandled exception that silences the assistant."""
+        from azure.core.exceptions import HttpResponseError
+
+        async def _always_fail(**kwargs):
+            raise HttpResponseError(
+                message="Could not find a property named 'chunk_id'"
+            )
+
+        client = AsyncMock()
+        client.search = _always_fail
+
+        # identifier_field is 'chunk_id' (wrong/truthy) — must NOT escape as unhandled
+        result = asyncio.run(search(
+            client, "menuSemanticConfig", "chunk_id", "chunk", "text_vector", False, {"query": "fries"}
+        ))
+        self.assertEqual(result.destination, ToolResultDirection.TO_SERVER)
+        # Should get a spoken error message, not an exception
+        self.assertTrue(
+            "sorry" in result.text.lower() or "couldn't" in result.text.lower() or "menu" in result.text.lower(),
+            f"Expected a graceful error message, got: {result.text}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

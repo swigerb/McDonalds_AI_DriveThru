@@ -36,16 +36,19 @@ from piper_tts import (
 
 
 def _make_mock_piper_voice(native_rate=22050):
-    """Create a mock PiperVoice that writes PCM data on synthesize."""
+    """Create a mock PiperVoice that returns AudioChunk objects on synthesize (Piper v2 API)."""
     voice = MagicMock()
     config = MagicMock()
     config.sample_rate = native_rate
     voice.config = config
 
-    def fake_synthesize(text, buffer, sentence_silence=0.1, length_scale=0.9):
-        # Write 100 samples of silence as int16
+    def fake_synthesize(text, syn_config=None):
+        # Return a list of AudioChunk-like objects with audio_int16_bytes and sample_rate
+        chunk = MagicMock()
         samples = np.zeros(100, dtype=np.int16)
-        buffer.write(samples.tobytes())
+        chunk.audio_int16_bytes = samples.tobytes()
+        chunk.sample_rate = native_rate
+        return [chunk]
 
     voice.synthesize = MagicMock(side_effect=fake_synthesize)
     return voice

@@ -148,7 +148,7 @@ class LocalProcessorInitTests(unittest.TestCase):
 
     def test_default_max_tokens(self):
         proc = LocalPhi4Processor()
-        self.assertEqual(proc.max_tokens, 256)
+        self.assertEqual(proc.max_tokens, 2048)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

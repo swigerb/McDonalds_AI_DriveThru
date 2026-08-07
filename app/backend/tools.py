@@ -354,18 +354,25 @@ async def search(
                 vector_queries=vector_queries or None,
                 select=select_fields,
             )
-        # Gracefully handle schema/field mismatches (e.g., invalid $select fields) by retrying with a minimal projection.
+        # Gracefully handle schema/field mismatches (e.g., invalid $select fields) by retrying with safe literal field names.
         elif "Could not find a property named" in str(exc):
-            logger.warning("Retrying search with minimal fields after select mismatch: %s", exc)
-            fallback_select = [identifier_field or "id", content_field or "description"]
-            search_results = await search_client.search(
-                search_text=query,
-                query_type=query_type,
-                semantic_configuration_name=sem_config,
-                top=3,
-                vector_queries=vector_queries or None,
-                select=[f for f in fallback_select if f],
-            )
+            logger.warning("Retrying search with safe literal fields after select mismatch: %s", exc)
+            # Use genuinely safe literals — NOT the configured values which may themselves be wrong
+            fallback_select = ["id", "description", "name"]
+            try:
+                search_results = await search_client.search(
+                    search_text=query,
+                    query_type="simple",
+                    top=3,
+                    vector_queries=None,
+                    select=fallback_select,
+                )
+            except HttpResponseError as retry_exc:
+                logger.error("Search fallback also failed: %s", retry_exc)
+                return ToolResult(
+                    "I'm sorry, I couldn't search our menu right now. Could you try asking again?",
+                    ToolResultDirection.TO_SERVER,
+                )
         else:
             logger.error("Azure AI Search request failed: %s", exc)
             return ToolResult("I'm sorry, I can't reach our menu data right now.", ToolResultDirection.TO_SERVER)

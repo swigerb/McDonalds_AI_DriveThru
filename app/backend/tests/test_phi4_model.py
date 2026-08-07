@@ -67,7 +67,7 @@ class Phi4InitTests(unittest.TestCase):
         mgr = Phi4ModelManager(model_path="/fake/model")
         self.assertEqual(mgr._model_path, "/fake/model")
         self.assertEqual(mgr._requested_device, "auto")
-        self.assertEqual(mgr._max_length, 256)
+        self.assertEqual(mgr._max_length, 2048)
         self.assertAlmostEqual(mgr._temperature, 0.6)
 
     def test_custom_init(self):
@@ -99,22 +99,34 @@ class AutoDeviceDetectionTests(unittest.TestCase):
     """Test _load_onnxruntime_genai priority order."""
 
     def test_cuda_variant_first(self):
-        """CUDA variant takes priority when available."""
-        mock_cuda = MagicMock()
-        with patch("builtins.__import__", side_effect=lambda name, *a, **kw: mock_cuda if name == "onnxruntime_genai_cuda" else __import__(name, *a, **kw)):
-            mod, provider = _load_onnxruntime_genai()
-        self.assertEqual(provider, "cuda")
-        self.assertIs(mod, mock_cuda)
-
-    def test_directml_fallback(self):
-        """DirectML tried when CUDA unavailable."""
-        mock_dml = MagicMock()
+        """CUDA detected when CUDAExecutionProvider is available."""
+        mock_og = MagicMock()
+        mock_ort = MagicMock()
+        mock_ort.get_available_providers.return_value = ["CUDAExecutionProvider", "CPUExecutionProvider"]
 
         def fake_import(name, *a, **kw):
-            if name == "onnxruntime_genai_cuda":
-                raise ImportError
-            if name == "onnxruntime_genai_directml":
-                return mock_dml
+            if name == "onnxruntime_genai":
+                return mock_og
+            if name == "onnxruntime":
+                return mock_ort
+            return __import__(name, *a, **kw)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            mod, provider = _load_onnxruntime_genai()
+        self.assertEqual(provider, "cuda")
+        self.assertIs(mod, mock_og)
+
+    def test_directml_fallback(self):
+        """DirectML detected when DmlExecutionProvider is available."""
+        mock_og = MagicMock()
+        mock_ort = MagicMock()
+        mock_ort.get_available_providers.return_value = ["DmlExecutionProvider", "CPUExecutionProvider"]
+
+        def fake_import(name, *a, **kw):
+            if name == "onnxruntime_genai":
+                return mock_og
+            if name == "onnxruntime":
+                return mock_ort
             return __import__(name, *a, **kw)
 
         with patch("builtins.__import__", side_effect=fake_import):
@@ -123,13 +135,15 @@ class AutoDeviceDetectionTests(unittest.TestCase):
 
     def test_cpu_fallback(self):
         """CPU fallback when no GPU variants available."""
-        mock_cpu = MagicMock()
+        mock_og = MagicMock()
+        mock_ort = MagicMock()
+        mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
 
         def fake_import(name, *a, **kw):
-            if name in ("onnxruntime_genai_cuda", "onnxruntime_genai_directml"):
-                raise ImportError
             if name == "onnxruntime_genai":
-                return mock_cpu
+                return mock_og
+            if name == "onnxruntime":
+                return mock_ort
             return __import__(name, *a, **kw)
 
         with patch("builtins.__import__", side_effect=fake_import):
@@ -140,7 +154,7 @@ class AutoDeviceDetectionTests(unittest.TestCase):
         """Returns (None, 'none') when nothing installed."""
 
         def fake_import(name, *a, **kw):
-            if name.startswith("onnxruntime_genai"):
+            if name.startswith("onnxruntime"):
                 raise ImportError
             return __import__(name, *a, **kw)
 
@@ -257,7 +271,7 @@ class InferenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(tokens), 0)
 
     async def test_process_audio_with_tool_schemas(self):
-        """process_audio accepts tool_schemas and builds prompt with them."""
+        """process_audio accepts tool_schemas and includes them in the prompt."""
         mgr, mock_og = await self._load_manager()
         tools = [{"type": "function", "name": "search_menu", "parameters": {}}]
 
@@ -268,9 +282,12 @@ class InferenceTests(unittest.IsolatedAsyncioTestCase):
             ):
                 tokens.append(token)
 
-        # Processor was called — prompt should contain tool info
-        mock_processor = mock_og.MultiModalProcessor.return_value
-        mock_processor.assert_called()
+        # Tokenizer.encode was called — verify prompt contains tool info
+        mock_tokenizer = mock_og.Tokenizer.return_value
+        mock_tokenizer.encode.assert_called()
+        encoded_prompt = mock_tokenizer.encode.call_args[0][0]
+        self.assertIn("search_menu", encoded_prompt)
+        self.assertIn("tool_call", encoded_prompt)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -278,32 +295,14 @@ class InferenceTests(unittest.IsolatedAsyncioTestCase):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-class PCMConversionTests(unittest.TestCase):
-    """Test _pcm_bytes_to_numpy static method."""
-
-    def test_converts_int16_to_float32(self):
-        import struct
-
-        import numpy as np
-        pcm = struct.pack("<4h", 0, 16384, -16384, 32767)
-        result = Phi4ModelManager._pcm_bytes_to_numpy(pcm)
-        self.assertEqual(result.dtype, np.float32)
-        self.assertEqual(len(result), 4)
-
-    def test_normalized_range(self):
-        import struct
-        pcm = struct.pack("<2h", 32767, -32768)
-        result = Phi4ModelManager._pcm_bytes_to_numpy(pcm)
-        self.assertAlmostEqual(result[0], 32767 / 32768.0, places=4)
-        self.assertAlmostEqual(result[1], -1.0, places=4)
-
-
 class PromptBuildingTests(unittest.TestCase):
     """Test _build_prompt static method."""
 
     def test_basic_prompt(self):
         result = Phi4ModelManager._build_prompt("You are helpful")
-        self.assertEqual(result, "You are helpful")
+        self.assertIn("You are helpful", result)
+        self.assertIn("<|system|>", result)
+        self.assertIn("<|assistant|>", result)
 
     def test_prompt_with_tools(self):
         tools = [{"type": "function", "name": "test_tool"}]
