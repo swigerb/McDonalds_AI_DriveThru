@@ -74,6 +74,20 @@ Properties -> Assignment required? = Yes
 Then assign specific users or groups under **Users and groups**. Only assigned
 principals will be able to sign in to the drive-thru app.
 
+> ⚠️ **This requires an administrator to grant consent, and will lock you out
+> if you are not one.** Requiring assignment disables *user* self-consent for
+> the app, so the first sign-in fails with "Need admin approval — <app> needs
+> permission to access resources in your organization that only an admin can
+> grant", even for a user who has been assigned. Someone holding Application
+> Administrator, Cloud Application Administrator or Global Administrator must
+> run `az ad app permission admin-consent --id <app-id>` first. Global
+> *Reader* is not sufficient — it is read-only.
+>
+> If you have no admin account to hand, leave assignment off. The app is
+> registered single-tenant (`AzureADMyOrg`), so sign-in is still limited to
+> members of your own tenant; you simply cannot narrow it to named
+> individuals.
+
 ### How It Works
 
 - `infra/core/security/container-app-auth.bicep` configures the Container App's
