@@ -2,7 +2,12 @@
 
 ## Sessions
 
-_No sessions yet._
+### 2026-08-06 — Remove Route 44 Sonic Branding
+
+**Task:** Remove Sonic Drive-In "Route 44" sizing from McDonald's demo.
+**Status:** ✅ Complete — all validation green.
+**Files changed:** `order_state.py`, `tools.py`, `scripts/extract_production_items.py`, `test_order_state.py`, `test_tool_calling.py`
+**Decision:** Unknown sizes (including Route 44) are silently dropped to no-size — consistent with existing behavior for other unrecognized sizes like "pot" or "kannchen". The AI's system prompt already instructs it not to accept invalid sizes, so the assistant will naturally ask for clarification.
 
 ## Learnings
 

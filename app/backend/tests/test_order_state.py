@@ -40,12 +40,14 @@ class OrderStateTests(unittest.TestCase):
         self.assertTrue(math.isclose(summary.finalTotal, expected_final, rel_tol=1e-9))
 
     def test_formatted_display_labels_handle_special_sizes(self):
+        """Route 44 is a Sonic trademark and must NOT be recognized as a McDonald's size."""
         session_id = order_state_singleton.create_session()
         order_state_singleton.handle_order_update(session_id, "add", "Coca-Cola", "rt44", 1, 3.99)
 
         summary = order_state_singleton.get_order_summary(session_id)
 
-        self.assertEqual(summary.items[0].display, "Route 44 Coca-Cola")
+        # Unknown size should be dropped — item displays without a size prefix
+        self.assertEqual(summary.items[0].display, "Coca-Cola")
 
     def test_n_a_size_is_hidden_in_display(self):
         session_id = order_state_singleton.create_session()
@@ -160,9 +162,9 @@ class OrderStateTests(unittest.TestCase):
             ("Latte", "medium", "Medium Latte"),
             ("Latte", "large", "Large Latte"),
             ("Coca-Cola", "mini", "Mini Coca-Cola"),
-            ("Coca-Cola", "rt44", "Route 44 Coca-Cola"),
-            ("Coca-Cola", "rt 44", "Route 44 Coca-Cola"),
-            ("Coca-Cola", "route 44", "Route 44 Coca-Cola"),
+            ("Coca-Cola", "rt44", "Coca-Cola"),
+            ("Coca-Cola", "rt 44", "Coca-Cola"),
+            ("Coca-Cola", "route 44", "Coca-Cola"),
             ("Donut", "standard", "Donut"),
             ("Donut", "n/a", "Donut"),
             ("Donut", "na", "Donut"),
@@ -179,6 +181,21 @@ class OrderStateTests(unittest.TestCase):
             summary = order_state_singleton.get_order_summary(sid)
             self.assertEqual(summary.items[0].display, expected_display,
                              f"Failed for size='{size}': expected '{expected_display}'")
+
+    # ── Route 44 regression tests ──
+
+    def test_route44_not_recognized_as_mcdonalds_size(self):
+        """Regression: Route 44 is a Sonic trademark. McDonald's must not accept it."""
+        for sonic_size in ("rt44", "rt 44", "route 44", "44", "44oz"):
+            order_state_singleton.sessions = {}
+            sid = order_state_singleton.create_session()
+            order_state_singleton.handle_order_update(sid, "add", "Coca-Cola", sonic_size, 1, 3.49)
+            summary = order_state_singleton.get_order_summary(sid)
+            # The size should be silently dropped (treated as no-size), not formatted
+            self.assertEqual(summary.items[0].display, "Coca-Cola",
+                             f"Size '{sonic_size}' should not produce a Route 44 prefix")
+            self.assertNotIn("Route 44", summary.items[0].display)
+            self.assertNotIn("44", summary.items[0].display)
 
     # ── Combo requirements tests ──
 

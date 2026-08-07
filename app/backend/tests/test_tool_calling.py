@@ -630,7 +630,16 @@ class FormatSizeHumanReadableTests(unittest.TestCase):
         self.assertEqual(_format_size_human_readable("jumbo"), "Jumbo")
 
     def test_alias_resolved(self):
-        self.assertEqual(_format_size_human_readable("rt44"), "Route 44")
+        self.assertEqual(_format_size_human_readable("s"), "Small")
+
+    def test_route44_not_valid_mcdonalds_size(self):
+        """Route 44 aliases must not be explicitly mapped in the McDonald's size table."""
+        # These should NOT resolve to "Route 44" via an explicit size_map entry.
+        # The fallback capitalize() may coincidentally produce "Route 44" from "route 44",
+        # but the order_state layer rejects these before they reach this function.
+        self.assertNotEqual(_format_size_human_readable("rt44"), "Route 44")
+        self.assertNotEqual(_format_size_human_readable("rt 44"), "Route 44")
+        self.assertNotEqual(_format_size_human_readable("44"), "Route 44")
 
     def test_standard_size(self):
         self.assertEqual(_format_size_human_readable("standard"), "Standard")

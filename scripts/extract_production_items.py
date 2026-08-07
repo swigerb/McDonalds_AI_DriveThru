@@ -51,8 +51,6 @@ def normalize_size_name(child_display_name, parent_display_name):
         ("Sm ", "Small"),
         ("Med ", "Medium"),
         ("Lg ", "Large"),
-        ("RT 44", "RT 44"),
-        ("Rt. 44", "RT 44"),
     ]
     for prefix, label in prefixes:
         if child_display_name.startswith(prefix):

@@ -2,6 +2,16 @@
 
 ## Sessions
 
+### 2026-08-06 — Route 44 Regression Tests
+
+**Added:**
+- `test_order_state.py::test_route44_not_recognized_as_mcdonalds_size` — asserts all Sonic size aliases (rt44, rt 44, route 44, 44, 44oz) are silently dropped, no "Route 44" prefix appears
+- `test_tool_calling.py::test_route44_not_valid_mcdonalds_size` — asserts `_format_size_human_readable` has no explicit Route 44 mapping
+- Updated existing `test_formatted_display_labels_handle_special_sizes` to assert rejection (was asserting acceptance)
+- Updated `test_display_formatting_for_various_sizes` cases to expect "" for Route 44 variants
+
+**Validation:** 729 passed, 0 failed; ruff clean; npm build ✓; npm test 15 passed.
+
 ### 2026-03-22 — Prompt Externalization Test Suite
 
 Created comprehensive test coverage for the new prompt externalization architecture:

@@ -2,7 +2,14 @@
 
 ## Sessions
 
-_No sessions yet._
+### 2026-08-06 — Remove Route 44 from Backend
+
+**Changes:**
+- `order_state.py` L31: Removed "Route 44 " from `_SIZE_PREFIXES`
+- `order_state.py` L176-177: Removed `rt44/rt 44/route 44/44/44oz` → "Route 44 " mapping; added "regular" to valid sizes
+- `order_state.py` L405: Removed `RT 44`→`Route 44` display normalization
+- `tools.py` L262-264: Removed `rt 44/rt44/44` → "Route 44" from size map; added "regular" → "Regular"
+- `scripts/extract_production_items.py` L54-55: Removed RT 44 / Rt. 44 size prefixes
 
 ## Learnings
 

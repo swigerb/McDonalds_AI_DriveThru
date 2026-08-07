@@ -28,7 +28,7 @@ def is_happy_hour() -> bool:
 
 
 _BREAKFAST_KEYWORDS = ("mcmuffin", "biscuit", "mcgriddle", "hotcake", "big breakfast")
-_SIZE_PREFIXES = ("Small ", "Medium ", "Large ", "Route 44 ")
+_SIZE_PREFIXES = ("Small ", "Medium ", "Large ")
 
 
 def _infer_combo_component(item_name: str) -> str:
@@ -173,9 +173,7 @@ class OrderState:
         normalized_size = (size or "").strip().lower()
         if normalized_size in {"", "standard", "n/a", "na", "none", "n.a."}:
             formatted_size = ""
-        elif normalized_size in {"rt44", "rt 44", "route 44", "44", "44oz"}:
-            formatted_size = "Route 44 "
-        elif normalized_size in {"mini", "small", "medium", "large"}:
+        elif normalized_size in {"mini", "small", "medium", "large", "regular"}:
             formatted_size = f"{normalized_size.capitalize()} "
         else:
             formatted_size = ""
@@ -402,7 +400,7 @@ class OrderState:
         counts = {}
         components_map = {}
         for oi in items:
-            clean_name = oi.display.replace("RT 44", "Route 44").replace("RT44", "Route 44")
+            clean_name = oi.display
             # Convert parenthesized mods to speech-friendly format
             if "(" in clean_name and ")" in clean_name:
                 clean_name = clean_name.replace("(", "with ").replace(")", "")

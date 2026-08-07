@@ -259,9 +259,7 @@ def _format_size_human_readable(size: str) -> str:
         "large": "Large",
         "l": "Large",
         "xl": "Extra Large",
-        "rt 44": "Route 44",
-        "rt44": "Route 44",
-        "44": "Route 44",
+        "regular": "Regular",
         "standard": "Standard",
     }
     return size_map.get(size_lower, size.capitalize())
