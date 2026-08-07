@@ -111,7 +111,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                     </Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Switch between breakfast and lunch menus</p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
                     <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden" role="radiogroup" aria-label="Menu mode">
                         <button
                             type="button"
@@ -140,7 +140,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                             🍔 Lunch
                         </button>
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{menuMode === "breakfast" ? "Breakfast Menu" : "Lunch Menu"}</span>
+                    <span className="text-xs text-muted-foreground">{menuMode === "breakfast" ? "Breakfast Menu" : "Lunch Menu"}</span>
                 </div>
             </div>
             <div className="flex items-start justify-between">
@@ -150,9 +150,9 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                     </Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Toggle between light and dark theme</p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
+                    <span className="min-w-[5rem] text-right text-xs text-muted-foreground">{isDarkMode ? "Dark Mode" : "Light Mode"}</span>
                     <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={handleDarkModeChange} aria-label="Toggle dark mode" />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{isDarkMode ? "Dark Mode" : "Light Mode"}</span>
                 </div>
             </div>
             <div className="flex items-start justify-between">
@@ -162,7 +162,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                     </Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Run AI locally — no internet needed</p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
                     <Switch id="local-mode" checked={localMode} onCheckedChange={handleLocalModeChange} aria-label="Toggle local mode" />
                     {localModeStatus === "loading" && (
                         <span className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
@@ -186,12 +186,12 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                         </Label>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Choose your drive-thru assistant's voice</p>
                     </div>
-                    <div className="ml-4 flex flex-col items-end">
+                    <div className="ml-4 flex flex-col items-end gap-1 shrink-0">
                         <select
                             id="voice-choice"
                             value={voiceChoice}
                             onChange={(e) => onVoiceChoiceChange(e.target.value)}
-                            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                            className="w-56 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                         >
                             <option value="shimmer">Shimmer — Cheerful &amp; Bright</option>
                             <option value="ash">Ash — Warm &amp; Friendly</option>
@@ -200,7 +200,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                             <option value="sage">Sage — Calm &amp; Thoughtful</option>
                             <option value="verse">Verse — Natural &amp; Adaptable</option>
                         </select>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">Default: Shimmer</span>
+                        <span className="text-xs text-muted-foreground">Default: Shimmer</span>
                     </div>
                 </div>
             )}
@@ -212,19 +212,19 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                         </Label>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Upbeat drive-thru voices — runs locally</p>
                     </div>
-                    <div className="ml-4 flex flex-col items-end">
+                    <div className="ml-4 flex items-center gap-3 shrink-0">
                         <select
                             id="piper-voice"
                             value={piperVoice}
                             onChange={(e) => onPiperVoiceChange(e.target.value)}
-                            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                            className="w-56 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                         >
                             <option value="en_US-amy-medium">Amy (US) — Friendly &amp; Conversational</option>
                             <option value="en_GB-jenny_dioco-medium">Jenny (UK) — Expressive &amp; Upbeat</option>
                             <option value="en_US-lessac-medium">Lessac (US) — Warm &amp; Professional</option>
                             <option value="en_US-kristin-medium">Kristin (US) — Neutral &amp; Clear</option>
                         </select>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">Default: Amy (US)</span>
+                        <span className="text-xs text-muted-foreground">Default: Amy (US)</span>
                     </div>
                 </div>
             )}
@@ -237,7 +237,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                         Toggle between Azure OpenAI real-time API and Azure Speech SDK (STT, LLM(GPT-4o), TTS)
                     </p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
                     <Tooltip content="Work in progress">
                         <div>
                             <Switch
@@ -249,7 +249,7 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                             />
                         </div>
                     </Tooltip>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{useAzureSpeechOn ? "STT->LLM->TTS" : "Realtime API"}</span>
+                    <span className="min-w-[5rem] text-right text-xs text-muted-foreground">{useAzureSpeechOn ? "STT->LLM->TTS" : "Realtime API"}</span>
                 </div>
             </div>
             <div className="flex items-start justify-between">
@@ -259,9 +259,9 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                     </Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Toggle between real data and dummy data</p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
+                    <span className="min-w-[5rem] text-right text-xs text-muted-foreground">{useDummyData ? "Dummy Data" : "Real Data"}</span>
                     <Switch id="dummy-data" checked={useDummyData} onCheckedChange={handleDummyDataChange} aria-label="Toggle dummy data" />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{useDummyData ? "Dummy Data" : "Real Data"}</span>
                 </div>
             </div>
             <div className="flex items-start justify-between">
@@ -271,14 +271,14 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                     </Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Toggle visibility of session token and round-trip IDs</p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
+                    <span className="min-w-[5rem] text-right text-xs text-muted-foreground">{showSessionTokens ? "Visible" : "Hidden"}</span>
                     <Switch
                         id="session-token-visibility"
                         checked={showSessionTokens}
                         onCheckedChange={handleSessionTokensChange}
                         aria-label="Toggle session token visibility"
                     />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{showSessionTokens ? "Visible" : "Hidden"}</span>
                 </div>
             </div>
             <div className="flex items-start justify-between">
@@ -290,14 +290,14 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                         Show detailed conversation traces, tool calls, and system messages in the terminal
                     </p>
                 </div>
-                <div className="ml-4 flex flex-col items-end">
+                <div className="ml-4 flex items-center gap-3 shrink-0">
+                    <span className="min-w-[5rem] text-right text-xs text-muted-foreground">{verboseLogging ? "Verbose" : "Normal"}</span>
                     <Switch
                         id="verbose-logging"
                         checked={verboseLogging}
                         onCheckedChange={handleVerboseLoggingChange}
                         aria-label="Toggle verbose logging"
                     />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{verboseLogging ? "Verbose" : "Normal"}</span>
                 </div>
             </div>
             {verboseLogging && (
@@ -310,14 +310,14 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                             Save verbose logs to a text file on the server for later review
                         </p>
                     </div>
-                    <div className="ml-4 flex flex-col items-end">
+                    <div className="ml-4 flex items-center gap-3 shrink-0">
+                        <span className="min-w-[5rem] text-right text-xs text-muted-foreground">{logToFile ? "File logging" : "Off"}</span>
                         <Switch
                             id="log-to-file"
                             checked={logToFile}
                             onCheckedChange={handleLogToFileChange}
                             aria-label="Toggle log to file"
                         />
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{logToFile ? "File logging" : "Off"}</span>
                     </div>
                 </div>
             )}
