@@ -78,3 +78,10 @@
 - **Decisions Merged:** #34–#35 captured (Phi-4 pipeline, multi-voice TTS)
 - **Tests:** All 423 passing, zero regressions
 - **Next:** Voice models available via download script, ready for demo deployment
+
+## Sonic parity — item 1: server-owned bootstrap session.update (2026-09-22)
+- McD HAD the defect: upstream session was only configured when the browser sent session.update (mic press). A react-use-websocket auto-reconnect with the mic live ran on service defaults (no tools); once the model spoke, our later session.update carrying a voice was rejected wholesale (cannot_update_voice) → no tools for the whole conversation.
+- Ported Sonic fe91eb5: `build_bootstrap_session_update()` is the first upstream frame; `_build_session(session, voice_locked)` is the single seam that overlays server config + translates to GA; `_strip_output_voice` drops audio.output.voice once assistant audio was seen.
+- Replaced McD's old `session_configured` voice deferral (pre-session) with the voice-lock deferral: voice picker sends immediately (bootstrap already registered tools) unless assistant audio exists, then defers to next conversation.
+- Greeting: no longer fired by the (now bootstrap) session.updated; triggered by the browser's session.update and waits up to 5s for session.updated (reconciles decisions.md "session.updated not reliable" fallback).
+- Tests: tests/test_session_bootstrap.py (fake GA upstream harness, incl. McD's mic-press sequence set_voice→session.update). 2 obsolete deferral tests in test_rtmt.py updated to the new contract.

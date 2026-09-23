@@ -83,3 +83,7 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - ✅ **test_whisper_stt.py** (37 tests): WHISPER_AVAILABLE flag (3), init/config (4), device detection CUDA→ctranslate2→CPU (5), model loading/idempotent/auto-detect (4), unloading (2), properties (2), transcription PCM→float32/segments/executor/vad/language/beam (7), short audio guard (4), error handling/lazy-load/empty-segments (4), constants (2)
 - ✅ **test_local_processor.py** (6 new tests): Transcription message sent to WS, parallel execution verification, graceful skip without STT, STT unloaded on stop, STT failure doesn't crash pipeline
 - **Tests:** 671+ passing (43 new + existing), zero regressions from Whisper changes
+
+## Sonic parity — item 1 mutation checks (2026-09-22)
+- 7/7 mutants killed on rtmt.py bootstrap/voice-lock/greeting logic (no bootstrap frame, voice_locked ignored, picker not deferred, lock never set, bootstrap ack greets, greeting skips wait, bootstrap lacks transcription).
+- Strengthened greeting-wait test with a delayed session.updated ack + timeline so the ordering is actually observable.

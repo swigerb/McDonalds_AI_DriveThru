@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import copy
 import hashlib
 import hmac
 import json
@@ -207,6 +208,42 @@ def _to_ga_session(session: dict) -> dict:
 
     return ga
 
+
+# What the browser's useRealtime.startSession() sends (App.tsx enables input
+# transcription). The middle tier applies the same values itself the moment the
+# upstream socket opens, so a socket the browser never configures (e.g.
+# react-use-websocket auto-reconnected while the mic was live) behaves exactly
+# like one it did.
+_BOOTSTRAP_CLIENT_SESSION: dict = {
+    "turn_detection": {
+        "type": "server_vad",
+        "threshold": 0.7,
+        "prefix_padding_ms": 300,
+        "silence_duration_ms": 500,
+    },
+    "input_audio_transcription": {"model": "whisper-1"},
+}
+
+# How long the greeting waits for the server to confirm the session config.
+_SESSION_CONFIGURED_TIMEOUT_SEC = 5.0
+
+
+def _strip_output_voice(ga_session: dict) -> bool:
+    """Remove `audio.output.voice` from a GA session in place. Returns True if removed."""
+    audio = ga_session.get("audio")
+    if not isinstance(audio, dict):
+        return False
+    output = audio.get("output")
+    if not isinstance(output, dict) or "voice" not in output:
+        return False
+    output.pop("voice")
+    if not output:
+        audio.pop("output")
+    if not audio:
+        ga_session.pop("audio")
+    return True
+
+
 class RTMiddleTier:
     endpoint: str
     deployment: str
@@ -246,6 +283,59 @@ class RTMiddleTier:
                 self._token_provider()  # Warm up — cache a token for the first request
             except Exception as exc:
                 logger.warning("Token warmup failed (offline?): %s — will retry on first request", exc)
+
+    def build_voice_update(self, voice: str) -> str:
+        """Serialise a session.update that switches the assistant voice.
+
+        The voice is expressed in the legacy shape and then translated, so it
+        lands at `audio.output.voice` where the GA endpoint expects it.
+        """
+        ga_session = _to_ga_session({"voice": voice})
+        return json.dumps({"type": "session.update", "session": ga_session})
+
+    def _build_session(self, session: dict, voice_locked: bool = False) -> dict:
+        """Overlay the server-owned configuration onto a legacy-shaped session
+        and translate it to the GA shape.
+
+        `voice_locked` must be True once the upstream conversation contains
+        assistant audio. From then on GA rejects any session.update whose voice
+        differs from the current one with `cannot_update_voice` -- and it
+        rejects the WHOLE event, so tools, tool_choice and instructions are
+        silently lost along with the voice.
+        """
+        if self.system_message is not None:
+            session["instructions"] = self.system_message
+        if self.temperature is not None:
+            session["temperature"] = self.temperature
+        if self.max_tokens is not None:
+            session["max_response_output_tokens"] = self.max_tokens
+        if self.disable_audio is not None:
+            session["disable_audio"] = self.disable_audio
+        if self.voice_choice is not None:
+            session["voice"] = self.voice_choice
+        session["tool_choice"] = "auto" if len(self.tools) > 0 else "none"
+        session["tools"] = [tool.schema for tool in self.tools.values()]
+        # Clients speak the legacy (2024-10-01-preview) session shape.
+        # Translate to the GA shape here so the browser contract is
+        # unchanged, and so unsupported legacy keys are dropped rather
+        # than rejected outright by the server.
+        ga_session = _to_ga_session(session)
+        if voice_locked and _strip_output_voice(ga_session):
+            logger.info("session.update: assistant audio already present — omitting voice so the update is not rejected")
+        return ga_session
+
+    def build_bootstrap_session_update(self) -> str:
+        """Serialise the session.update the middle tier sends as the very first
+        frame on every upstream socket, before any browser traffic is relayed.
+
+        Without it the upstream session runs on the service defaults (no tools,
+        generic instructions, server VAD auto-responding) until the browser's
+        own session.update arrives -- and if the model speaks in that window the
+        voice locks and every later session.update carrying our voice is
+        rejected, so tools are never registered for that conversation.
+        """
+        session = self._build_session(copy.deepcopy(_BOOTSTRAP_CLIENT_SESSION))
+        return json.dumps({"type": "session.update", "session": session})
 
     def _get_auth_token(self) -> str:
         """Return the cached token, falling back to a synchronous call if needed."""
@@ -470,7 +560,7 @@ class RTMiddleTier:
 
         return updated_message
 
-    async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse, verbose: bool = False) -> str | None:
+    async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse, verbose: bool = False, voice_locked: bool = False) -> str | None:
         data = msg.data
 
         # FAST PATH: input_audio_buffer.append is the most frequent client message
@@ -486,25 +576,8 @@ class RTMiddleTier:
             _vlog(verbose, "─── [Client → Server] %s ───", msg_type)
             match msg_type:
                 case "session.update":
-                    session = message["session"]
-                    if self.system_message is not None:
-                        session["instructions"] = self.system_message
-                    if self.temperature is not None:
-                        session["temperature"] = self.temperature
-                    if self.max_tokens is not None:
-                        session["max_response_output_tokens"] = self.max_tokens
-                    if self.disable_audio is not None:
-                        session["disable_audio"] = self.disable_audio
-                    if self.voice_choice is not None:
-                        session["voice"] = self.voice_choice
-                    session["tool_choice"] = "auto" if len(self.tools) > 0 else "none"
-                    session["tools"] = [tool.schema for tool in self.tools.values()]
+                    session = self._build_session(message["session"], voice_locked=voice_locked)
                     tool_names = [t.get("name", "?") for t in session["tools"]]
-                    # Clients speak the legacy (2024-10-01-preview) session shape.
-                    # Translate to the GA shape here so the browser contract is
-                    # unchanged, and so unsupported legacy keys are dropped rather
-                    # than rejected outright by the server.
-                    session = _to_ga_session(session)
                     message["session"] = session
                     logger.info(
                         "session.update: injected %d tools %s, tool_choice=%s, max_tokens=%s",
@@ -568,15 +641,36 @@ class RTMiddleTier:
                 loop = asyncio.get_running_loop()
                 session_id = self._sessions.get_session_id(ws)
                 greeting_sent = self._sessions.has_sent_greeting(session_id) if session_id else False
+                # Set once the model has produced audio on this upstream socket;
+                # from then on GA refuses voice changes (see _build_session).
+                assistant_audio_seen = False
+                session_configured = asyncio.Event()
 
                 _vlog(verbose, "\n═══ [SESSION] Connected ═══\n"
                                "Session ID: %s\n"
                                "═══════════════════════════", session_id or "?")
 
+                # Configure the upstream session BEFORE relaying a single browser
+                # frame. Events are processed in order, so nothing the browser
+                # sends (mic audio included) can reach an unconfigured session.
+                await target_ws.send_str(self.build_bootstrap_session_update())
+                logger.info("Upstream session bootstrapped with %d tools before relaying client traffic (session=%s)",
+                            len(self.tools), session_id)
+
                 async def send_greeting_once(trigger: str = "unknown"):
                     nonlocal greeting_sent
                     if greeting_sent:
                         return
+                    # Don't greet until the server has confirmed the session
+                    # configuration (tools + instructions) -- or give up waiting.
+                    try:
+                        await asyncio.wait_for(session_configured.wait(), timeout=_SESSION_CONFIGURED_TIMEOUT_SEC)
+                    except TimeoutError:
+                        logger.warning("No session.updated within %.0fs; sending greeting anyway (session=%s)",
+                                       _SESSION_CONFIGURED_TIMEOUT_SEC, session_id)
+                    if greeting_sent:
+                        return
+                    greeting_sent = True
                     logger.info("Greeting firing via trigger=%s (session=%s)", trigger, session_id)
                     _vlog(verbose, "─── [Lifecycle] Greeting trigger=%s ───", trigger)
                     echo.start_greeting_suppression(verbose)
@@ -584,18 +678,11 @@ class RTMiddleTier:
                     await target_ws.send_str(_INPUT_AUDIO_CLEAR_MSG)
                     await target_ws.send_str(self._sessions.greeting_msg)
                     await target_ws.send_str(_RESPONSE_CREATE_MSG)
-                    greeting_sent = True
                     if session_id is not None:
                         self._sessions.mark_greeting_sent(session_id)
 
                 async def from_client_to_server():
                     nonlocal verbose, audio_frame_count, session_file_handler
-                    # Track whether the full session.update (with tools/instructions)
-                    # has been forwarded to OpenAI.  Before that point, voice changes
-                    # are stored locally and piggy-backed on the upcoming session.update
-                    # to avoid a race where a voice-only session.update triggers
-                    # session.updated → greeting fires before tools are configured.
-                    session_configured = False
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             # Track activity for idle timeout
@@ -662,21 +749,17 @@ class RTMiddleTier:
                                             previous_voice = self.voice_choice
                                             self.voice_choice = new_voice
                                             logger.info("[VOICE] Voice change request: %s → %s (session %s)", previous_voice, new_voice, session_id)
-                                            if session_configured:
-                                                # Mid-session voice change — send GA-shaped session.update
-                                                ga_session = _to_ga_session({"voice": new_voice})
-                                                session_update = json.dumps({
-                                                    "type": "session.update",
-                                                    "session": ga_session,
-                                                })
+                                            if assistant_audio_seen:
+                                                # GA would reject this with cannot_update_voice.
+                                                logger.info("[VOICE] Assistant audio already present — voice %s applies from the next conversation (session %s)", new_voice, session_id)
+                                                _vlog(verbose, "─── [Voice Change] Deferred voice=%s (voice locked) ───", new_voice)
+                                            else:
+                                                # The bootstrap already configured the session, so the
+                                                # voice-only update cannot race ahead of the tools.
+                                                session_update = self.build_voice_update(new_voice)
                                                 await target_ws.send_str(session_update)
                                                 logger.info("[VOICE] Sent session.update to OpenAI (session %s): %s", session_id, session_update)
                                                 _vlog(verbose, "─── [Voice Change] Sent session.update voice=%s to OpenAI ───", new_voice)
-                                            else:
-                                                # Pre-session: voice will be included in the
-                                                # upcoming full session.update (with tools/instructions)
-                                                logger.info("[VOICE] Deferred — will include in next session.update (session %s)", session_id)
-                                                _vlog(verbose, "─── [Voice Change] Deferred voice=%s (session not yet configured) ───", new_voice)
                                         continue  # Don't forward to OpenAI
                                 except (json.JSONDecodeError, KeyError):
                                     pass
@@ -692,16 +775,13 @@ class RTMiddleTier:
                             if _MARKER_RESPONSE_CANCEL in msg.data:
                                 echo.on_barge_in(verbose)
                             # Forward client message to OpenAI.
-                            new_msg = await self._process_message_to_server(msg, ws, verbose)
+                            new_msg = await self._process_message_to_server(msg, ws, verbose, voice_locked=assistant_audio_seen)
                             if new_msg is not None:
                                 await target_ws.send_str(new_msg)
-                            # Mark session as configured after the first full session.update
-                            if not session_configured and _MARKER_SESSION_UPDATE in msg.data and _MARKER_SESSION_UPDATED not in msg.data:
-                                session_configured = True
-                            # Fallback greeting trigger
+                            # The browser's session.update marks the start of a conversation.
                             if not greeting_sent and _MARKER_SESSION_UPDATE in msg.data and _MARKER_SESSION_UPDATED not in msg.data:
-                                logger.info("Fallback greeting: session.update forwarded — sending greeting without waiting for session.updated")
-                                await send_greeting_once(trigger="fallback-after-session.update")
+                                logger.info("Client session.update forwarded — sending greeting")
+                                await send_greeting_once(trigger="client-session.update")
                         elif msg.type == aiohttp.WSMsgType.ERROR:
                             logger.error("Client WebSocket error: %s", ws.exception())
                             break
@@ -714,21 +794,25 @@ class RTMiddleTier:
                         await target_ws.close()
                         
                 async def from_server_to_client():
+                    nonlocal assistant_audio_seen
                     async for msg in target_ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             data = msg.data
                             if _MARKER_AUDIO_DELTA in data or _MARKER_AUDIO_DELTA_LEGACY in data:
+                                assistant_audio_seen = True
                                 echo.on_audio_delta(verbose)
                             elif _MARKER_AUDIO_DONE in data or _MARKER_AUDIO_DONE_LEGACY in data:
                                 echo.on_audio_done(loop, target_ws, verbose)
                             elif _MARKER_SPEECH_STARTED in data:
                                 echo.on_speech_started(verbose)
 
-                            # Greeting trigger: wait for session.updated confirmation
-                            if _MARKER_SESSION_UPDATED in data and not greeting_sent:
-                                logger.info("session.updated received — tools are configured, sending greeting")
-                                _vlog(verbose, "─── [Lifecycle] session.updated — sending greeting ───")
-                                await send_greeting_once(trigger="session.updated")
+                            # The bootstrap session.updated arrives as soon as the socket
+                            # opens, so it must NOT trigger the greeting -- the browser's
+                            # session.update (conversation start) does that.
+                            if _MARKER_SESSION_UPDATED in data and not session_configured.is_set():
+                                logger.info("session.updated received — tools are configured (session=%s)", session_id)
+                                _vlog(verbose, "─── [Lifecycle] session.updated — session configured ───")
+                                session_configured.set()
 
                             # Verbose: log conversation transcription events
                             if (verbose or _VERBOSE_GLOBAL):
