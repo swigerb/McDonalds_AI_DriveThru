@@ -847,7 +847,7 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
 
     Verifies that:
     - Valid voice changes update voice_choice
-    - Pre-session: voice is deferred (no separate session.update to OpenAI)
+    - Pre-session: voice is sent right after the server-owned bootstrap
     - Mid-session: voice change sends session.update to OpenAI immediately
     - The extension message is consumed (not forwarded to OpenAI)
     - Invalid voice names are rejected without sending session.update
@@ -931,12 +931,19 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
         rtmt, _ = await self._run_voice_scenario(msg)
         self.assertEqual(rtmt.voice_choice, "coral")
 
-    async def test_pre_session_voice_deferred(self):
-        """Pre-session extension.set_voice defers — no session.update to OpenAI."""
+    async def test_pre_session_voice_is_sent_after_bootstrap(self):
+        """Before the browser's session.update, the server-owned bootstrap has
+        already registered the tools, so a voice change is applied right away
+        (no longer deferred) and can never race ahead of the tools."""
         msg = json.dumps({"type": "extension.set_voice", "voice": "ash"})
         _, target_ws = await self._run_voice_scenario(msg)
-        # No messages should be sent to OpenAI (voice is deferred)
-        target_ws.send_str.assert_not_called()
+        sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list]
+        self.assertEqual(len(sent), 2, sent)
+        self.assertEqual(sent[0]["type"], "session.update")
+        self.assertTrue(sent[0]["session"]["tools"] is not None)
+        self.assertEqual(sent[1]["type"], "session.update")
+        self.assertEqual(sent[1]["session"]["audio"]["output"]["voice"], "ash")
+        self.assertNotIn("tools", sent[1]["session"])
 
     async def test_mid_session_voice_sends_session_update(self):
         """Mid-session extension.set_voice sends session.update to OpenAI."""
@@ -966,19 +973,22 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
         msg = json.dumps({"type": "extension.set_voice", "voice": "INVALID"})
         rtmt, target_ws = await self._run_voice_scenario(msg, initial_voice="shimmer")
         self.assertEqual(rtmt.voice_choice, "shimmer")
-        target_ws.send_str.assert_not_called()
+        # Only the bootstrap session.update (first upstream frame) was sent.
+        sent = [json.loads(c.args[0]) for c in target_ws.send_str.call_args_list]
+        self.assertEqual(len(sent), 1, sent)
+        self.assertIn("tools", sent[0]["session"])
 
     async def test_each_valid_voice_accepted(self):
-        """All 8 valid voice names are accepted and update voice_choice."""
-        for voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+        """All 10 GA voice names are accepted and update voice_choice."""
+        for voice in ("marin", "cedar", "shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
             with self.subTest(voice=voice):
                 msg = json.dumps({"type": "extension.set_voice", "voice": voice})
                 rtmt, _ = await self._run_voice_scenario(msg)
                 self.assertEqual(rtmt.voice_choice, voice)
 
     async def test_each_valid_voice_mid_session(self):
-        """All 8 valid voice names send session.update when mid-session."""
-        for voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+        """All 10 GA voice names send session.update when mid-session."""
+        for voice in ("marin", "cedar", "shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
             with self.subTest(voice=voice):
                 msg = json.dumps({"type": "extension.set_voice", "voice": voice})
                 rtmt, target_ws = await self._run_voice_scenario(msg, pre_session_update=True)
@@ -990,11 +1000,11 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
                                       or s.get("session", {}).get("voice") == voice)]
                 self.assertTrue(len(voice_updates) >= 1, f"Expected session.update with voice={voice}")
 
-    async def test_missing_voice_key_defaults_to_shimmer(self):
-        """When voice key is absent, defaults to shimmer (valid)."""
+    async def test_missing_voice_key_defaults_to_marin(self):
+        """When voice key is absent, defaults to marin (the shipped default)."""
         msg = json.dumps({"type": "extension.set_voice"})
-        rtmt, _ = await self._run_voice_scenario(msg)
-        self.assertEqual(rtmt.voice_choice, "shimmer")
+        rtmt, _ = await self._run_voice_scenario(msg, initial_voice="shimmer")
+        self.assertEqual(rtmt.voice_choice, "marin")
 
 
 if __name__ == "__main__":

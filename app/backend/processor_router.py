@@ -35,6 +35,10 @@ pipeline_logger = logging.getLogger("local-pipeline")
 
 _cfg = get_config()
 _local_cfg = _cfg.get("local_mode", {})
+# Same switch as rtmt._WS_COMPRESS (config.yaml connection.ws_compression): every
+# browser-facing socket must decline permessage-deflate while aiohttp 3.14.2/3.14.3
+# kill the first compressed frame after an initial PONG (aio-libs/aiohttp#13274).
+WS_COMPRESS = bool(_cfg.get("connection", {}).get("ws_compression", False))
 
 
 class ProcessorRouter:
@@ -303,7 +307,7 @@ class ProcessorRouter:
                 pipeline_logger.info(
                     "[VOICE/ROUTING] [conn-%d] FAST PATH — LocalPhi4Processor handling connection (no cloud check, no auto-fallback)", conn_id
                 )
-                ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True)
+                ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True, compress=WS_COMPRESS)
                 await ws.prepare(request)
                 try:
                     await self._local.handle_websocket(ws, request)
@@ -354,7 +358,7 @@ class ProcessorRouter:
                     pipeline_logger.error("[conn-%d] %s", conn_id, err_msg)
                     self._last_error = err_msg
                     self._last_error_time = time.time()
-                    ws = web.WebSocketResponse()
+                    ws = web.WebSocketResponse(compress=WS_COMPRESS)
                     await ws.prepare(request)
                     await ws.send_json({"type": "error", "error": {"message": err_msg}})
                     await ws.close()
@@ -373,7 +377,7 @@ class ProcessorRouter:
                 "[conn-%d] Routing to local processor (Phi-4 ONNX)", conn_id
             )
 
-            ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True)
+            ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True, compress=WS_COMPRESS)
             await ws.prepare(request)
 
             try:

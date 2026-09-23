@@ -1,4 +1,7 @@
 {
   "version": 1,
-  "teamRoot": "."
+  "teamRoot": ".",
+  "agentModelOverrides": {
+    "ronald": "claude-opus-5.5"
+  }
 }

@@ -71,7 +71,7 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 ## Features
 
 ### Core AI & Voice Experience
-- **Azure OpenAI GPT-4o Realtime API**: Voice-to-voice ordering powered by gpt-realtime-1.5 with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition).
+- **Azure OpenAI GPT-4o Realtime API**: Voice-to-voice ordering powered by gpt-realtime-2.1 (`reasoning.effort: low`) with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition).
 - **McDonald's crew member personality**: Upbeat, friendly, branded — **Nova voice** (warm, friendly female) embodies the McDonald's crew member persona. Phrase variety rules prevent bot-like repetition ("Awesome choice!", "You got it!", "Great pick!", "Coming right up!").
 - **Natural turn-taking**: Server VAD tuning (threshold 0.7, prefix padding 300ms, silence duration 500ms) for seamless back-and-forth conversations.
 - **Spoken currency**: "Four dollars and nineteen cents" instead of "$4.19" — more natural, more McDonald's.
@@ -173,7 +173,7 @@ This is where the intelligence lives. The `RTMiddleTier` (`rtmt.py`) acts as a W
 
 **4. Azure OpenAI Realtime API (GPT-4o)**
 
-The audio hits **Azure OpenAI's GPT-4o Realtime API** (`gpt-realtime-1.5`), which processes the guest's speech and decides what to do. It doesn't just transcribe — it *understands intent* and generates both a spoken response and structured **tool calls** as JSON function calls (the "Citation Payloads" shown in the diagram). This is the agentic core: the model autonomously decides which tools to invoke based on the conversation context.
+The audio hits **Azure OpenAI's GPT-4o Realtime API** (`gpt-realtime-2.1`), which processes the guest's speech and decides what to do. It doesn't just transcribe — it *understands intent* and generates both a spoken response and structured **tool calls** as JSON function calls (the "Citation Payloads" shown in the diagram). This is the agentic core: the model autonomously decides which tools to invoke based on the conversation context.
 
 **5. Tool Execution — The Agentic Toolkit**
 
@@ -215,7 +215,9 @@ The entire round trip — guest speech → AI understanding → tool execution �
 
 > **Note:** This demo uses sample McDonald's menu data (172 items) for demonstration purposes. All prices, promotions, and machine statuses are simulated to showcase the agentic architecture capabilities.
 
-- **Voice picker**: The settings dialog exposes ten GA realtime voices (alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar) with short descriptors. Changing it takes effect on the live conversation without a redeploy — the choice is persisted in the browser and sent to the middle tier, which reissues a `session.update` with the voice at `audio.output.voice`. The initial default comes from `model.default_voice` in `app/backend/config.yaml`.
+- **Voice picker**: The settings dialog exposes all ten GA realtime voices (marin and cedar — OpenAI's recommended voices — plus alloy, ash, ballad, coral, echo, sage, shimmer, verse), listed in `app/frontend/src/lib/voices.ts`. The default is **marin** (`model.default_voice` in `app/backend/config.yaml`, `DEFAULT_VOICE` in `voices.ts`). The choice is persisted in the browser and sent to the middle tier, which reissues a `session.update` with the voice at `audio.output.voice`. The service locks the voice once the crew member has spoken, so a change made mid-conversation applies from the next conversation.
+- **Session config can't silently fail**: GA rejects a `session.update` wholesale if any one field is unsupported — tools included. Every `session.update` the middle tier sends carries an `event_id`; if the service rejects one, the middle tier resends a minimal update (instructions + tools only) so the crew member keeps its tools, and a failing tool call returns an apology to the model instead of ending the conversation. `azd deploy` runs a non-fatal smoke check (`scripts/smoke_realtime.py`) that verifies the live deployment accepts the exact session config. See [docs/customizing_deploy.md](docs/customizing_deploy.md#post-deploy-realtime-smoke-check).
+- **Orders survive a dropped connection** (cloud realtime mode): after a Wi-Fi blip or a missed heartbeat, the browser reconnects within 2 minutes and gets the same order back. The mic restarts and the crew member carries on without greeting again. Idle sessions still end after 5 minutes, and **Start a new order** clears the ticket. Local mode and Azure Speech mode don't resume. See [docs/order_resume.md](docs/order_resume.md).
 ### Architecture Diagram
 
 The `RTClient` in the frontend receives the audio input, sends that to the Python backend which uses an `RTMiddleTier` object to interface with the Azure OpenAI Realtime API, and includes a tool for searching Azure AI Search.
@@ -240,7 +242,7 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 **Backend:**
 - Python 3.11+ with aiohttp, WebSockets
 - WebSocket middle tier (`rtmt.py`) — browser ↔ Azure OpenAI Realtime API
-- Azure OpenAI GPT-4o Realtime API (gpt-realtime-1.5)
+- Azure OpenAI Realtime API (gpt-realtime-2.1; gpt-realtime-1.5 remains a supported rollback)
 - Demo menu data from `mcdonalds-menu-items.json` (sample McDonald's menu export, 172 items)
 
 **AI & Search:**
@@ -250,7 +252,7 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 **Infrastructure:**
 - Bicep IaC for reproducible deployments
 - Azure Container Apps with auto-scaling (20 concurrent requests/replica, max 5 replicas)
-- Gunicorn with 2 async workers, 120s timeout, 65s keep-alive
+- Gunicorn with 1 async worker (order/resume state is in-process) and sticky ingress affinity, 120s timeout, 65s keep-alive
 - Docker with layer caching for fast rebuilds
 - Health probes: startup (50s), liveness (30s), readiness (10s)
 - Azure Developer CLI (`azd`) for one-command provisioning
@@ -491,7 +493,7 @@ Local Mode delivers a complete AI drive-thru experience on consumer hardware. Th
 | **Speech Understanding** | Azure OpenAI GPT-4o Realtime | Phi-4-mini-instruct (ONNX INT4) |
 | **Customer Transcription** | Whisper-1 (via Azure OpenAI) | Whisper base.en (CPU) |
 | **Text Generation** | GPT-4o Realtime | Phi-4-mini-instruct (ONNX INT4) |
-| **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, en_US, 0.7 length_scale) |
+| **Voice Synthesis** | Azure OpenAI voices (marin, cedar, shimmer, etc.) | Piper TTS (Amy, en_US, 0.7 length_scale) |
 | **Menu Search** | Azure AI Search (semantic + vector) | Local in-memory search (keyword matching) |
 | **Order Management** | Same | Same (runs locally in both modes) |
 

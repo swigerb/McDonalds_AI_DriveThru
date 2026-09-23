@@ -192,6 +192,18 @@ class TestRebrandVerification(unittest.TestCase):
             f"README.md first heading does not mention McDonald's: '{first_heading}'",
         )
 
+    def test_doc_headings_carry_no_template_branding(self):
+        """docs/*.md headings must name this app, not the VoiceRAG template or its sibling sample."""
+        leftovers = re.compile(r"voice ?rag|azure-search-openai-demo|contoso", re.IGNORECASE)
+        docs = sorted((PROJECT_ROOT / "docs").glob("*.md"))
+        self.assertGreaterEqual(len(docs), 3)
+        hits = []
+        for doc in docs:
+            for line_no, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), start=1):
+                if line.startswith("#") and leftovers.search(line):
+                    hits.append(f"  docs/{doc.name}:{line_no}  →  {line.strip()}")
+        self.assertEqual(hits, [], "\nTemplate branding in doc headings:\n" + "\n".join(hits))
+
     def test_readme_does_not_mention_dunkin(self):
         """README.md must be completely free of Dunkin references."""
         readme = PROJECT_ROOT / "README.md"

@@ -2,12 +2,33 @@ import "./status-message.css";
 import { useTranslation } from "react-i18next";
 import { memo } from "react";
 import { useLocalMode } from "@/context/local-mode-context";
+import type { RateLimitNotice } from "@/hooks/useRateLimitApology";
+
+export type ConnectionNotice = "idle" | "lost" | "reconnecting" | "resumed" | "tapToResume" | "resumeRejected" | "superseded" | null;
 
 type Properties = {
     isRecording: boolean;
+    notice?: ConnectionNotice;
+    /** Shown in place of "Conversation in progress" while the server retries a rate-limited reply. */
+    busyNotice?: RateLimitNotice;
 };
 
-export default memo(function StatusMessage({ isRecording }: Properties) {
+const NOTICE_KEYS: Record<Exclude<ConnectionNotice, null>, string> = {
+    idle: "status.sessionEndedIdle",
+    lost: "status.connectionLost",
+    reconnecting: "status.reconnecting",
+    resumed: "status.resumed",
+    tapToResume: "status.resumedTapToContinue",
+    resumeRejected: "status.resumeRejected",
+    superseded: "status.superseded"
+};
+
+const BUSY_KEYS: Record<Exclude<RateLimitNotice, null>, string> = {
+    busy: "status.rateLimited",
+    final: "status.rateLimitedFinal"
+};
+
+export default memo(function StatusMessage({ isRecording, notice = null, busyNotice = null }: Properties) {
     const { t } = useTranslation();
     const { localMode } = useLocalMode();
 
@@ -25,7 +46,7 @@ export default memo(function StatusMessage({ isRecording }: Properties) {
         return (
             <div className="mb-4 mt-6 flex items-center gap-2">
                 <p className="text-sm text-muted-foreground" aria-live="polite">
-                    {t("status.notRecordingMessage")}
+                    {t(notice ? NOTICE_KEYS[notice] : "status.notRecordingMessage")}
                 </p>
                 {modeIndicator}
             </div>
@@ -40,7 +61,7 @@ export default memo(function StatusMessage({ isRecording }: Properties) {
                 ))}
             </div>
             <p className="mb-4 ml-2 mt-6 font-semibold text-primary">
-                {t("status.conversationInProgress")}
+                {t(busyNotice ? BUSY_KEYS[busyNotice] : notice === "resumed" ? NOTICE_KEYS.resumed : "status.conversationInProgress")}
             </p>
             <span className="mb-4 ml-2 mt-6">{modeIndicator}</span>
         </div>

@@ -83,3 +83,58 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - ✅ **test_whisper_stt.py** (37 tests): WHISPER_AVAILABLE flag (3), init/config (4), device detection CUDA→ctranslate2→CPU (5), model loading/idempotent/auto-detect (4), unloading (2), properties (2), transcription PCM→float32/segments/executor/vad/language/beam (7), short audio guard (4), error handling/lazy-load/empty-segments (4), constants (2)
 - ✅ **test_local_processor.py** (6 new tests): Transcription message sent to WS, parallel execution verification, graceful skip without STT, STT unloaded on stop, STT failure doesn't crash pipeline
 - **Tests:** 671+ passing (43 new + existing), zero regressions from Whisper changes
+
+## Sonic parity — item 1 mutation checks (2026-09-22)
+- 7/7 mutants killed on rtmt.py bootstrap/voice-lock/greeting logic (no bootstrap frame, voice_locked ignored, picker not deferred, lock never set, bootstrap ack greets, greeting skips wait, bootstrap lacks transcription).
+- Strengthened greeting-wait test with a delayed session.updated ack + timeline so the ordering is actually observable.
+
+## Sonic parity — item 2 mutation check (2026-09-22)
+- 13 mutants on rtmt.py / app.py / config.yaml / main.bicep, 13 killed. 2i ("off" not treated as a disabled value) first SURVIVED — it was only visible as a spurious warning — so added `test_off_is_a_documented_value_not_a_typo` (assertNoLogs) and it was killed.
+
+## Sonic parity — item 3 mutation check (2026-09-22)
+- 14 mutants (voices.ts ×6 incl. BE-side parity checks, settings.tsx, App.tsx, rtmt ×3, config.yaml, main.parameters.json, app.py), 14 killed. App.tsx seed covered by an `?raw` source assertion in voice-picker.test.tsx (rendering App is too heavy for a unit test).
+- Runner fix: subprocess output decoded as utf-8 (vitest prints ✓/×; cp1252 crashed the runner).
+
+## Sonic parity — item 4 mutation check (2026-09-22)
+- 15 mutants (guard/fallback/tool-error seams in rtmt.py), 15 killed. 4j (bootstrap builder without its own event_id) and 4l (voice update untracked) first SURVIVED — `guard.track` stamps anyway, and no test rejected a voice update. Added `test_builders_stamp_their_own_event_ids` and `test_rejected_voice_change_is_recovered_and_tools_kept`; both killed.
+- Tool-error tests (`test_tool_errors.py`) fail 4/5 against pre-fix rtmt (verified via stash).
+
+## Sonic parity — item 5 mutation check (2026-09-22)
+- 16 mutants (smoke_realtime.py ×13, azure.yaml continueOnError, ps1/sh exit code), 16 killed. Tests drive the real smoke functions against an in-process fake GA endpoint (`EchoGA`) that rejects beta keys like GA does — so sending the raw browser session (mutant 5g) is caught.
+
+## Sonic parity — item 6 mutation check (2026-09-22)
+- 23 mutants (rtmt ×4, config.yaml, session_manager ×2, useRealtime ×11, status-message ×2, App.tsx ×3), 23 killed. 6a (`ws_compression` default flipped to True) first SURVIVED because config.yaml always supplies the key; added `test_compression_stays_off_when_config_omits_the_key` (loads a fresh rtmt copy with an empty connection config) and it was killed.
+- Runner needs PYTHONIOENCODING=utf-8 when printing vitest's ❯ glyph.
+
+## Sonic parity — item 7 mutation check (2026-09-22)
+- 9 mutants (main.parameters.json ×3, main.bicep ×5, azure.yaml ×1), 9 killed — incl. un-conditioning the openAi module, flipping the reuse default, and adding a non-role declaration scoped to the shared OpenAI RG. New tests fail 4/6 against the pre-fix parameters file (stash check).
+
+## Round 3 — L1 mutation check (2026-09-23)
+- 10 mutants (processor_router ×6, app.py ×2, rtmt ×2), 10 killed. The behavioural test alone (AST scan deselected) kills `compress=True` on the local fast path — it reproduces the real 1002, not just the kwarg. The scan asserts it found >= 6 constructions so an empty scan can't pass.
+
+## Round 3 — R3 mutation check (2026-09-23)
+- 6 mutants (es/fr/ja/en locale values, fr key removal, a Contoso string in status-message.tsx), 6 killed. Runner needs `encoding=utf-8` on subprocess output (vitest glyphs crash cp1252).
+
+## Round 3 — R2 mutation check (2026-09-23)
+- 19 mutants on `scripts/smoke_realtime.py` (similarity gate, threshold 0.5/0.95, phrase back in a user turn / dropped from instructions, empty check, case/order normalisation, check_transcription bypassing the judge, credential order/pinning/fallback/continue-on-failure/first-line errors, CLI>env>azd precedence, azd skipped with explicit endpoint, identity not passed through run/main), 19 killed. The canned answered transcript is the one Sonic's keyword check passed on.
+
+## Round 3 — R1 mutation check (2026-09-23)
+- Backend: 29 mutants on `rate_limit.py` / `rtmt.py` integration (detection by code vs type, failed-only, ms hints, hint ignored/unclamped, both clamp bounds, first-retry silence, second-retry notice and delay, final notice, max-retries off-by-one, no-stacking guard, disabled flag, env true/false overrides, cancel reset, own vs foreign response.created, cancel on speech_started, error/response.done detection in rtmt, session.update correlation, tool-follow-up double-retry guard, retry actually sends response.create, config wiring, config.yaml delay, send failure swallowed), 29 killed.
+- Frontend: 23 mutants (language fallback/splitting, speaking-flag clear, mute, final unmute, already-speaking unmute guard, stale-clip guard, play-rejection path, session guard, final branch, dismiss, pause, recovering flag, clip language, useRealtime routing, StatusMessage keys ×2, App wiring ×5, es key removal), 23 killed. The stale-clip guard survived until a "dismissed before play() rejects" test was added.
+- Clips: 3 source mutants (generator phrase list, frontend language list, clip path) + 4 file mutants (missing ja clip, 16 kHz, silent, 6 s), 7 killed.
+- Self-inflicted regressions caught by the full suite this round (not by the targeted runs): the rebrand guard rejected the sibling brand name in a new docstring/comment (reworded), and the R2 `TenantTests` leaked `tools._prompt_loader` into `test_tool_calling` (isolated with `_isolate_tools_global`). Lesson: run the full suite before each commit, not just the new file.
+- **Order resume port — mutation + e2e (2026-09-23, feat/order-resume):** Every mutant killed:
+
+  | Step | Mutants |
+  | --- | --- |
+  | Doc headings | 3/3 |
+  | s0 infra | 14/14 |
+  | s1 grace hold | 15 + 1 replacement for an equivalent mutant |
+  | s2 handshake | 20/20 + 1 combined (the three single-use guards are redundant by design) |
+  | s3 rehydrate/nudge | 20/20 |
+  | fe protocol | 29/29 |
+  | fe UI | 38/38 |
+  | e2e | 2/2 |
+
+  - Two fe-UI survivors needed new App tests: a second failed reconnect keeps "was mid-conversation", and a give-up with no resume in flight stays silent.
+  - `scripts/e2e_order_resume.py`: headless Edge 153, 55/55. The e2e mutants dropped the voice re-send and the held tap; each failed its intended check.

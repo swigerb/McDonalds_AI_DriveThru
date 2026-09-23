@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-import StatusMessage from "@/components/ui/status-message";
+import StatusMessage, { ConnectionNotice } from "@/components/ui/status-message";
 import MenuPanel from "@/components/ui/menu-panel";
 import OrderSummary, { calculateOrderSummary, OrderSummaryProps } from "@/components/ui/order-summary";
 import TranscriptPanel from "@/components/ui/transcript-panel";
@@ -20,8 +20,9 @@ import { ReadyState } from "react-use-websocket";
 import useAzureSpeech from "@/hooks/useAzureSpeech";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
 import useAudioPlayer from "@/hooks/useAudioPlayer";
+import useRateLimitApology from "@/hooks/useRateLimitApology";
 
-import { ExtensionMiddleTierToolResponse, ExtensionRoundTripToken, ExtensionSessionMetadata } from "./types";
+import { ExtensionMiddleTierToolResponse, ExtensionRoundTripToken, ExtensionSessionMetadata, ExtensionSessionResumed } from "./types";
 
 import { ThemeProvider, useTheme } from "./context/theme-context";
 import { DummyDataProvider, useDummyDataContext } from "@/context/dummy-data-context";
@@ -29,6 +30,7 @@ import { AzureSpeechProvider, useAzureSpeechOnContext } from "@/context/azure-sp
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { MenuModeProvider } from "@/context/menu-mode-context";
 import { LocalModeProvider, useLocalMode } from "@/context/local-mode-context";
+import { resolveVoice } from "@/lib/voices";
 
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
@@ -84,6 +86,7 @@ function McDonaldsApp() {
     const { theme } = useTheme();
     const { logout, authEnabled } = useAuth();
     const { localMode } = useLocalMode();
+    const { t, i18n } = useTranslation();
 
     const [transcripts, setTranscripts] = useState<Array<{ text: string; isUser: boolean; timestamp: Date }>>([]);
     const dummyTranscripts = useMemo<Array<{ text: string; isUser: boolean; timestamp: Date }>>(
@@ -119,7 +122,7 @@ function McDonaldsApp() {
         return localStorage.getItem("verboseLogToFile") === "true";
     });
     const [voiceChoice, setVoiceChoice] = useState<string>(() => {
-        return localStorage.getItem("voiceChoice") || "shimmer";
+        return resolveVoice(localStorage.getItem("voiceChoice"));
     });
     const [piperVoice, setPiperVoice] = useState<string>(() => {
         return localStorage.getItem("piperVoice") || "en_US-amy-medium";
@@ -160,8 +163,37 @@ function McDonaldsApp() {
     const startMicInFlightRef = useRef<Promise<void> | null>(null);
     const isAiSpeakingRef = useRef(false);
 
+    // Cloud realtime only (docs/order_resume.md): a transport drop (1001/1002/1006/1011)
+    // is resumable. The hook reconnects and presents the tab's resume id, and the
+    // server holds the order for a short grace period. Anything else (idle 4000,
+    // superseded 4002, rejected resume, retries exhausted) means the server-side
+    // order is gone here and the next tap starts fresh. Local mode and Azure Speech
+    // mode never resume and never show these notices.
+    const [connectionNotice, setConnectionNotice] = useState<ConnectionNotice>(null);
+    const serverSessionLostRef = useRef(false);
+    // null: no resume in flight; otherwise whether the guest was mid-conversation at the drop.
+    const resumePendingRef = useRef<boolean | null>(null);
+    // This socket carries a resumed session: no greeting will come, so a tap restarts the mic at once.
+    const resumedSessionRef = useRef(false);
+    const resumedNoticeTimerRef = useRef<number | null>(null);
+    const orderItemCountRef = useRef(0);
+    useEffect(() => {
+        orderItemCountRef.current = order.items.length;
+    }, [order]);
+
+    const flashResumedNotice = useCallback(() => {
+        setConnectionNotice("resumed");
+        if (resumedNoticeTimerRef.current !== null) window.clearTimeout(resumedNoticeTimerRef.current);
+        resumedNoticeTimerRef.current = window.setTimeout(() => {
+            resumedNoticeTimerRef.current = null;
+            setConnectionNotice(current => (current === "resumed" ? null : current));
+        }, 4000);
+    }, []);
+
     const realtime = useRealTime({
         localMode,
+        // Azure Speech mode orders over HTTP, not this socket: nothing to resume.
+        resumeEnabled: !useAzureSpeechOn,
         enableInputAudioTranscription: true,
         onWebSocketOpen: () => {
             console.log("[WS] WebSocket connection opened");
@@ -172,6 +204,34 @@ function McDonaldsApp() {
         },
         onWebSocketClose: () => {
             console.log("[WS] WebSocket connection closed");
+        },
+        onConnectionLost: ({ code, reason, idle, kind, resuming }) => {
+            console.warn(`[WS] Connection lost (code=${code}${reason ? `, reason=${reason}` : ""})`);
+            // Local mode and Azure Speech keep their existing behaviour.
+            if (useAzureSpeechOn || localMode) return;
+            // Our own "Start a new order": a fresh socket follows by itself, and a tap
+            // made meanwhile carries straight on into it.
+            if (kind === "ended") return;
+            const wasActive = isSessionActiveRef.current;
+            if (wasActive) void stopConversation();
+            if (resuming) {
+                // A failed reconnect attempt closes again; remember the first answer.
+                resumePendingRef.current = wasActive || resumePendingRef.current === true;
+                if (wasActive || orderItemCountRef.current > 0) setConnectionNotice("reconnecting");
+                return;
+            }
+            resumePendingRef.current = null;
+            resumedSessionRef.current = false;
+            serverSessionLostRef.current = true;
+            if (idle || kind === "superseded" || wasActive || orderItemCountRef.current > 0) {
+                setConnectionNotice(idle ? "idle" : kind === "superseded" ? "superseded" : "lost");
+            }
+        },
+        onReconnectGaveUp: () => {
+            if (resumePendingRef.current === null) return;
+            resumePendingRef.current = null;
+            serverSessionLostRef.current = true;
+            setConnectionNotice("lost");
         },
         onWebSocketError: event => {
             console.error("[WS] WebSocket error:", event);
@@ -192,12 +252,14 @@ function McDonaldsApp() {
         },
         onReceivedResponseAudioDelta: message => {
             if (!isSessionActiveRef.current) return;
+            rateLimitApology.dismiss();
             greetingAudioSeenRef.current = true;
             playAudio(message.delta);
         },
         onReceivedInputAudioBufferSpeechStarted: () => {
             // User speech detected - stop AI playback (barge-in) and unmute mic
             stopAudioPlayer();
+            rateLimitApology.dismiss();
             if (isAiSpeakingRef.current) {
                 isAiSpeakingRef.current = false;
                 unmuteAudioRecording();
@@ -213,8 +275,51 @@ function McDonaldsApp() {
                 console.log("Final Total:", orderSummary.finalTotal);
             }
         },
-        onReceivedSessionMetadata: handleSessionIdentifiers,
+        onReceivedSessionMetadata: message => {
+            resumedSessionRef.current = false;
+            handleSessionIdentifiers(message);
+        },
+        onReceivedSessionResumed: (message: ExtensionSessionResumed) => {
+            // Same shape as a tool result: the ticket comes back exactly as it was.
+            setOrder(message.order_summary);
+            handleSessionIdentifiers({
+                type: "extension.round_trip_token",
+                sessionToken: message.session_token,
+                roundTripIndex: message.round_trip_index,
+                roundTripToken: message.round_trip_token
+            });
+            serverSessionLostRef.current = false;
+            resumedSessionRef.current = true;
+            const wasActive = resumePendingRef.current === true;
+            resumePendingRef.current = null;
+            if (isSessionActiveRef.current) {
+                // The guest tapped while we were reconnecting; that conversation carries
+                // on. The server suppresses the greeting on a resume, so open the mic now.
+                startMicAfterGreeting();
+                flashResumedNotice();
+            } else if (wasActive) {
+                void resumeConversation();
+            } else {
+                setConnectionNotice(message.order_summary.items.length > 0 ? "tapToResume" : null);
+            }
+        },
+        onReceivedResumeRejected: ({ reason }) => {
+            console.warn(`[WS] Order resume rejected (${reason}); starting a fresh order`);
+            resumedSessionRef.current = false;
+            const wasPending = resumePendingRef.current !== null;
+            resumePendingRef.current = null;
+            const hadItems = orderItemCountRef.current > 0;
+            setOrder(initialOrder);
+            if (isSessionActiveRef.current) return; // the guest's own tap already started the fresh session
+            serverSessionLostRef.current = true;
+            if (wasPending || hadItems) setConnectionNotice("resumeRejected");
+        },
         onReceivedRoundTripToken: handleSessionIdentifiers,
+        onReceivedExtensionRateLimited: message => {
+            rateLimitApology.onRateLimited(message);
+            // Gave up on a rate-limited greeting: open the mic so the guest can start.
+            if (message.final) startMicAfterGreeting();
+        },
         onReceivedInputAudioTranscriptionCompleted: message => {
             const newTranscriptItem = {
                 text: message.transcript,
@@ -240,23 +345,7 @@ function McDonaldsApp() {
                 unmuteAudioRecording();
             }
 
-            if (awaitingGreetingDoneRef.current && isSessionActiveRef.current) {
-                awaitingGreetingDoneRef.current = false;
-
-                if (!startMicInFlightRef.current) {
-                    startMicInFlightRef.current = (async () => {
-                        // If we received audio deltas for the greeting, wait until playback drains.
-                        if (greetingAudioSeenRef.current) {
-                            await waitForAudioDrain(2000);
-                        }
-
-                        if (!isSessionActiveRef.current) return;
-                        await startAudioRecording();
-                    })().finally(() => {
-                        startMicInFlightRef.current = null;
-                    });
-                }
-            }
+            startMicAfterGreeting();
         }
     });
 
@@ -318,13 +407,111 @@ function McDonaldsApp() {
         onBargeIn: handleBargeIn
     });
 
+    const rateLimitApology = useRateLimitApology({
+        isSessionActiveRef,
+        isAiSpeakingRef,
+        mute: muteAudioRecording,
+        unmute: unmuteAudioRecording,
+        getLanguage: () => i18n.resolvedLanguage || i18n.language
+    });
+
+    const startMicAfterGreeting = () => {
+        if (!awaitingGreetingDoneRef.current || !isSessionActiveRef.current) return;
+        awaitingGreetingDoneRef.current = false;
+        if (startMicInFlightRef.current) return;
+        startMicInFlightRef.current = (async () => {
+            // If we received audio deltas for the greeting, wait until playback drains.
+            if (greetingAudioSeenRef.current) {
+                await waitForAudioDrain(2000);
+            }
+
+            if (!isSessionActiveRef.current) return;
+            await startAudioRecording();
+        })().finally(() => {
+            startMicInFlightRef.current = null;
+        });
+    };
+
+    const stopConversation = async () => {
+        await stopAudioRecording();
+        console.log("[MIC] Audio recording stopped");
+        stopAudioPlayer();
+        rateLimitApology.dismiss();
+        isSessionActiveRef.current = false;
+        isAiSpeakingRef.current = false;
+        awaitingGreetingDoneRef.current = false;
+        if (useAzureSpeechOn) {
+            azureSpeech.inputAudioBufferClear();
+        } else {
+            realtime.inputAudioBufferClear();
+        }
+        setIsRecording(false);
+    };
+
+    // Mid-conversation drop, resumed: pick the conversation straight back up.
+    // The voice is re-sent first (it configures each upstream session), then
+    // session.update (the server suppresses the greeting), and the mic restarts
+    // without a tap when the browser allows it.
+    const resumeConversation = async () => {
+        isSessionActiveRef.current = true;
+        isAiSpeakingRef.current = false;
+        awaitingGreetingDoneRef.current = false;
+        greetingAudioSeenRef.current = false;
+        setIsRecording(true);
+        realtime.sendVoiceChoice(voiceChoice);
+        realtime.startSession();
+        if (verboseLogging) {
+            realtime.sendVerboseLogging(true);
+            if (logToFile) realtime.sendLogToFile(true);
+        }
+        let micStarted = false;
+        try {
+            micStarted = await startAudioRecording();
+        } catch (error) {
+            console.warn("[MIC] Mic could not restart after reconnect:", error);
+        }
+        if (!isSessionActiveRef.current) return;
+        if (!micStarted) {
+            // Needs a user gesture (suspended AudioContext / permission prompt).
+            await stopConversation();
+            setConnectionNotice("tapToResume");
+            return;
+        }
+        flashResumedNotice();
+    };
+
+    // Cloud realtime only: drop this order server-side and start clean.
+    const startNewOrder = async () => {
+        if (isRecording) await stopConversation();
+        realtime.endSession();
+        resumePendingRef.current = null;
+        resumedSessionRef.current = false;
+        serverSessionLostRef.current = false;
+        setOrder(initialOrder);
+        setTranscripts([]);
+        setSessionIdentifiers(null);
+        setTokenHistory([]);
+        setConnectionNotice(null);
+    };
+
     const onToggleListening = async () => {
         console.log("[MIC] Toggle clicked. isRecording:", isRecording, "localMode:", localMode, "readyState:", realtime.readyState);
         console.log("[WS-DIAG] Mic clicked, readyState:", readyStateLabel(realtime.readyState), "wsEndpoint:", realtime.wsEndpoint);
 
         if (!isRecording) {
-            // Check WebSocket connection before proceeding
-            if (realtime.readyState !== ReadyState.OPEN) {
+            const cloudRealtime = !localMode && !useAzureSpeechOn;
+            // A resumed session carries on: no greeting, and the ticket stays.
+            const continuing = cloudRealtime && resumedSessionRef.current && !serverSessionLostRef.current;
+            // Check WebSocket connection before proceeding. After an idle close or
+            // exhausted retries the cloud socket is parked on purpose: reopen it with
+            // a fresh token; startSession() below is queued until it opens.
+            if (cloudRealtime && realtime.needsReconnect) {
+                console.log("[WS] Socket parked (idle close / retries exhausted) — reconnecting");
+                void realtime.reconnect();
+            } else if (cloudRealtime && resumePendingRef.current !== null) {
+                // Mid-resume: the hook holds these frames until the socket reopens.
+                console.log("[WS] Reconnecting to resume the order — tap queued");
+            } else if (realtime.readyState !== ReadyState.OPEN) {
                 const errorMsg = localMode
                     ? "Cannot connect to local server. Is the backend running?"
                     : "WebSocket not connected. Please check your connection and try again.";
@@ -336,12 +523,17 @@ function McDonaldsApp() {
 
             console.log("[MIC] Starting session...", localMode ? "(local mode)" : "(cloud mode)");
             dismissAllToasts();
-            setSessionIdentifiers(null);
+            if (!continuing) setSessionIdentifiers(null);
+            setConnectionNotice(null);
+            if (cloudRealtime && serverSessionLostRef.current) {
+                serverSessionLostRef.current = false;
+                setOrder(initialOrder);
+            }
 
             // Start session and playback immediately, but delay mic capture until the greeting finishes.
             isSessionActiveRef.current = true;
             isAiSpeakingRef.current = false;
-            awaitingGreetingDoneRef.current = !useAzureSpeechOn;
+            awaitingGreetingDoneRef.current = !useAzureSpeechOn && !continuing;
             greetingAudioSeenRef.current = false;
 
             await resetAudioPlayer();
@@ -374,37 +566,37 @@ function McDonaldsApp() {
                     }
                 }
 
+                if (continuing && !startMicInFlightRef.current) {
+                    // Resumed session: no greeting is coming.
+                    startMicInFlightRef.current = startAudioRecording()
+                        .then(() => undefined)
+                        .finally(() => {
+                            startMicInFlightRef.current = null;
+                        });
+                }
+
                 // Safety: if we never receive the greeting completion, start the mic after a short timeout.
                 window.setTimeout(() => {
                     if (!isSessionActiveRef.current) return;
                     if (!awaitingGreetingDoneRef.current) return;
+                    // A rate-limited greeting is being retried; its response.done (or the final notice) opens the mic.
+                    if (rateLimitApology.isRecovering()) return;
                     awaitingGreetingDoneRef.current = false;
                     if (startMicInFlightRef.current) return;
-                    startMicInFlightRef.current = startAudioRecording().finally(() => {
-                        startMicInFlightRef.current = null;
-                    });
+                    startMicInFlightRef.current = startAudioRecording()
+                        .then(() => undefined)
+                        .finally(() => {
+                            startMicInFlightRef.current = null;
+                        });
                 }, 3500);
             }
 
             setIsRecording(true);
         } else {
             console.log("[MIC] Stopping session...");
-            await stopAudioRecording();
-            console.log("[MIC] Audio recording stopped");
-            stopAudioPlayer();
-            isSessionActiveRef.current = false;
-            isAiSpeakingRef.current = false;
-            awaitingGreetingDoneRef.current = false;
-            if (useAzureSpeechOn) {
-                azureSpeech.inputAudioBufferClear();
-            } else {
-                realtime.inputAudioBufferClear();
-            }
-            setIsRecording(false);
+            await stopConversation();
         }
     };
-
-    const { t } = useTranslation();
 
     useEffect(() => {
         const checkMobile = () => {
@@ -539,7 +731,12 @@ function McDonaldsApp() {
                                         </>
                                     )}
                                 </Button>
-                                <StatusMessage isRecording={isRecording} />
+                                <StatusMessage isRecording={isRecording} notice={connectionNotice} busyNotice={rateLimitApology.notice} />
+                                {!useDummyData && !localMode && !useAzureSpeechOn && order.items.length > 0 && (
+                                    <Button variant="ghost" size="sm" onClick={startNewOrder} className="text-xs text-muted-foreground">
+                                        {t("app.newOrder")}
+                                    </Button>
+                                )}
                                 {localMode && (
                                     <div className="mt-2 max-w-xs text-center font-mono text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
                                         <div>

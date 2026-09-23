@@ -60,10 +60,10 @@ class CreateAppConfigTests(unittest.IsolatedAsyncioTestCase):
             await create_app()
             return mock_cls, mock_instance
 
-    async def test_default_voice_is_coral(self):
+    async def test_default_voice_is_marin(self):
         mock_cls, _ = await self._run_create_app()
         _, kwargs = mock_cls.call_args
-        self.assertEqual(kwargs["voice_choice"], "coral")
+        self.assertEqual(kwargs["voice_choice"], "marin")
 
     async def test_system_prompt_contains_mcdonalds_closing(self):
         _, mock_instance = await self._run_create_app()

@@ -42,3 +42,23 @@
 - **Decisions Merged:** #40–#41 captured (offline mode documentation, user directives)
 - **Links:** Piper voices reference (huggingface.co/rhasspy/piper-voices), Azure Local compatibility callout
 - **Next:** Documentation complete, ready for user guidance and deployment guides
+
+## Sonic parity review — feat/sonic-parity (2026-09-22)
+- Items 1–7 landed as separate commits on the cloud realtime path only; local mode (Phi-4/Piper) untouched except for the shared browser hook (keep=false plus 4000 handling, harmless for local).
+- Silent-model flags (raised by the brief): (1) FIXED — a tool exception used to escape `response.output_item.done` and kill the session with no function_call_output; it now returns an apology result. (2) OPEN — `tools.search`: only `search_client.search()` is guarded, so pager iteration and the semantic retry can raise (now caught by the seam with a generic apology). (3) OPEN — `response.done status=failed` (e.g. rate limit on the shared deployment) is relayed silently, with no retry or apology. (4) OPEN — local/test sockets (processor_router L306/L357/L376, app.py ws_test_handler) keep the aiohttp default compress=True (aiohttp#13274).
+- Shared OpenAI: provision with reuse=true touches rg-sonic-demo only through two already-existing role assignments; it declares no deployments.
+
+## Round 3 review — feat/round3 (2026-09-23)
+- One commit per item: L1 (local-mode socket compression + AST guard), dz reasoning-name test, R3 (i18n template sweep + guard), R2 (verbatim smoke transcription + tenant-pinned auth) + two follow-up fixes, R1 backend / frontend / clips, docs. Nothing pushed, merged or deployed.
+- Reviewed R1 for talk-over risk: every retry path is cancelled by guest speech; the clip is played with the mic muted so it can't cancel the retry itself; `final` always reopens the mic. Local mode (Phi-4/Piper) doesn't emit `extension.rate_limited` and is otherwise untouched apart from L1.
+- Needs a deploy to confirm: real rate-limit event shapes and hint text on the shared deployment, clip playback + mute in a real browser, and the azd env — `mcd-demo` still has `AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime-2.1`, not the `-dz` deployment McDonald's is meant to use (Brian's call).
+- Still open from the Sonic-parity review: `tools.search` guards only `search_client.search()` (generic apology via the tool-error seam covers the rest). The docs heading "Customizing the VoiceRAG deployment" is a template leftover outside R3's i18n scope.
+- **Order resume port — review (2026-09-23, feat/order-resume):**
+  - Scope held to the cloud realtime path. Local (Phi-4/Piper) and Azure Speech modes are unchanged: their tests pass and they show no resume UI.
+  - Deltas from Sonic are documented in `docs/order_resume.md` ("How it maps onto McDonald's"): the router seam, R1 composition, the voice re-send, the held tap, no ctx_monitor feeding, and `resumeEnabled`.
+  - Only a deploy can confirm:
+    - the sticky affinity cookie on the ws upgrade;
+    - the session secret surviving provision;
+    - the real-browser mic auto-restart on the deployed origin.
+  - No push/merge/deploy.
+  - Closed: the 'Customizing the VoiceRAG deployment' template heading (and the other template-branded doc headings) was fixed in 9f28e0e, with a heading guard in test_rebrand_verification.

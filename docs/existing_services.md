@@ -1,9 +1,9 @@
-# Connecting VoiceRAG to existing services
+# Connecting the McDonald's AI Drive-Thru to existing services
 
-VoiceRAG can be connected to existing Azure services, such as Azure OpenAI and Azure Search. This guide will show you how to reuse existing services in your Azure subscription.
+The McDonald's AI Drive-Thru can be connected to existing Azure services, such as Azure OpenAI and Azure Search. This guide will show you how to reuse existing services in your Azure subscription.
 
 * [Reuse existing OpenAI real-time deployment](#reuse-existing-openai-real-time-deployment)
-* [Reuse existing index from azure-search-openai-demo](#reuse-existing-index-from-azure-search-openai-demo)
+* [Reuse an existing Azure AI Search index](#reuse-an-existing-azure-ai-search-index)
 
 ## Reuse existing OpenAI real-time deployment
 
@@ -33,9 +33,9 @@ Run these commands _before_ running `azd up`:
     azd env set AZURE_OPENAI_REALTIME_DEPLOYMENT <YOUR_REALTIME_DEPLOYMENT_NAME>
     ```
 
-## Reuse existing index from azure-search-openai-demo
+## Reuse an existing Azure AI Search index
 
-If you are using the popular RAG solution [azure-search-openai-demo](https://www.github.com/Azure-samples/azure-search-openai-demo), you can connect VoiceRAG to the existing index by setting the following `azd` environment variables.
+If you are using the popular RAG solution [azure-search-openai-demo](https://www.github.com/Azure-samples/azure-search-openai-demo), you can connect the drive-thru to the existing index by setting the following `azd` environment variables.
 Run these commands _before_ running `azd up`.
 
 1. Run this command to ensure that the [infrastructure](../infra/main.bicep) does not make a brand new Azure Search service:
@@ -84,8 +84,8 @@ Alternatively, you can first test the solution locally with the `azure-search-op
 ```bash
 AZURE_TENANT_ID=<YOUR-TENANT-ID>
 AZURE_OPENAI_EASTUS2_ENDPOINT=https://<YOUR_OPENAI_ENDPOINT>.openai.azure.com
-AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-4o-realtime-preview
-AZURE_OPENAI_REALTIME_VOICE_CHOICE=<choose one: echo, alloy, shimmer>
+AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime-2.1
+AZURE_OPENAI_REALTIME_VOICE_CHOICE=<choose one: marin (default), cedar, alloy, ash, ballad, coral, echo, sage, shimmer, verse>
 AZURE_SEARCH_ENDPOINT=https://<YOUR_SEARCH_SERVICE>.search.windows.net
 AZURE_SEARCH_INDEX=gptkbindex
 AZURE_SEARCH_SEMANTIC_CONFIGURATION=default
@@ -95,4 +95,4 @@ AZURE_SEARCH_TITLE_FIELD=sourcepage
 AZURE_SEARCH_EMBEDDING_FIELD=embedding
 ```
 
-Then follow the steps in the project's [README](../README.md@#development-server) to run the app locally.
+Then follow the steps in the project's [README](../README.md#running-the-app-locally) to run the app locally.
