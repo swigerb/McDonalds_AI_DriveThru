@@ -108,3 +108,6 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 
 ## Sonic parity — item 7 mutation check (2026-09-22)
 - 9 mutants (main.parameters.json ×3, main.bicep ×5, azure.yaml ×1), 9 killed — incl. un-conditioning the openAi module, flipping the reuse default, and adding a non-role declaration scoped to the shared OpenAI RG. New tests fail 4/6 against the pre-fix parameters file (stash check).
+
+## Round 3 — L1 mutation check (2026-09-23)
+- 10 mutants (processor_router ×6, app.py ×2, rtmt ×2), 10 killed. The behavioural test alone (AST scan deselected) kills `compress=True` on the local fast path — it reproduces the real 1002, not just the kwarg. The scan asserts it found >= 6 constructions so an empty scan can't pass.

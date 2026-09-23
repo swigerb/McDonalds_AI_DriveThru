@@ -58,7 +58,8 @@ search:
 
 connection:
   ws_heartbeat_seconds: 15.0
-  # permessage-deflate on the browser websocket (cloud path). Keep false: aiohttp
+  # permessage-deflate on every browser websocket (cloud /realtime, local-mode /realtime,
+  # /api/ws-test). Keep false: aiohttp
   # 3.14.2/3.14.3 reject the first compressed frame after an initial PONG
   # (aio-libs/aiohttp#13274) with 1002 "non-zero reserved bits", and base64 PCM only
   # deflates ~33% for ~5x the socket CPU. Revisit once a fixed aiohttp ships.
