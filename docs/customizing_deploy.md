@@ -75,3 +75,27 @@ for you..." fails the check instead of passing on a keyword.
   `az` for that subscription, then `azd` and `az` pinned to that tenant, and reports every failure if all fail.
 - Skip it: `azd env set MCD_SKIP_REALTIME_SMOKE true`.
 - Local mode (Phi-4/Piper) is not checked; it never talks to Azure OpenAI.
+
+## Rate-limit recovery
+
+When the realtime deployment is out of quota for a moment (an `error` whose code or type contains `rate_limit`,
+or a `response.done` with `status: failed` for that reason) the middle tier retries the reply instead of leaving
+the guest in silence (`app/backend/rate_limit.py`):
+
+1. First hit: a silent `response.create` retry after `retry_delay_seconds` (1.5 s), or the service's "try again in
+   N s" hint clamped to 0.5-5 s.
+2. Second hit: the browser gets `extension.rate_limited` and plays a short local apology clip ("Sorry, give me just
+   a second.") with the mic muted, and the middle tier retries once more after `second_retry_delay_seconds` (4 s,
+   hint clamped to 2-8 s).
+3. After `max_retries` (2): `extension.rate_limited` with `final: true`; the guest sees "please say that again" and
+   the mic reopens. Nothing more is retried.
+
+Guest speech (barge-in) or any new response cancels a pending retry and resets the ladder, so a retry never talks
+over the guest. Rate limits on a `session.update` keep the minimal-update fallback above. Settings live under
+`resilience.rate_limit` in `app/backend/config.yaml`; `RATE_LIMIT_RECOVERY_ENABLED=false` turns it off.
+
+The clips are `app/frontend/public/audio/rate-limit-apology-<lang>.wav`, one per UI locale (en, es, fr, ja; any
+other UI language plays English). They are pre-recorded because the model is the thing that is rate-limited.
+Regenerate them after a voice change with `python scripts/generate_apology_clips.py [--deployment <name>] [--voice
+marin]`; it reads each clip back through whisper-1 so you can check the wording. Adding a UI locale needs a phrase
+in that script and in `src/lib/rate-limit-apology.ts` (`tests/test_apology_clips.py` fails until it has a clip).
