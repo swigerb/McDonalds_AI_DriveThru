@@ -37,6 +37,7 @@ from audio_pipeline import (
     MARKER_SESSION_UPDATED as _MARKER_SESSION_UPDATED,
     MARKER_SET_VOICE as _MARKER_SET_VOICE,
     MARKER_SPEECH_STARTED as _MARKER_SPEECH_STARTED,
+    MARKER_TRANSCRIPTION_COMPLETED as _MARKER_TRANSCRIPTION_COMPLETED,
     MARKER_VERBOSE_LOGGING as _MARKER_VERBOSE_LOGGING,
     RESPONSE_CREATE_MSG as _RESPONSE_CREATE_MSG,
     TYPE_RE as _TYPE_RE,
@@ -1025,8 +1026,11 @@ class RTMiddleTier:
                     nonlocal verbose, audio_frame_count, session_file_handler
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
-                            # Track activity for idle timeout
-                            if session_id:
+                            # Guest activity drives the idle clock. Mic frames stream
+                            # constantly (silence included), so they don't count; the
+                            # guest actually speaking does (speech_started/transcripts
+                            # from upstream).
+                            if session_id and _MARKER_AUDIO_APPEND not in msg.data:
                                 self._sessions.touch_activity(session_id)
                             # Intercept extension messages — don't forward to OpenAI
                             if _MARKER_VERBOSE_LOGGING in msg.data:
@@ -1146,6 +1150,10 @@ class RTMiddleTier:
                             elif _MARKER_SPEECH_STARTED in data:
                                 echo.on_speech_started(verbose)
                                 recovery.cancel("the guest started speaking")
+                                if session_id:
+                                    self._sessions.touch_activity(session_id)
+                            elif _MARKER_TRANSCRIPTION_COMPLETED in data and session_id:
+                                self._sessions.touch_activity(session_id)
                             elif _MARKER_RESPONSE_CREATED in data:
                                 recovery.on_response_created()
 
@@ -1193,7 +1201,10 @@ class RTMiddleTier:
                     if session_file_handler is not None:
                         _remove_verbose_file_handler(session_file_handler)
                         session_file_handler = None
-                    self._sessions.cleanup_session(ws, session_id)
+                    # A transport close holds the order for the resume grace period
+                    # (an idle close already ended the session, so this is a no-op then).
+                    # recovery.close() above has cancelled any pending rate-limit retry.
+                    self._sessions.detach_session(ws, session_id, reason=f"client close code={ws.close_code}")
 
     async def _websocket_handler(self, request: web.Request):
         # ── Origin validation ──
@@ -1258,6 +1269,11 @@ class RTMiddleTier:
                     })
                 except Exception:
                     pass
+        finally:
+            # Covers an upstream connect failure, which never reaches the
+            # forwarder's own finally. A no-op if that already ran.
+            self._sessions.detach_session(ws, self._sessions.get_session_id(ws),
+                                          reason=f"handler exit code={ws.close_code}")
         return ws
     
     def attach_to_app(self, app: web.Application, path: str) -> None:
