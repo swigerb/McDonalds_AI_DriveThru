@@ -215,7 +215,7 @@ The entire round trip — guest speech → AI understanding → tool execution �
 
 > **Note:** This demo uses sample McDonald's menu data (172 items) for demonstration purposes. All prices, promotions, and machine statuses are simulated to showcase the agentic architecture capabilities.
 
-- **Voice picker**: The settings dialog exposes ten GA realtime voices (alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar) with short descriptors. Changing it takes effect on the live conversation without a redeploy — the choice is persisted in the browser and sent to the middle tier, which reissues a `session.update` with the voice at `audio.output.voice`. The initial default comes from `model.default_voice` in `app/backend/config.yaml`.
+- **Voice picker**: The settings dialog exposes all ten GA realtime voices (marin and cedar — OpenAI's recommended voices — plus alloy, ash, ballad, coral, echo, sage, shimmer, verse), listed in `app/frontend/src/lib/voices.ts`. The default is **marin** (`model.default_voice` in `app/backend/config.yaml`, `DEFAULT_VOICE` in `voices.ts`). The choice is persisted in the browser and sent to the middle tier, which reissues a `session.update` with the voice at `audio.output.voice`. The service locks the voice once the crew member has spoken, so a change made mid-conversation applies from the next conversation.
 ### Architecture Diagram
 
 The `RTClient` in the frontend receives the audio input, sends that to the Python backend which uses an `RTMiddleTier` object to interface with the Azure OpenAI Realtime API, and includes a tool for searching Azure AI Search.
@@ -491,7 +491,7 @@ Local Mode delivers a complete AI drive-thru experience on consumer hardware. Th
 | **Speech Understanding** | Azure OpenAI GPT-4o Realtime | Phi-4-mini-instruct (ONNX INT4) |
 | **Customer Transcription** | Whisper-1 (via Azure OpenAI) | Whisper base.en (CPU) |
 | **Text Generation** | GPT-4o Realtime | Phi-4-mini-instruct (ONNX INT4) |
-| **Voice Synthesis** | Azure OpenAI voices (shimmer, coral, etc.) | Piper TTS (Amy, en_US, 0.7 length_scale) |
+| **Voice Synthesis** | Azure OpenAI voices (marin, cedar, shimmer, etc.) | Piper TTS (Amy, en_US, 0.7 length_scale) |
 | **Menu Search** | Azure AI Search (semantic + vector) | Local in-memory search (keyword matching) |
 | **Order Management** | Same | Same (runs locally in both modes) |
 

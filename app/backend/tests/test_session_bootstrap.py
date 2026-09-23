@@ -522,6 +522,48 @@ class ReasoningAndTranscriptionConfigTests(unittest.TestCase):
         self.assertNotIn("gpt-realtime-1.5", bicep)
 
 
+class VoiceParityTests(unittest.TestCase):
+    """marin default + all ten GA voices, kept in sync across backend, frontend and infra."""
+
+    GA_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"}
+    ROOT = Path(__file__).resolve().parents[3]
+
+    def _voices_ts(self):
+        return (self.ROOT / "app" / "frontend" / "src" / "lib" / "voices.ts").read_text(encoding="utf-8")
+
+    def test_backend_whitelist_is_exactly_the_ga_voices(self):
+        from rtmt import GA_REALTIME_VOICES
+        self.assertEqual(set(GA_REALTIME_VOICES), self.GA_VOICES)
+        self.assertEqual(len(GA_REALTIME_VOICES), len(self.GA_VOICES))
+
+    def test_voice_picker_offers_exactly_the_ga_voices(self):
+        import re
+        offered = re.findall(r'\{ value: "([a-z]+)"', self._voices_ts())
+        self.assertEqual(set(offered), self.GA_VOICES)
+        self.assertEqual(len(offered), len(self.GA_VOICES), "duplicate voice in the picker")
+
+    def test_marin_is_the_default_everywhere(self):
+        import re
+
+        import yaml
+
+        from rtmt import DEFAULT_VOICE
+        cfg = yaml.safe_load((self.ROOT / "app" / "backend" / "config.yaml").read_text(encoding="utf-8"))
+        frontend_default = re.search(r'DEFAULT_VOICE = "([a-z]+)"', self._voices_ts()).group(1)
+        params = json.loads((self.ROOT / "infra" / "main.parameters.json").read_text(encoding="utf-8"))
+        infra_default = params["parameters"]["openAiRealtimeVoiceChoice"]["value"]
+        self.assertEqual(
+            {"config.yaml": cfg["model"]["default_voice"], "rtmt": DEFAULT_VOICE,
+             "voices.ts": frontend_default, "main.parameters.json": infra_default},
+            {"config.yaml": "marin", "rtmt": "marin", "voices.ts": "marin",
+             "main.parameters.json": "${AZURE_OPENAI_REALTIME_VOICE_CHOICE=marin}"},
+        )
+
+    def test_app_fallback_voice_is_marin(self):
+        source = (self.ROOT / "app" / "backend" / "app.py").read_text(encoding="utf-8")
+        self.assertIn('model_cfg.get("default_voice", "marin")', source)
+
+
 class BuildSessionTests(unittest.TestCase):
 
     def _rtmt(self):

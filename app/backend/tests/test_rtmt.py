@@ -979,16 +979,16 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("tools", sent[0]["session"])
 
     async def test_each_valid_voice_accepted(self):
-        """All 8 valid voice names are accepted and update voice_choice."""
-        for voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+        """All 10 GA voice names are accepted and update voice_choice."""
+        for voice in ("marin", "cedar", "shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
             with self.subTest(voice=voice):
                 msg = json.dumps({"type": "extension.set_voice", "voice": voice})
                 rtmt, _ = await self._run_voice_scenario(msg)
                 self.assertEqual(rtmt.voice_choice, voice)
 
     async def test_each_valid_voice_mid_session(self):
-        """All 8 valid voice names send session.update when mid-session."""
-        for voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+        """All 10 GA voice names send session.update when mid-session."""
+        for voice in ("marin", "cedar", "shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
             with self.subTest(voice=voice):
                 msg = json.dumps({"type": "extension.set_voice", "voice": voice})
                 rtmt, target_ws = await self._run_voice_scenario(msg, pre_session_update=True)
@@ -1000,11 +1000,11 @@ class VoiceChangeLiveTests(unittest.IsolatedAsyncioTestCase):
                                       or s.get("session", {}).get("voice") == voice)]
                 self.assertTrue(len(voice_updates) >= 1, f"Expected session.update with voice={voice}")
 
-    async def test_missing_voice_key_defaults_to_shimmer(self):
-        """When voice key is absent, defaults to shimmer (valid)."""
+    async def test_missing_voice_key_defaults_to_marin(self):
+        """When voice key is absent, defaults to marin (the shipped default)."""
         msg = json.dumps({"type": "extension.set_voice"})
-        rtmt, _ = await self._run_voice_scenario(msg)
-        self.assertEqual(rtmt.voice_choice, "shimmer")
+        rtmt, _ = await self._run_voice_scenario(msg, initial_voice="shimmer")
+        self.assertEqual(rtmt.voice_choice, "marin")
 
 
 if __name__ == "__main__":

@@ -251,6 +251,13 @@ def _strip_output_voice(ga_session: dict) -> bool:
     return True
 
 
+# Every built-in voice gpt-realtime-2.1 (and 1.5) accepts for audio.output.voice;
+# the service lists exactly these ten when it rejects anything else (fable, onyx,
+# nova...). Keep in sync with app/frontend/src/lib/voices.ts.
+GA_REALTIME_VOICES = ("marin", "cedar", "shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo")
+# OpenAI's recommended voice; keep in sync with config.yaml model.default_voice.
+DEFAULT_VOICE = "marin"
+
 # Values accepted by gpt-realtime-2.1 for `reasoning.effort` (probed live 2026-09-22).
 REASONING_EFFORTS = frozenset({"none", "minimal", "low", "medium", "high", "xhigh"})
 # Config values that mean "do not send `reasoning` at all".
@@ -865,8 +872,8 @@ class RTMiddleTier:
                                 try:
                                     ext_msg = json.loads(msg.data)
                                     if ext_msg.get("type") == "extension.set_voice":
-                                        new_voice = ext_msg.get("voice", "shimmer")
-                                        if new_voice in ("shimmer", "ash", "ballad", "coral", "sage", "verse", "alloy", "echo"):
+                                        new_voice = ext_msg.get("voice", DEFAULT_VOICE)
+                                        if new_voice in GA_REALTIME_VOICES:
                                             previous_voice = self.voice_choice
                                             self.voice_choice = new_voice
                                             logger.info("[VOICE] Voice change request: %s → %s (session %s)", previous_voice, new_voice, session_id)

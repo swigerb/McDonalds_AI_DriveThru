@@ -90,3 +90,7 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 
 ## Sonic parity — item 2 mutation check (2026-09-22)
 - 13 mutants on rtmt.py / app.py / config.yaml / main.bicep, 13 killed. 2i ("off" not treated as a disabled value) first SURVIVED — it was only visible as a spurious warning — so added `test_off_is_a_documented_value_not_a_typo` (assertNoLogs) and it was killed.
+
+## Sonic parity — item 3 mutation check (2026-09-22)
+- 14 mutants (voices.ts ×6 incl. BE-side parity checks, settings.tsx, App.tsx, rtmt ×3, config.yaml, main.parameters.json, app.py), 14 killed. App.tsx seed covered by an `?raw` source assertion in voice-picker.test.tsx (rendering App is too heavy for a unit test).
+- Runner fix: subprocess output decoded as utf-8 (vitest prints ✓/×; cp1252 crashed the runner).

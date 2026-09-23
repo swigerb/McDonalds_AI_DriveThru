@@ -256,7 +256,7 @@ async def create_app() -> web.Application:
                 credentials=llm_credential,
                 endpoint=llm_endpoint,
                 deployment=llm_deployment,
-                voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
+                voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "marin"),
                 prompt_loader=prompt_loader,
             )
             rtmt.app_secret = app_secret

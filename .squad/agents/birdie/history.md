@@ -145,3 +145,8 @@ _No sessions yet._
 - All 15 tests pass, `tsc -b` clean, `npm run build` succeeds
 - CSS size: 39.36 kB → 56.05 kB (Tailwind 4 includes more utilities by default; gzip 7.83→10.07 kB)
 - McDonald's brand vars (--brand-red, #FFBC0D, #DB0007) confirmed in built CSS
+
+## Sonic parity — item 3: marin default + all ten GA voices (2026-09-22)
+- New `src/lib/voices.ts` (VOICE_OPTIONS ×10, DEFAULT_VOICE="marin", resolveVoice) is the single frontend list; settings.tsx renders the picker from it (was 6 hard-coded options, hiding marin/cedar/alloy/echo) and the "Default:" hint derives from it.
+- App.tsx seeds voiceChoice via `resolveVoice(localStorage…)` — a stale/unknown stored voice falls back to marin instead of the old hard-coded "shimmer". Important because McD's App sends extension.set_voice on every mic press, so the frontend default is what the guest actually hears.
+- Tests: `components/ui/__tests__/voice-picker.test.tsx` (ported from Sonic; McD needs MenuMode + LocalMode providers and the "AI Voice" label). Local (Piper) voice picker untouched.

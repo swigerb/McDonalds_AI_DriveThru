@@ -29,6 +29,7 @@ import { AzureSpeechProvider, useAzureSpeechOnContext } from "@/context/azure-sp
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { MenuModeProvider } from "@/context/menu-mode-context";
 import { LocalModeProvider, useLocalMode } from "@/context/local-mode-context";
+import { resolveVoice } from "@/lib/voices";
 
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
@@ -119,7 +120,7 @@ function McDonaldsApp() {
         return localStorage.getItem("verboseLogToFile") === "true";
     });
     const [voiceChoice, setVoiceChoice] = useState<string>(() => {
-        return localStorage.getItem("voiceChoice") || "shimmer";
+        return resolveVoice(localStorage.getItem("voiceChoice"));
     });
     const [piperVoice, setPiperVoice] = useState<string>(() => {
         return localStorage.getItem("piperVoice") || "en_US-amy-medium";

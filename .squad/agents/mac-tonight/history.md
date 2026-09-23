@@ -92,3 +92,7 @@
 - New `configure_realtime_model(rtmt, model_cfg, environ)` is the one seam app.py (and the item-5 smoke script) use: temperature/max tokens + `AZURE_OPENAI_REALTIME_{REASONING_EFFORT,REASONING_MODEL,TRANSCRIPTION_MODEL}` overrides of config.yaml.
 - config.yaml: `reasoning_effort: low` (Sonic's 174-trial benchmark), `reasoning_model: auto`, `parallel_tool_calls: null`, `transcription_model: whisper-1` (server-owned, overrides the browser's value; gpt-4o-transcribe needs a deployment).
 - Bicep: 3 optional params → env via `union()` so unset = config.yaml wins; wired through main.parameters.json + azure.yaml pipeline vars.
+
+## Sonic parity — item 3: backend voice whitelist (2026-09-22)
+- `rtmt.GA_REALTIME_VOICES` (10 voices) + `DEFAULT_VOICE="marin"` replace the inline 8-voice tuple in the extension.set_voice handler — marin/cedar were silently ignored before. Missing voice key now defaults to marin.
+- Default marin in config.yaml, app.py fallback, main.parameters.json, .env-sample. `VoiceParityTests` pins all four + voices.ts together.

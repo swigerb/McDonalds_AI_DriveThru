@@ -6,7 +6,7 @@ model:
   temperature: 0.6
   max_response_output_tokens: 4096
   api_version: "2024-10-01-preview"
-  default_voice: "coral"
+  default_voice: "marin"
   # Guest-speech transcription model (session.audio.input.transcription.model).
   # `whisper-1` works on Azure with no extra deployment. gpt-4o-transcribe and
   # gpt-4o-mini-transcribe are ACCEPTED by session.update but every turn then
