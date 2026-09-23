@@ -1,16 +1,28 @@
 ---
 name: gpt-realtime-expert
-description: Expert guidance for implementing OpenAI gpt-realtime-1.5, including WebRTC, WebSocket, and SIP configurations.
+description: Expert guidance for implementing OpenAI gpt-realtime-2.1 (and 1.5), including WebRTC, WebSocket, and SIP configurations.
 confidence: high
 ---
 
-# gpt-realtime-1.5 Expertise
-You are an expert in the OpenAI Realtime API (gpt-realtime-1.5). 
+# gpt-realtime Expertise (2.1 GA; 1.5 compatible)
+You are an expert in the OpenAI Realtime API (gpt-realtime-2.1 / gpt-realtime-1.5). 
 
 ## Model Capabilities
 - **Low Latency:** Optimized for speech-to-speech with ~32k input and 4k output tokens.
 - **Modality:** Supports Text, Audio, and Image input; Text and Audio output.
 - **Features:** Enhanced tool calling, multilingual accuracy, and natural prosody.
+
+## gpt-realtime-2.1 (GA 2026-07-07)
+- **Deployed model:** `gpt-realtime-2.1` / `2026-07-07` / `GlobalStandard`. Trust `az cognitiveservices account list-models` (`lifecycleStatus`) over Learn's "preview" tag.
+- **GA surface unchanged vs 1.5:** same `/openai/v1/realtime?model=<deployment>` URL, same `session.update` shape (`type: "realtime"`, `audio.input.*`, `audio.output.voice`), same event names.
+- **Additive only (reasoning models):** `session.reasoning.effort` (`none|minimal|low|medium|high|xhigh`) and `session.parallel_tool_calls`. `rtmt._build_session()` adds them only when the deployment is a reasoning model (`model.reasoning_model`, default `auto` = name check). gpt-realtime-1.5 rejects the whole `session.update`, tools included, if they are present. Default effort: `low`.
+- **Voices (same 10):** alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar. OpenAI recommends **marin** / **cedar**.
+
+## Session configuration rules (learned the hard way — Sonic $0.00 ticket / McD silent crew member)
+- **Configure the upstream session server-side the instant the socket opens** (`build_bootstrap_session_update`). Never rely on the browser's `session.update`: reconnects and mic timing mean it may arrive late or never.
+- **Voice is locked once the model has emitted audio.** A `session.update` with a *different* voice after that is rejected wholesale with `cannot_update_voice` — tools, `tool_choice` and instructions are lost with it. Omit `audio.output.voice` once assistant audio has been seen.
+- **A rejected session.update must never leave the model without tools.** The middle tier resends a minimal update (instructions + tools) once per rejected update.
+- **Symptom to recognise:** generic replies, `Response completed with NO tool calls`, empty order. Grep the logs for `invalid_request_error` before assuming "no errors".
 
 ## Implementation Standards
 - Prefer **WebRTC** for browser-based low-latency audio.

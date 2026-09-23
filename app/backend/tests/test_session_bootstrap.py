@@ -29,7 +29,7 @@ from aiohttp import WSMsgType, web
 from aiohttp.test_utils import TestClient, TestServer
 from azure.core.credentials import AzureKeyCredential
 
-from rtmt import RTMiddleTier, Tool
+from rtmt import RTMiddleTier, Tool, _to_ga_session
 
 SYSTEM_PROMPT = "You are a McDonald's drive-thru crew member."
 TOOL_NAMES = ["search", "update_order", "get_order", "reset_order"]
@@ -336,6 +336,190 @@ class SessionBootstrapTests(_RealtimeHarness):
                         timeline)
         self.assertEqual(self.fake.response_sessions[0]["tools"], TOOL_NAMES)
         await browser.close()
+
+
+class ReasoningAndTranscriptionConfigTests(unittest.TestCase):
+    """gpt-realtime-2.1 reasoning / transcription wiring (ported from Sonic).
+
+    A session.update the service rejects drops the tools with it, so anything
+    only a reasoning model accepts must never reach a non-reasoning deployment.
+    """
+
+    def _rtmt(self, deployment="gpt-realtime-2.1", **attrs):
+        rtmt = RTMiddleTier("https://fake.openai.azure.com", deployment, AzureKeyCredential("k"), voice_choice="marin")
+        rtmt.system_message = SYSTEM_PROMPT
+        rtmt.tools["update_order"] = Tool(target=MagicMock(), schema={"type": "function", "name": "update_order"})
+        for key, value in attrs.items():
+            setattr(rtmt, key, value)
+        return rtmt
+
+    def _bootstrap(self, rtmt):
+        return json.loads(rtmt.build_bootstrap_session_update())["session"]
+
+    def test_reasoning_not_sent_when_unconfigured(self):
+        session = self._bootstrap(self._rtmt())
+        self.assertNotIn("reasoning", session)
+        self.assertNotIn("parallel_tool_calls", session)
+
+    def test_reasoning_sent_on_a_reasoning_deployment(self):
+        session = self._bootstrap(self._rtmt(reasoning_effort="low", parallel_tool_calls=False))
+        self.assertEqual(session["reasoning"], {"effort": "low"})
+        self.assertIs(session["parallel_tool_calls"], False)
+        self.assertEqual(self._bootstrap(self._rtmt(reasoning_effort="none"))["reasoning"], {"effort": "none"})
+
+    def test_reasoning_reaches_every_session_update_path(self):
+        rtmt = self._rtmt(reasoning_effort="low")
+        payloads = [self._bootstrap(rtmt), rtmt._build_session({}), rtmt._build_session({}, voice_locked=True)]
+        for session in payloads:
+            self.assertEqual(session["reasoning"], {"effort": "low"})
+        # The picker's voice-only update is a partial merge; it must not re-send reasoning.
+        self.assertEqual(set(json.loads(rtmt.build_voice_update("marin"))["session"]), {"type", "audio"})
+
+    def test_rollback_to_1_5_never_sends_reasoning(self):
+        """1.5 rejects `reasoning` (any effort) and parallel_tool_calls=true -- with the tools."""
+        for deployment in ("gpt-realtime-1.5", "gpt-realtime", "gpt-realtime-2025-08-28", "gpt-realtime-mini",
+                           "gpt-4o-realtime-preview"):
+            with self.subTest(deployment=deployment):
+                rtmt = self._rtmt(deployment, reasoning_effort="high", parallel_tool_calls=True)
+                session = self._bootstrap(rtmt)
+                self.assertNotIn("reasoning", session)
+                self.assertNotIn("parallel_tool_calls", session)
+                self.assertEqual(session["tools"][0]["name"], "update_order")
+                self.assertFalse(rtmt.reasoning_enabled())
+
+    def test_deployment_name_check(self):
+        from rtmt import deployment_supports_reasoning
+        for name in ("gpt-realtime-2", "gpt-realtime-2.1", "GPT-Realtime-2.1", "mcd-crew-prod", "", None):
+            self.assertTrue(deployment_supports_reasoning(name), name)
+        for name in ("gpt-realtime-1.5", "gpt-realtime-1", "gpt-realtime", "gpt-realtime-2025-08-28",
+                     "gpt-realtime-mini-2025-10-06", "gpt-4o-realtime-preview"):
+            self.assertFalse(deployment_supports_reasoning(name), name)
+
+    def test_client_cannot_inject_reasoning(self):
+        rtmt = self._rtmt("gpt-realtime-1.5")
+        session = rtmt._build_session({"reasoning": {"effort": "high"}, "parallel_tool_calls": True})
+        self.assertNotIn("reasoning", session)
+        self.assertNotIn("parallel_tool_calls", session)
+        rtmt = self._rtmt("gpt-realtime-2.1", reasoning_effort="low")
+        session = rtmt._build_session({"reasoning": {"effort": "xhigh"}, "parallel_tool_calls": True})
+        self.assertEqual(session["reasoning"], {"effort": "low"})
+        self.assertNotIn("parallel_tool_calls", session)
+
+    def test_runtime_rejection_stops_reasoning(self):
+        rtmt = self._rtmt(reasoning_effort="low")
+        rtmt._reasoning_rejected = True
+        self.assertNotIn("reasoning", self._bootstrap(rtmt))
+        rtmt.reasoning_model = True                     # a live rejection beats the explicit switch
+        self.assertNotIn("reasoning", self._bootstrap(rtmt))
+
+    def test_explicit_reasoning_model_switch_beats_the_name_check(self):
+        from rtmt import configure_realtime_model
+        cases = [
+            # (deployment, config reasoning_model, env switch, reasoning sent?)
+            ("gpt-realtime-2.1", "auto", None, True),
+            ("gpt-realtime-1.5", "auto", None, False),
+            ("gpt-realtime-2.1", False, None, False),          # YAML `false`
+            ("gpt-realtime-2.1", "auto", "false", False),
+            ("mcd-crew-prod", "auto", None, True),             # unknown name: assumed reasoning (fallback guards it)
+            ("mcd-crew-prod", "auto", "false", False),
+            ("gpt-4o-crew", "auto", None, False),
+            ("gpt-4o-crew", "false", "true", True),           # env wins over config
+            ("gpt-realtime-1.5", True, "", True),              # empty env = use config
+            ("gpt-realtime-1.5", "bogus", None, False),        # unknown value = auto
+        ]
+        for deployment, cfg_switch, env_switch, sent in cases:
+            with self.subTest(deployment=deployment, cfg=cfg_switch, env=env_switch):
+                env = {} if env_switch is None else {"AZURE_OPENAI_REALTIME_REASONING_MODEL": env_switch}
+                rtmt = configure_realtime_model(
+                    self._rtmt(deployment), {"reasoning_effort": "low", "parallel_tool_calls": False,
+                                             "reasoning_model": cfg_switch}, environ=env)
+                session = self._bootstrap(rtmt)
+                self.assertEqual("reasoning" in session, sent)
+                self.assertEqual("parallel_tool_calls" in session, sent)
+                self.assertEqual(rtmt.reasoning_enabled(), sent)
+                self.assertEqual(session["tools"][0]["name"], "update_order")
+
+    def test_effort_off_or_empty_never_sends_reasoning_even_when_forced(self):
+        from rtmt import configure_realtime_model
+        for effort_cfg, effort_env in (("", None), ("off", None), ("low", "off"), (None, None)):
+            with self.subTest(cfg=effort_cfg, env=effort_env):
+                env = {"AZURE_OPENAI_REALTIME_REASONING_MODEL": "true"}
+                if effort_env is not None:
+                    env["AZURE_OPENAI_REALTIME_REASONING_EFFORT"] = effort_env
+                rtmt = configure_realtime_model(self._rtmt(), {"reasoning_effort": effort_cfg}, environ=env)
+                self.assertNotIn("reasoning", self._bootstrap(rtmt))
+                self.assertFalse(rtmt.reasoning_enabled())
+
+    def test_configure_realtime_model(self):
+        from rtmt import configure_realtime_model
+        cases = [
+            # (config, env, expected effort, expected transcription model)
+            ({}, {}, None, "whisper-1"),
+            ({"reasoning_effort": "low", "transcription_model": "gpt-4o-transcribe"}, {}, "low", "gpt-4o-transcribe"),
+            ({"reasoning_effort": "low"}, {"AZURE_OPENAI_REALTIME_REASONING_EFFORT": "medium"}, "medium", "whisper-1"),
+            ({"reasoning_effort": "low"}, {"AZURE_OPENAI_REALTIME_REASONING_EFFORT": "off"}, None, "whisper-1"),
+            ({"reasoning_effort": "low"}, {"AZURE_OPENAI_REALTIME_REASONING_EFFORT": ""}, "low", "whisper-1"),
+            ({"reasoning_effort": ""}, {}, None, "whisper-1"),
+            ({"reasoning_effort": False}, {}, None, "whisper-1"),      # YAML `off` parses to False
+            ({"reasoning_effort": "turbo"}, {}, None, "whisper-1"),
+            ({"transcription_model": "whisper-1"},
+             {"AZURE_OPENAI_REALTIME_TRANSCRIPTION_MODEL": "my-transcribe-deployment"}, None, "my-transcribe-deployment"),
+        ]
+        for cfg, env, effort, transcription in cases:
+            with self.subTest(cfg=cfg, env=env):
+                rtmt = configure_realtime_model(self._rtmt(), cfg, environ=env)
+                self.assertEqual(rtmt.reasoning_effort, effort)
+                self.assertEqual(rtmt.transcription_model, transcription)
+                session = self._bootstrap(rtmt)
+                self.assertEqual(session["audio"]["input"]["transcription"], {"model": transcription})
+                self.assertEqual(session.get("reasoning"), None if effort is None else {"effort": effort})
+
+    def test_off_is_a_documented_value_not_a_typo(self):
+        from rtmt import normalize_reasoning_effort
+        for value in ("off", "OFF", "disabled", "false", False, "null", ""):
+            with self.subTest(value=value), self.assertNoLogs("mcdonalds-drive-thru", level="WARNING"):
+                self.assertIsNone(normalize_reasoning_effort(value))
+        with self.assertLogs("mcdonalds-drive-thru", level="WARNING"):
+            self.assertIsNone(normalize_reasoning_effort("turbo"))
+
+    def test_client_transcription_model_is_overridden(self):
+        # The browser always asks for whisper-1; the server-side choice wins.
+        rtmt = self._rtmt(transcription_model="my-transcribe-deployment")
+        session = rtmt._build_session({"input_audio_transcription": {"model": "whisper-1"}})
+        self.assertEqual(session["audio"]["input"]["transcription"], {"model": "my-transcribe-deployment"})
+
+    def test_shipped_config_is_rollback_safe_and_uses_whisper(self):
+        import yaml
+
+        from rtmt import configure_realtime_model
+        cfg = yaml.safe_load((Path(__file__).resolve().parents[1] / "config.yaml").read_text(encoding="utf-8"))
+        model_cfg = cfg["model"]
+        self.assertEqual(model_cfg["transcription_model"], "whisper-1")
+        self.assertEqual(model_cfg["reasoning_model"], "auto")
+        self.assertEqual(model_cfg["reasoning_effort"], "low")
+        self.assertIsNone(model_cfg["parallel_tool_calls"])
+        rtmt = configure_realtime_model(self._rtmt("gpt-realtime-2.1"), model_cfg, environ={})
+        self.assertEqual(self._bootstrap(rtmt)["reasoning"], {"effort": "low"})
+        rtmt = configure_realtime_model(self._rtmt("gpt-realtime-1.5"), model_cfg, environ={})
+        session = self._bootstrap(rtmt)
+        self.assertNotIn("reasoning", session)
+        self.assertNotIn("parallel_tool_calls", session)
+
+    def test_reasoning_model_fields_survive_ga_translation(self):
+        session = _to_ga_session({"reasoning": {"effort": "low"}, "parallel_tool_calls": False, "temperature": 0.6})
+        self.assertEqual(session["reasoning"], {"effort": "low"})
+        self.assertIs(session["parallel_tool_calls"], False)
+        self.assertNotIn("temperature", session)
+
+    def test_app_wires_configure_realtime_model(self):
+        source = (Path(__file__).resolve().parents[1] / "app.py").read_text(encoding="utf-8")
+        self.assertIn("configure_realtime_model(rtmt, model_cfg)", source)
+
+    def test_template_deploys_gpt_realtime_2_1(self):
+        bicep = (Path(__file__).resolve().parents[3] / "infra" / "main.bicep").read_text(encoding="utf-8")
+        self.assertIn("name: 'gpt-realtime-2.1'", bicep)
+        self.assertIn("version: '2026-07-07'", bicep)
+        self.assertNotIn("gpt-realtime-1.5", bicep)
 
 
 class BuildSessionTests(unittest.TestCase):

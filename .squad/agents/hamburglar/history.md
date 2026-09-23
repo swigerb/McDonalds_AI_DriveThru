@@ -87,3 +87,6 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 ## Sonic parity — item 1 mutation checks (2026-09-22)
 - 7/7 mutants killed on rtmt.py bootstrap/voice-lock/greeting logic (no bootstrap frame, voice_locked ignored, picker not deferred, lock never set, bootstrap ack greets, greeting skips wait, bootstrap lacks transcription).
 - Strengthened greeting-wait test with a delayed session.updated ack + timeline so the ordering is actually observable.
+
+## Sonic parity — item 2 mutation check (2026-09-22)
+- 13 mutants on rtmt.py / app.py / config.yaml / main.bicep, 13 killed. 2i ("off" not treated as a disabled value) first SURVIVED — it was only visible as a spurious warning — so added `test_off_is_a_documented_value_not_a_typo` (assertNoLogs) and it was killed.

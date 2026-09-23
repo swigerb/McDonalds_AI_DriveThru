@@ -85,3 +85,10 @@
 - Replaced McD's old `session_configured` voice deferral (pre-session) with the voice-lock deferral: voice picker sends immediately (bootstrap already registered tools) unless assistant audio exists, then defers to next conversation.
 - Greeting: no longer fired by the (now bootstrap) session.updated; triggered by the browser's session.update and waits up to 5s for session.updated (reconciles decisions.md "session.updated not reliable" fallback).
 - Tests: tests/test_session_bootstrap.py (fake GA upstream harness, incl. McD's mic-press sequence set_voice→session.update). 2 obsolete deferral tests in test_rtmt.py updated to the new contract.
+
+## Sonic parity — item 2: gpt-realtime-2.1 + reasoning.effort (2026-09-22)
+- Template deploys `gpt-realtime-2.1` / `2026-07-07` / GlobalStandard (was 1.5). 1.5 stays a rollback via `AZURE_OPENAI_REALTIME_DEPLOYMENT`.
+- `reasoning`/`parallel_tool_calls` now pass `_to_ga_session`, but `_build_session` adds them ONLY when `_reasoning_model()` (runtime rejection > explicit `model.reasoning_model` > deployment-name regex). Client-supplied values are always stripped — 1.5 rejects the whole update (tools included) if they appear.
+- New `configure_realtime_model(rtmt, model_cfg, environ)` is the one seam app.py (and the item-5 smoke script) use: temperature/max tokens + `AZURE_OPENAI_REALTIME_{REASONING_EFFORT,REASONING_MODEL,TRANSCRIPTION_MODEL}` overrides of config.yaml.
+- config.yaml: `reasoning_effort: low` (Sonic's 174-trial benchmark), `reasoning_model: auto`, `parallel_tool_calls: null`, `transcription_model: whisper-1` (server-owned, overrides the browser's value; gpt-4o-transcribe needs a deployment).
+- Bicep: 3 optional params → env via `union()` so unset = config.yaml wins; wired through main.parameters.json + azure.yaml pipeline vars.

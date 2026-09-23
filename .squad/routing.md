@@ -11,7 +11,7 @@ How to decide who handles what.
 | Python backend, Azure OpenAI, AI Search, WebSockets | Grimace 🔧 | API endpoints, rtmt.py, tool calling, order state, speech SDK |
 | Tests, quality, edge cases | Hamburglar 🧪 | pytest, integration tests, test fixtures, coverage |
 | Bicep, Docker, azd, CI/CD, Azure resources | Mayor McCheese ⚙️ | Infrastructure, deployment, container config, dev containers |
-| OpenAI Realtime API, system prompts, VAD, voice AI | Mac Tonight 🤖 | gpt-realtime-1.5, session config, audio pipeline architecture, demo readiness |
+| OpenAI Realtime API, system prompts, VAD, voice AI | Mac Tonight 🤖 | gpt-realtime-2.1 (1.5 rollback), session config, audio pipeline architecture, demo readiness |
 | Code review | Ronald 🏗️ | Review PRs, check quality, suggest improvements |
 | Testing strategy | Hamburglar 🧪 | Write tests, find edge cases, verify fixes |
 | Scope & priorities | Ronald 🏗️ | What to build next, trade-offs, decisions |

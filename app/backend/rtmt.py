@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import re
 import time
 from enum import Enum
@@ -55,7 +56,8 @@ _conn_cfg = _cfg.get("connection", {})
 _security_cfg = _cfg.get("security", {})
 
 __all__ = ["RTMiddleTier", "RTToolCall", "Tool", "ToolResult", "ToolResultDirection",
-           "create_hmac_token", "validate_hmac_token"]
+           "configure_realtime_model", "create_hmac_token", "deployment_supports_reasoning",
+           "normalize_reasoning_effort", "parse_reasoning_model", "validate_hmac_token"]
 
 # Connection tuning constants
 _WS_HEARTBEAT_SEC = _conn_cfg.get("ws_heartbeat_seconds", 15.0)
@@ -132,10 +134,15 @@ class RTToolCall:
 # Session keys the GA realtime API accepts at the top level. Anything else that
 # the legacy (2024-10-01-preview) clients send is dropped, because GA rejects
 # unknown parameters outright instead of ignoring them.
+# `reasoning` ({effort}) and `parallel_tool_calls` exist only for reasoning
+# realtime models (gpt-realtime-2 / 2.1). gpt-realtime-1.5 rejects the whole
+# session.update if they are present, so RTMiddleTier only sets them when the
+# deployment is a reasoning model (see `RTMiddleTier._reasoning_model`).
 _GA_SESSION_TOP_LEVEL = frozenset({
     "type", "model", "instructions", "tools", "tool_choice",
     "max_output_tokens", "output_modalities", "audio", "tracing",
     "include", "prompt", "truncation",
+    "reasoning", "parallel_tool_calls",
 })
 
 # Legacy audio formats were bare strings ("pcm16"); GA expects an object.
@@ -244,6 +251,67 @@ def _strip_output_voice(ga_session: dict) -> bool:
     return True
 
 
+# Values accepted by gpt-realtime-2.1 for `reasoning.effort` (probed live 2026-09-22).
+REASONING_EFFORTS = frozenset({"none", "minimal", "low", "medium", "high", "xhigh"})
+# Config values that mean "do not send `reasoning` at all".
+_REASONING_DISABLED_VALUES = frozenset({"", "off", "disabled", "false", "null"})
+
+# Realtime model families that are NOT reasoning models. gpt-realtime-1.5 answers
+# `reasoning` (any effort, even "none") and `parallel_tool_calls: true` with
+# `invalid_value` "Unsupported option for this model" -- and drops the whole
+# session.update, tools included. The dated `gpt-realtime-2025-08-28` snapshot is
+# the original non-reasoning gpt-realtime, not gpt-realtime-2.
+_NON_REASONING_DEPLOYMENT_RE = re.compile(
+    r"^(gpt-4o.*|gpt-realtime(-mini.*|-1(\.\d+)?(-.*)?|-\d{4}-\d{2}-\d{2})?)$",
+    re.IGNORECASE,
+)
+
+
+def deployment_supports_reasoning(deployment: str | None) -> bool:
+    """Best-effort check from the deployment name, used only when
+    `model.reasoning_model` is "auto". azd names deployments after the model, so
+    a rollback to `gpt-realtime-1.5` is recognised. Unrecognised custom names
+    are assumed to support reasoning; if they don't, the rejected session.update
+    is caught by the fallback in RTMiddleTier and reasoning is switched off for
+    the rest of the process."""
+    if not isinstance(deployment, str) or not deployment.strip():
+        return True
+    return _NON_REASONING_DEPLOYMENT_RE.match(deployment.strip()) is None
+
+
+def parse_reasoning_model(value: Any) -> bool | None:
+    """`model.reasoning_model` / AZURE_OPENAI_REALTIME_REASONING_MODEL:
+    True / False force it; None ("auto", empty, unknown) infers it from the
+    deployment name."""
+    if isinstance(value, bool):
+        return value
+    text = "" if value is None else str(value).strip().lower()
+    if text in ("true", "yes", "on", "1"):
+        return True
+    if text in ("false", "no", "off", "0"):
+        return False
+    if text not in ("", "auto", "null", "none"):
+        logger.warning("Ignoring unknown reasoning_model %r (expected auto|true|false)", value)
+    return None
+
+
+def normalize_reasoning_effort(value: Any) -> str | None:
+    """Map a configured effort to the wire value, or None to omit `reasoning`.
+
+    Empty / "off" / "disabled" omit the field. "none" is a real effort level on
+    gpt-realtime-2.1 (no reasoning tokens) and is sent as-is.
+    """
+    if value is None:
+        return None
+    effort = str(value).strip().lower()
+    if effort in _REASONING_DISABLED_VALUES:
+        return None
+    if effort not in REASONING_EFFORTS:
+        logger.warning("Ignoring unknown reasoning effort %r (expected one of %s)", value, sorted(REASONING_EFFORTS))
+        return None
+    return effort
+
+
 class RTMiddleTier:
     endpoint: str
     deployment: str
@@ -261,6 +329,17 @@ class RTMiddleTier:
     max_tokens: int | None = None
     disable_audio: bool | None = None
     voice_choice: str | None = None
+    # audio.input.transcription.model. whisper-1 works on Azure without its own
+    # deployment; gpt-4o(-mini)-transcribe are ACCEPTED by session.update but
+    # then fail every turn with DeploymentNotFound unless deployed separately.
+    transcription_model: str | None = None
+    # reasoning.effort for reasoning realtime models; None omits the field.
+    reasoning_effort: str | None = None
+    parallel_tool_calls: bool | None = None
+    # Whether the deployment is a reasoning model (accepts `reasoning` and
+    # `parallel_tool_calls`). None = infer from the deployment name.
+    reasoning_model: bool | None = None
+    _reasoning_rejected: bool = False
 
     def __init__(self, endpoint: str, deployment: str, credentials: AzureKeyCredential | DefaultAzureCredential, voice_choice: str | None = None, prompt_loader=None):
         self.endpoint = endpoint
@@ -273,6 +352,9 @@ class RTMiddleTier:
         self.app_secret: bytes = b""
         self._prompt_loader = prompt_loader
         self._sessions = SessionManager(prompt_loader=prompt_loader)
+        # Flipped if the deployment rejects `reasoning` at runtime despite the
+        # name check, so later sessions stop sending it.
+        self._reasoning_rejected = False
         if voice_choice is not None:
             logger.info("Realtime voice choice set to %s", voice_choice)
         if isinstance(credentials, AzureKeyCredential):
@@ -292,6 +374,21 @@ class RTMiddleTier:
         """
         ga_session = _to_ga_session({"voice": voice})
         return json.dumps({"type": "session.update", "session": ga_session})
+
+    def _reasoning_model(self) -> bool:
+        """Whether reasoning-model-only fields may be sent upstream at all.
+
+        A runtime rejection always wins; then the explicit `reasoning_model`
+        switch; the deployment-name check is only the default."""
+        if self._reasoning_rejected:
+            return False
+        if self.reasoning_model is not None:
+            return self.reasoning_model
+        return deployment_supports_reasoning(getattr(self, "deployment", None))
+
+    def reasoning_enabled(self) -> bool:
+        """Whether `reasoning` will be sent upstream."""
+        return normalize_reasoning_effort(self.reasoning_effort) is not None and self._reasoning_model()
 
     def _build_session(self, session: dict, voice_locked: bool = False) -> dict:
         """Overlay the server-owned configuration onto a legacy-shaped session
@@ -315,6 +412,21 @@ class RTMiddleTier:
             session["voice"] = self.voice_choice
         session["tool_choice"] = "auto" if len(self.tools) > 0 else "none"
         session["tools"] = [tool.schema for tool in self.tools.values()]
+        if self.transcription_model:
+            transcription = session.get("input_audio_transcription")
+            session["input_audio_transcription"] = {
+                **(transcription if isinstance(transcription, dict) else {}),
+                "model": self.transcription_model,
+            }
+        # Server-owned: never trust a client-supplied value for these, since
+        # an unsupported one takes the tools down with it.
+        session.pop("reasoning", None)
+        session.pop("parallel_tool_calls", None)
+        if self._reasoning_model():
+            if (effort := normalize_reasoning_effort(self.reasoning_effort)) is not None:
+                session["reasoning"] = {"effort": effort}
+            if self.parallel_tool_calls is not None:
+                session["parallel_tool_calls"] = bool(self.parallel_tool_calls)
         # Clients speak the legacy (2024-10-01-preview) session shape.
         # Translate to the GA shape here so the browser contract is
         # unchanged, and so unsupported legacy keys are dropped rather
@@ -416,6 +528,13 @@ class RTMiddleTier:
                     # so they don't silently vanish into the client.
                     logger.error("OpenAI Realtime API error: %s", json.dumps(message, default=str)[:1000])
                     _vlog(verbose, "  ⚠ ERROR: %s", json.dumps(message, default=str)[:500])
+
+                case "conversation.item.input_audio_transcription.failed":
+                    # e.g. DeploymentNotFound when the configured transcription
+                    # model has no Azure deployment: the session.update was
+                    # accepted, but no guest speech is ever transcribed.
+                    logger.error("Input audio transcription failed (model=%s): %s", self.transcription_model,
+                                 json.dumps(message.get("error"), default=str)[:500])
 
                 case "session.created":
                     session = message["session"]
@@ -580,9 +699,9 @@ class RTMiddleTier:
                     tool_names = [t.get("name", "?") for t in session["tools"]]
                     message["session"] = session
                     logger.info(
-                        "session.update: injected %d tools %s, tool_choice=%s, max_tokens=%s",
+                        "session.update: injected %d tools %s, tool_choice=%s, max_tokens=%s, reasoning=%s",
                         len(session["tools"]), tool_names, session["tool_choice"],
-                        session.get("max_output_tokens"),
+                        session.get("max_output_tokens"), session.get("reasoning"),
                     )
                     _vlog(verbose, "  Injected %d tools: %s, tool_choice=%s",
                           len(session["tools"]), tool_names, session["tool_choice"])
@@ -654,8 +773,10 @@ class RTMiddleTier:
                 # frame. Events are processed in order, so nothing the browser
                 # sends (mic audio included) can reach an unconfigured session.
                 await target_ws.send_str(self.build_bootstrap_session_update())
-                logger.info("Upstream session bootstrapped with %d tools before relaying client traffic (session=%s)",
-                            len(self.tools), session_id)
+                logger.info("Upstream session bootstrapped with %d tools before relaying client traffic "
+                            "(reasoning=%s, session=%s)", len(self.tools),
+                            normalize_reasoning_effort(self.reasoning_effort) if self.reasoning_enabled() else "off",
+                            session_id)
 
                 async def send_greeting_once(trigger: str = "unknown"):
                     nonlocal greeting_sent
@@ -914,3 +1035,27 @@ class RTMiddleTier:
     
     def attach_to_app(self, app: web.Application, path: str) -> None:
         app.router.add_get(path, self._websocket_handler)
+
+
+def configure_realtime_model(rtmt: RTMiddleTier, model_cfg: dict, environ: Any = None) -> RTMiddleTier:
+    """Apply `config.yaml` `model:` settings plus their env overrides to `rtmt`.
+
+    Shared by app.py and scripts/smoke_realtime.py so the smoke check sends
+    exactly the session the app sends.
+    """
+    env = os.environ if environ is None else environ
+    rtmt.temperature = model_cfg.get("temperature", 0.6)
+    rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
+    rtmt.transcription_model = (env.get("AZURE_OPENAI_REALTIME_TRANSCRIPTION_MODEL")
+                                or model_cfg.get("transcription_model") or "whisper-1")
+    effort = env.get("AZURE_OPENAI_REALTIME_REASONING_EFFORT")
+    rtmt.reasoning_effort = normalize_reasoning_effort(effort if effort else model_cfg.get("reasoning_effort"))
+    parallel = model_cfg.get("parallel_tool_calls")
+    rtmt.parallel_tool_calls = None if parallel is None else bool(parallel)
+    switch = env.get("AZURE_OPENAI_REALTIME_REASONING_MODEL")
+    rtmt.reasoning_model = parse_reasoning_model(switch if switch else model_cfg.get("reasoning_model"))
+    if rtmt.reasoning_effort is not None and not rtmt._reasoning_model():
+        logger.info("Deployment %s is not treated as a reasoning model (reasoning_model=%s); `reasoning` "
+                    "(effort=%s) will not be sent", rtmt.deployment,
+                    "auto" if rtmt.reasoning_model is None else rtmt.reasoning_model, rtmt.reasoning_effort)
+    return rtmt

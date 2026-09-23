@@ -71,7 +71,7 @@ Special thanks to [John Carroll](https://github.com/john-carroll-sw) for the ori
 ## Features
 
 ### Core AI & Voice Experience
-- **Azure OpenAI GPT-4o Realtime API**: Voice-to-voice ordering powered by gpt-realtime-1.5 with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition).
+- **Azure OpenAI GPT-4o Realtime API**: Voice-to-voice ordering powered by gpt-realtime-2.1 (`reasoning.effort: low`) with optimized system prompt (bulleted format, ALL CAPS emphasis, variety rules to prevent robotic repetition).
 - **McDonald's crew member personality**: Upbeat, friendly, branded — **Nova voice** (warm, friendly female) embodies the McDonald's crew member persona. Phrase variety rules prevent bot-like repetition ("Awesome choice!", "You got it!", "Great pick!", "Coming right up!").
 - **Natural turn-taking**: Server VAD tuning (threshold 0.7, prefix padding 300ms, silence duration 500ms) for seamless back-and-forth conversations.
 - **Spoken currency**: "Four dollars and nineteen cents" instead of "$4.19" — more natural, more McDonald's.
@@ -173,7 +173,7 @@ This is where the intelligence lives. The `RTMiddleTier` (`rtmt.py`) acts as a W
 
 **4. Azure OpenAI Realtime API (GPT-4o)**
 
-The audio hits **Azure OpenAI's GPT-4o Realtime API** (`gpt-realtime-1.5`), which processes the guest's speech and decides what to do. It doesn't just transcribe — it *understands intent* and generates both a spoken response and structured **tool calls** as JSON function calls (the "Citation Payloads" shown in the diagram). This is the agentic core: the model autonomously decides which tools to invoke based on the conversation context.
+The audio hits **Azure OpenAI's GPT-4o Realtime API** (`gpt-realtime-2.1`), which processes the guest's speech and decides what to do. It doesn't just transcribe — it *understands intent* and generates both a spoken response and structured **tool calls** as JSON function calls (the "Citation Payloads" shown in the diagram). This is the agentic core: the model autonomously decides which tools to invoke based on the conversation context.
 
 **5. Tool Execution — The Agentic Toolkit**
 
@@ -240,7 +240,7 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 **Backend:**
 - Python 3.11+ with aiohttp, WebSockets
 - WebSocket middle tier (`rtmt.py`) — browser ↔ Azure OpenAI Realtime API
-- Azure OpenAI GPT-4o Realtime API (gpt-realtime-1.5)
+- Azure OpenAI Realtime API (gpt-realtime-2.1; gpt-realtime-1.5 remains a supported rollback)
 - Demo menu data from `mcdonalds-menu-items.json` (sample McDonald's menu export, 172 items)
 
 **AI & Search:**
