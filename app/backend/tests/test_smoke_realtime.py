@@ -416,6 +416,7 @@ class TenantTests(unittest.TestCase):
         self.assertEqual(self._main_identity(self.EXPLICIT, {}, {}), (None, None))
 
     def test_run_passes_identity_to_auth(self):
+        _isolate_tools_global(self)  # run() builds the middle tier before it asks for a token
         seen = {}
 
         def fake_auth(*args):
