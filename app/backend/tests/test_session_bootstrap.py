@@ -195,6 +195,9 @@ class _RealtimeHarness(unittest.IsolatedAsyncioTestCase):
     def _session_updates(self):
         return [e for e in self.fake.received if e["type"] == "session.update"]
 
+    def _fallbacks(self):
+        return [e for e in self._session_updates() if str(e.get("event_id", "")).startswith("mcd_fallback")]
+
     async def _browser_events(self, browser, duration=0.3):
         events = []
         try:
@@ -336,6 +339,225 @@ class SessionBootstrapTests(_RealtimeHarness):
                         timeline)
         self.assertEqual(self.fake.response_sessions[0]["tools"], TOOL_NAMES)
         await browser.close()
+
+
+class SessionUpdateFallbackTests(_RealtimeHarness):
+    """A rejected session.update must never silently cost us the tools.
+
+    GA drops the WHOLE session.update when any one field is unsupported (a
+    locked voice, an undeployed transcription model, `reasoning` on 1.5...).
+    The middle tier correlates the `error` back to its update and immediately
+    resends a minimal one -- instructions + tools only -- exactly once.
+    """
+
+    async def _until_browser(self, browser, event_type, timeout=5.0):
+        async def recv():
+            while True:
+                msg = await browser.receive()
+                if json.loads(msg.data).get("type") == event_type:
+                    return
+        await asyncio.wait_for(recv(), timeout)
+
+    async def test_every_session_update_carries_an_event_id(self):
+        browser = await self.client.ws_connect("/realtime")
+        await self._until_browser(browser, "session.updated")
+        await browser.send_json({"type": "extension.set_voice", "voice": "coral"})
+        await browser.send_json(BROWSER_SESSION_UPDATE)
+        await self._until(lambda: len(self._session_updates()) >= 3)
+
+        ids = [e.get("event_id") for e in self._session_updates()]
+        self.assertTrue(all(ids), ids)
+        self.assertEqual(len(set(ids)), len(ids))
+        await browser.close()
+
+    async def test_rejected_bootstrap_triggers_exactly_one_minimal_fallback_that_registers_tools(self):
+        self.fake.reject_keys = {"audio"}      # e.g. an undeployable transcription/voice setting
+        browser = await self.client.ws_connect("/realtime")
+        await self._until(lambda: len(self._fallbacks()) >= 1)
+        events = await self._browser_events(browser)
+
+        bootstrap = self._session_updates()[0]
+        self.assertEqual([e["error"]["event_id"] for e in self.fake.errors], [bootstrap["event_id"]])
+        fallbacks = self._fallbacks()
+        self.assertEqual(len(fallbacks), 1)
+        self.assertEqual(set(fallbacks[0]["session"]), {"type", "instructions", "tools", "tool_choice"})
+        self.assertEqual(self.fake.session["tools"], [{"type": "function", "name": n} for n in TOOL_NAMES])
+        self.assertEqual(self.fake.session["tool_choice"], "auto")
+        self.assertEqual(self.fake.session["instructions"], SYSTEM_PROMPT)
+        self.assertNotIn("error", [e["type"] for e in events], "a recovered rejection reached the browser")
+
+        await browser.send_json(MIC_FRAME)            # the guest speaks: the model must have its tools
+        await self._response_done(browser)
+        self.assertEqual(self.fake.response_sessions[0]["tools"], TOOL_NAMES)
+        await browser.close()
+
+    async def test_rejection_without_event_id_is_recovered_and_reasoning_turned_off(self):
+        """gpt-realtime-1.5 rejects `reasoning` with no error.event_id and no param."""
+        self.rtmt.reasoning_effort = "low"
+        self.fake.reject_keys = {"reasoning"}
+        self.fake.echo_event_id = False
+        browser = await self.client.ws_connect("/realtime")
+        await self._until(lambda: len(self._fallbacks()) >= 1)
+        events = await self._browser_events(browser)
+
+        self.assertIn("reasoning", self._session_updates()[0]["session"])
+        self.assertEqual(len(self._fallbacks()), 1)
+        self.assertNotIn("reasoning", self._fallbacks()[0]["session"])
+        self.assertEqual(self.fake.session["tools"], [{"type": "function", "name": n} for n in TOOL_NAMES])
+        self.assertNotIn("error", [e["type"] for e in events])
+        self.assertTrue(self.rtmt._reasoning_rejected)
+        self.assertFalse(self.rtmt.reasoning_enabled())
+
+        await browser.send_json(BROWSER_SESSION_UPDATE)   # later updates no longer carry `reasoning`
+        await self._response_done(browser)
+        self.assertNotIn("reasoning", self._session_updates()[-1]["session"])
+        self.assertEqual(len(self.fake.errors), 1)
+        await browser.close()
+
+    async def test_forced_reasoning_on_a_non_reasoning_deployment_still_registers_tools(self):
+        """Operator sets reasoning_model=true on a 1.5 deployment: 1.5 rejects it (no event_id,
+        no param), the fallback still registers the tools, and later updates drop `reasoning`."""
+        self.rtmt.deployment = "gpt-realtime-1.5"
+        self.rtmt.reasoning_model = True
+        self.rtmt.reasoning_effort = "minimal"
+        self.fake.reject_keys = {"reasoning"}
+        self.fake.echo_event_id = False
+        browser = await self.client.ws_connect("/realtime")
+        await self._until(lambda: len(self._fallbacks()) >= 1)
+        events = await self._browser_events(browser)
+
+        self.assertEqual(self._session_updates()[0]["session"]["reasoning"], {"effort": "minimal"})
+        self.assertEqual(len(self._fallbacks()), 1)
+        self.assertEqual(self.fake.session["tools"], [{"type": "function", "name": n} for n in TOOL_NAMES])
+        self.assertNotIn("error", [e["type"] for e in events])
+        await browser.send_json(BROWSER_SESSION_UPDATE)
+        await self._response_done(browser)
+        self.assertNotIn("reasoning", self._session_updates()[-1]["session"])
+        self.assertEqual(self.fake.response_sessions[0]["tools"], TOOL_NAMES)
+        await browser.close()
+
+    async def _assert_rejected_fallback_does_not_loop(self):
+        self.fake.reject_every_update = True
+        browser = await self.client.ws_connect("/realtime")
+        await self._until(lambda: len(self._fallbacks()) >= 1)
+        events = await self._browser_events(browser, duration=0.5)
+
+        self.assertEqual(len(self._session_updates()), 2, "bootstrap + exactly one fallback")
+        self.assertEqual(len(self._fallbacks()), 1)
+        errors = [e for e in events if e["type"] == "error"]
+        self.assertEqual(len(errors), 1, "the fallback's own rejection must reach the browser, once")
+        if self.fake.echo_event_id:
+            self.assertEqual(errors[0]["error"]["event_id"], self._fallbacks()[0]["event_id"])
+
+        # A new original still gets its own (single) fallback -- and no more.
+        await browser.send_json(BROWSER_SESSION_UPDATE)
+        await self._until(lambda: len(self._session_updates()) >= 4)
+        events = await self._browser_events(browser, duration=0.5)
+        self.assertEqual(len(self._session_updates()), 4)
+        self.assertEqual(len(self._fallbacks()), 2)
+        self.assertEqual(sum(e["type"] == "error" for e in events), 1)
+        await browser.close()
+
+    async def test_rejected_fallback_does_not_loop(self):
+        await self._assert_rejected_fallback_does_not_loop()
+
+    async def test_rejected_fallback_without_event_id_does_not_loop(self):
+        self.fake.echo_event_id = False
+        await self._assert_rejected_fallback_does_not_loop()
+
+    async def test_unrelated_errors_do_not_trigger_fallback(self):
+        browser = await self.client.ws_connect("/realtime")
+        await self._until_browser(browser, "session.updated")     # nothing of ours in flight now
+        await browser.send_json({"type": "conversation.item.delete", "item_id": "nope", "event_id": "client_evt_1"})
+        await browser.send_json({"type": "input_audio_buffer.commit"})
+        await self._until(lambda: len(self.fake.errors) >= 2)
+        events = await self._browser_events(browser)
+
+        self.assertEqual(self._fallbacks(), [])
+        self.assertEqual(len(self._session_updates()), 1)
+        self.assertEqual(sorted(e["error"]["code"] for e in events if e["type"] == "error"),
+                         ["input_audio_buffer_commit_empty", "item_not_found"])
+        await browser.close()
+
+    async def test_rejected_bootstrap_still_greets_with_tools(self):
+        """McD mic press after a rejected bootstrap: the greeting waits for the
+        fallback's session.updated and the greeting response has the tools."""
+        self.fake.reject_keys = {"audio"}
+        browser = await self.client.ws_connect("/realtime")
+        await self._until(lambda: len(self._fallbacks()) >= 1)
+        await browser.send_json({"type": "extension.set_voice", "voice": "coral"})
+        await browser.send_json(BROWSER_SESSION_UPDATE)
+        await self._response_done(browser)
+
+        self.assertEqual(sum(e["type"] == "conversation.item.create" for e in self.fake.received), 1)
+        self.assertEqual(self.fake.response_sessions[0]["tools"], TOOL_NAMES)
+        self.assertEqual(self.fake.response_sessions[0]["instructions"], SYSTEM_PROMPT)
+        await browser.close()
+
+    async def test_rejected_voice_change_is_recovered_and_tools_kept(self):
+        """The voice picker's own session.update is tracked like any other: if GA
+        rejects it, the relay re-asserts instructions/tools instead of leaking the error."""
+        browser = await self.client.ws_connect("/realtime")
+        await self._until_browser(browser, "session.updated")
+        self.fake.reject_keys = {"audio"}
+        await browser.send_json({"type": "extension.set_voice", "voice": "coral"})
+        await self._until(lambda: len(self._fallbacks()) >= 1)
+        events = await self._browser_events(browser)
+
+        voice_update = self._session_updates()[1]
+        self.assertTrue(voice_update["event_id"].startswith("mcd_voice"))
+        self.assertEqual([e["error"]["event_id"] for e in self.fake.errors], [voice_update["event_id"]])
+        self.assertEqual(len(self._fallbacks()), 1)
+        self.assertEqual(self.fake.session["tools"], [{"type": "function", "name": n} for n in TOOL_NAMES])
+        self.assertNotIn("error", [e["type"] for e in events])
+        await browser.close()
+
+
+class SessionUpdateGuardTests(unittest.TestCase):
+
+    def test_builders_stamp_their_own_event_ids(self):
+        """Standalone callers (the smoke script, tests) get correlatable payloads too."""
+        rtmt = RTMiddleTier("https://fake.openai.azure.com", "gpt-realtime-2.1", AzureKeyCredential("k"))
+        for payload, prefix in ((rtmt.build_bootstrap_session_update(), "mcd_bootstrap"),
+                                (rtmt.build_voice_update("marin"), "mcd_voice"),
+                                (rtmt.build_fallback_session_update(), "mcd_fallback")):
+            with self.subTest(prefix=prefix):
+                self.assertTrue(json.loads(payload)["event_id"].startswith(prefix + "_"))
+        self.assertEqual(json.loads(rtmt.build_bootstrap_session_update(event_id="x"))["event_id"], "x")
+
+    def _error(self, event_id=None, param=None, type_="invalid_request_error"):
+        return {"type": "error", "error": {"type": type_, "code": "invalid_value", "param": param,
+                                           "event_id": event_id}}
+
+    def test_track_adds_event_id_and_keeps_an_existing_one(self):
+        from rtmt import _SessionUpdateGuard
+        guard = _SessionUpdateGuard()
+        added = json.loads(guard.track(json.dumps({"type": "session.update", "session": {}})))
+        self.assertTrue(added["event_id"].startswith("mcd_su_"))
+        kept = json.loads(guard.track(json.dumps({"type": "session.update", "event_id": "mine", "session": {}})))
+        self.assertEqual(kept["event_id"], "mine")
+
+    def test_correlation_rules(self):
+        from rtmt import _SessionUpdateGuard
+        guard = _SessionUpdateGuard()
+        self.assertIsNone(guard.correlate(self._error()), "nothing in flight")
+        guard.stamp({"type": "session.update", "event_id": "su1", "session": {}})
+        self.assertIsNone(guard.correlate(self._error(event_id="client_evt")), "explicitly someone else's")
+        self.assertIsNone(guard.correlate(self._error(param="item_id")), "not a session field")
+        self.assertIsNone(guard.correlate(self._error(type_="server_error")), "not a validation error")
+        self.assertEqual(guard.correlate(self._error(param="session.reasoning")), "su1")
+
+        guard.stamp({"type": "session.update", "event_id": "su2", "session": {}})
+        guard.on_session_updated()
+        self.assertIsNone(guard.correlate(self._error()), "su2 was acknowledged")
+        self.assertEqual(guard.correlate(self._error(event_id="su2")), "su2", "echoed id always correlates")
+
+    def test_one_fallback_per_original(self):
+        from rtmt import _SessionUpdateGuard
+        guard = _SessionUpdateGuard()
+        self.assertTrue(guard.claim_fallback("su1"))
+        self.assertFalse(guard.claim_fallback("su1"))
+        self.assertTrue(guard.claim_fallback("su2"))
 
 
 class ReasoningAndTranscriptionConfigTests(unittest.TestCase):
@@ -481,6 +703,14 @@ class ReasoningAndTranscriptionConfigTests(unittest.TestCase):
                 self.assertIsNone(normalize_reasoning_effort(value))
         with self.assertLogs("mcdonalds-drive-thru", level="WARNING"):
             self.assertIsNone(normalize_reasoning_effort("turbo"))
+
+    def test_fallback_is_minimal(self):
+        rtmt = self._rtmt(reasoning_effort="low", parallel_tool_calls=True, transcription_model="whisper-1")
+        payload = json.loads(rtmt.build_fallback_session_update())
+        self.assertTrue(payload["event_id"].startswith("mcd_fallback_"))
+        self.assertEqual(set(payload["session"]), {"type", "instructions", "tools", "tool_choice"})
+        self.assertEqual(payload["session"]["tool_choice"], "auto")
+        self.assertEqual(payload["session"]["instructions"], SYSTEM_PROMPT)
 
     def test_client_transcription_model_is_overridden(self):
         # The browser always asks for whisper-1; the server-side choice wins.

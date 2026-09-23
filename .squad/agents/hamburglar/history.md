@@ -94,3 +94,7 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 ## Sonic parity — item 3 mutation check (2026-09-22)
 - 14 mutants (voices.ts ×6 incl. BE-side parity checks, settings.tsx, App.tsx, rtmt ×3, config.yaml, main.parameters.json, app.py), 14 killed. App.tsx seed covered by an `?raw` source assertion in voice-picker.test.tsx (rendering App is too heavy for a unit test).
 - Runner fix: subprocess output decoded as utf-8 (vitest prints ✓/×; cp1252 crashed the runner).
+
+## Sonic parity — item 4 mutation check (2026-09-22)
+- 15 mutants (guard/fallback/tool-error seams in rtmt.py), 15 killed. 4j (bootstrap builder without its own event_id) and 4l (voice update untracked) first SURVIVED — `guard.track` stamps anyway, and no test rejected a voice update. Added `test_builders_stamp_their_own_event_ids` and `test_rejected_voice_change_is_recovered_and_tools_kept`; both killed.
+- Tool-error tests (`test_tool_errors.py`) fail 4/5 against pre-fix rtmt (verified via stash).

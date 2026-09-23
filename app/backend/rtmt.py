@@ -8,6 +8,8 @@ import logging
 import os
 import re
 import time
+import uuid
+from collections import OrderedDict, deque
 from enum import Enum
 from typing import Any
 
@@ -319,6 +321,101 @@ def normalize_reasoning_effort(value: Any) -> str | None:
     return effort
 
 
+def _tool_error_result(tool_name: str) -> ToolResult:
+    """What the model gets back when a tool call cannot be executed."""
+    return ToolResult(
+        f"The {tool_name} tool failed and did not run. Apologise briefly, ask the guest to repeat "
+        "that part of the order, and do not claim it was done.",
+        ToolResultDirection.TO_SERVER,
+    )
+
+
+def _new_event_id(prefix: str) -> str:
+    return f"{prefix}_{uuid.uuid4().hex[:20]}"
+
+
+# The fallback carries only what the conversation cannot work without. No voice
+# (cannot_update_voice), no audio config, no reasoning -- the usual suspects when
+# GA rejects an update.
+_FALLBACK_SESSION_KEYS = ("type", "instructions", "tools", "tool_choice")
+
+
+class _SessionUpdateGuard:
+    """Tracks the session.updates sent on ONE upstream socket so a rejection can
+    be correlated back to them.
+
+    GA rejects an invalid session.update wholesale and reports it only as an
+    `error` event. Most rejections echo our `event_id` in `error.event_id`, but
+    some do not (gpt-realtime-1.5 rejecting `reasoning` returns no event_id and
+    no param), so an uncorrelated invalid_request_error that arrives while one
+    of our updates is still unacknowledged is attributed to the oldest one --
+    the service processes client events in order.
+    """
+
+    _MAX_TRACKED = 64
+
+    def __init__(self) -> None:
+        # event_id -> event_id of the original if this is a fallback, else None
+        self._sent: OrderedDict[str, str | None] = OrderedDict()
+        self._payloads: dict[str, dict] = {}
+        self._in_flight: deque[str] = deque()
+        self._fallback_sent_for: set[str] = set()
+
+    def stamp(self, message: dict, fallback_of: str | None = None) -> dict:
+        """Ensure `message` carries an event_id and start tracking it."""
+        event_id = message.get("event_id") or _new_event_id("mcd_fallback" if fallback_of else "mcd_su")
+        message["event_id"] = event_id
+        self._sent[event_id] = fallback_of
+        self._payloads[event_id] = message.get("session") or {}
+        self._in_flight.append(event_id)
+        while len(self._sent) > self._MAX_TRACKED:
+            old, _ = self._sent.popitem(last=False)
+            self._payloads.pop(old, None)
+        return message
+
+    def track(self, payload: str, fallback_of: str | None = None) -> str:
+        """`stamp` for an already-serialised session.update."""
+        message = json.loads(payload)
+        had_id = bool(message.get("event_id"))
+        self.stamp(message, fallback_of)
+        return payload if had_id else json.dumps(message)
+
+    def on_session_updated(self) -> None:
+        if self._in_flight:
+            self._in_flight.popleft()
+
+    def correlate(self, error_event: dict) -> str | None:
+        """Return the event_id of our session.update this error rejects, or None."""
+        err = error_event.get("error") or {}
+        event_id = err.get("event_id")
+        if event_id:
+            if event_id not in self._sent:
+                return None
+            try:
+                self._in_flight.remove(event_id)
+            except ValueError:
+                pass
+            return event_id
+        param = err.get("param") or ""
+        if (self._in_flight and err.get("type") == "invalid_request_error"
+                and (not param or param.startswith("session"))):
+            return self._in_flight.popleft()
+        return None
+
+    def original_of(self, event_id: str) -> str | None:
+        return self._sent.get(event_id)
+
+    def payload_of(self, event_id: str) -> dict:
+        return self._payloads.get(event_id, {})
+
+    def claim_fallback(self, event_id: str) -> bool:
+        """True exactly once per original session.update."""
+        if event_id in self._fallback_sent_for:
+            return False
+        self._fallback_sent_for.add(event_id)
+        return True
+
+
 class RTMiddleTier:
     endpoint: str
     deployment: str
@@ -373,14 +470,15 @@ class RTMiddleTier:
             except Exception as exc:
                 logger.warning("Token warmup failed (offline?): %s — will retry on first request", exc)
 
-    def build_voice_update(self, voice: str) -> str:
+    def build_voice_update(self, voice: str, event_id: str | None = None) -> str:
         """Serialise a session.update that switches the assistant voice.
 
         The voice is expressed in the legacy shape and then translated, so it
         lands at `audio.output.voice` where the GA endpoint expects it.
         """
         ga_session = _to_ga_session({"voice": voice})
-        return json.dumps({"type": "session.update", "session": ga_session})
+        return json.dumps({"type": "session.update", "event_id": event_id or _new_event_id("mcd_voice"),
+                           "session": ga_session})
 
     def _reasoning_model(self) -> bool:
         """Whether reasoning-model-only fields may be sent upstream at all.
@@ -443,7 +541,7 @@ class RTMiddleTier:
             logger.info("session.update: assistant audio already present — omitting voice so the update is not rejected")
         return ga_session
 
-    def build_bootstrap_session_update(self) -> str:
+    def build_bootstrap_session_update(self, event_id: str | None = None) -> str:
         """Serialise the session.update the middle tier sends as the very first
         frame on every upstream socket, before any browser traffic is relayed.
 
@@ -454,7 +552,55 @@ class RTMiddleTier:
         rejected, so tools are never registered for that conversation.
         """
         session = self._build_session(copy.deepcopy(_BOOTSTRAP_CLIENT_SESSION))
-        return json.dumps({"type": "session.update", "session": session})
+        return json.dumps({"type": "session.update", "event_id": event_id or _new_event_id("mcd_bootstrap"),
+                           "session": session})
+
+    def build_fallback_session_update(self, event_id: str | None = None) -> str:
+        """Serialise the minimal session.update sent when GA rejects one of ours.
+
+        Only `type`, `instructions`, `tools` and `tool_choice` -- whatever field
+        got the original rejected, the crew member keeps its tools and persona.
+        """
+        full = self._build_session({}, voice_locked=True)
+        session = {key: full[key] for key in _FALLBACK_SESSION_KEYS if key in full}
+        return json.dumps({"type": "session.update", "event_id": event_id or _new_event_id("mcd_fallback"),
+                           "session": session})
+
+    async def _recover_rejected_session_update(self, message: dict, server_ws, guard: "_SessionUpdateGuard | None",
+                                               session_id: str | None) -> bool:
+        """Handle an upstream `error` that rejects one of our session.updates.
+
+        Returns True if the error was consumed (a fallback was sent), False if
+        it should reach the browser: unrelated errors, and a rejected fallback.
+        """
+        if guard is None:
+            return False
+        event_id = guard.correlate(message)
+        if event_id is None:
+            return False
+        err = message.get("error") or {}
+        code, param, text = err.get("code"), err.get("param"), err.get("message")
+        original = guard.original_of(event_id)
+        if original is not None or not guard.claim_fallback(event_id):
+            logger.error(
+                "Fallback session.update %s (for %s) was ALSO rejected: code=%s param=%s message=%s -- "
+                "tools may NOT be registered for this conversation (session=%s)",
+                event_id, original, code, param, text, session_id)
+            return False
+        logger.error(
+            "Upstream REJECTED session.update %s: code=%s param=%s message=%s -- resending a minimal "
+            "session.update (instructions + tools only) so the tools survive (session=%s)",
+            event_id, code, param, text, session_id)
+        rejected = guard.payload_of(event_id)
+        if (("reasoning" in rejected or "parallel_tool_calls" in rejected)
+                and (not param or param.startswith(("session.reasoning", "session.parallel_tool_calls")))):
+            self._reasoning_rejected = True
+            logger.error("Deployment %s rejected reasoning-model options; no longer sending `reasoning` / "
+                         "`parallel_tool_calls` from this process. Set model.reasoning_effort to \"off\" for this "
+                         "deployment.", getattr(self, "deployment", "?"))
+        fallback = guard.track(self.build_fallback_session_update(), fallback_of=event_id)
+        await server_ws.send_str(fallback)
+        return True
 
     def _get_auth_token(self) -> str:
         """Return the cached token, falling back to a synchronous call if needed."""
@@ -488,7 +634,7 @@ class RTMiddleTier:
             self._token_refresh_task.cancel()
         self._sessions.stop_idle_checker()
 
-    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall], verbose: bool = False) -> str | None:
+    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall], verbose: bool = False, guard: "_SessionUpdateGuard | None" = None) -> str | None:
         data = msg.data
 
         # FAST PATH: extract type via regex without full JSON parse.
@@ -531,6 +677,11 @@ class RTMiddleTier:
             _vlog(verbose, "─── [Server → Client] %s ───", msg_type)
             match msg_type:
                 case "error":
+                    # A rejected session.update of ours is recovered here (minimal
+                    # fallback) instead of surfacing as a user-facing failure.
+                    if await self._recover_rejected_session_update(message, server_ws, guard, session_id):
+                        _vlog(verbose, "  ⚠ session.update rejected — fallback sent: %s", json.dumps(message, default=str)[:500])
+                        return None
                     # Surface OpenAI errors (e.g. rejected session.update, malformed tool schemas)
                     # so they don't silently vanish into the client.
                     logger.error("OpenAI Realtime API error: %s", json.dumps(message, default=str)[:1000])
@@ -611,49 +762,58 @@ class RTMiddleTier:
                             tool = self.tools.get(item["name"])
                             if tool is None:
                                 logger.error("Unknown tool requested: %s", item["name"])
-                                updated_message = None
-                            else:
+                            t0 = time.monotonic()
+                            args: Any = item.get("arguments")
+                            try:
+                                if tool is None:
+                                    raise LookupError(f"unknown tool {item['name']!r}")
                                 args = json.loads(item["arguments"])
                                 logger.info("Executing tool '%s' with args %s (session=%s)", item["name"], args, session_id)
-                                t0 = time.monotonic()
                                 if item["name"] in ("update_order", "get_order", "reset_order"):
                                     result = await tool.target(args, session_id)
                                 else:
                                     result = await tool.target(args)
-                                elapsed_ms = (time.monotonic() - t0) * 1000
-                                logger.info("Tool '%s' result direction=%s", item["name"], result.destination)
+                            except Exception:
+                                # Without a function_call_output the model is left waiting on
+                                # its own call, and an exception escaping here would tear down
+                                # the whole conversation: answer the call with an error instead.
+                                logger.exception("Tool '%s' failed (args=%s, session=%s) — returning an error result "
+                                                 "so the conversation continues", item["name"], args, session_id)
+                                result = _tool_error_result(item["name"])
+                            elapsed_ms = (time.monotonic() - t0) * 1000
+                            logger.info("Tool '%s' result direction=%s", item["name"], result.destination)
 
-                                # ── Verbose: full tool call lifecycle ──
-                                result_text = result.to_text()[:_VERBOSE_RESULT_TRUNCATE]
-                                _vlog(verbose,
-                                      "\n═══ [TOOL CALL] %s ═══\n"
-                                      "Args: %s\n"
-                                      "Result: %s\n"
-                                      "Direction: %s\n"
-                                      "Time: %.1fms\n"
-                                      "═══════════════════════════",
-                                      item["name"],
-                                      json.dumps(args, indent=2),
-                                      result_text,
-                                      result.destination.name,
-                                      elapsed_ms)
+                            # ── Verbose: full tool call lifecycle ──
+                            result_text = result.to_text()[:_VERBOSE_RESULT_TRUNCATE]
+                            _vlog(verbose,
+                                  "\n═══ [TOOL CALL] %s ═══\n"
+                                  "Args: %s\n"
+                                  "Result: %s\n"
+                                  "Direction: %s\n"
+                                  "Time: %.1fms\n"
+                                  "═══════════════════════════",
+                                  item["name"],
+                                  json.dumps(args, indent=2),
+                                  result_text,
+                                  result.destination.name,
+                                  elapsed_ms)
 
-                                await server_ws.send_json({
-                                    "type": "conversation.item.create",
-                                    "item": {
-                                        "type": "function_call_output",
-                                        "call_id": item["call_id"],
-                                        "output": result.to_text() if result.destination in (ToolResultDirection.TO_SERVER, ToolResultDirection.TO_BOTH) else ""
-                                    }
+                            await server_ws.send_json({
+                                "type": "conversation.item.create",
+                                "item": {
+                                    "type": "function_call_output",
+                                    "call_id": item["call_id"],
+                                    "output": result.to_text() if result.destination in (ToolResultDirection.TO_SERVER, ToolResultDirection.TO_BOTH) else ""
+                                }
+                            })
+                            if result.destination in (ToolResultDirection.TO_CLIENT, ToolResultDirection.TO_BOTH):
+                                await client_ws.send_json({
+                                    "type": "extension.middle_tier_tool_response",
+                                    "previous_item_id": tool_call.previous_id,
+                                    "tool_name": item["name"],
+                                    "tool_result": result.to_client_text()
                                 })
-                                if result.destination in (ToolResultDirection.TO_CLIENT, ToolResultDirection.TO_BOTH):
-                                    await client_ws.send_json({
-                                        "type": "extension.middle_tier_tool_response",
-                                        "previous_item_id": tool_call.previous_id,
-                                        "tool_name": item["name"],
-                                        "tool_result": result.to_client_text()
-                                    })
-                                updated_message = None
+                            updated_message = None
 
                 case "response.done":
                     fn_calls = []
@@ -686,7 +846,7 @@ class RTMiddleTier:
 
         return updated_message
 
-    async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse, verbose: bool = False, voice_locked: bool = False) -> str | None:
+    async def _process_message_to_server(self, msg: str, ws: web.WebSocketResponse, verbose: bool = False, voice_locked: bool = False, guard: "_SessionUpdateGuard | None" = None) -> str | None:
         data = msg.data
 
         # FAST PATH: input_audio_buffer.append is the most frequent client message
@@ -705,6 +865,12 @@ class RTMiddleTier:
                     session = self._build_session(message["session"], voice_locked=voice_locked)
                     tool_names = [t.get("name", "?") for t in session["tools"]]
                     message["session"] = session
+                    # Every session.update carries an event_id so a rejection can
+                    # be correlated and recovered (see _recover_rejected_session_update).
+                    if guard is not None:
+                        guard.stamp(message)
+                    else:
+                        message.setdefault("event_id", _new_event_id("mcd_su"))
                     logger.info(
                         "session.update: injected %d tools %s, tool_choice=%s, max_tokens=%s, reasoning=%s",
                         len(session["tools"]), tool_names, session["tool_choice"],
@@ -771,6 +937,7 @@ class RTMiddleTier:
                 # from then on GA refuses voice changes (see _build_session).
                 assistant_audio_seen = False
                 session_configured = asyncio.Event()
+                guard = _SessionUpdateGuard()
 
                 _vlog(verbose, "\n═══ [SESSION] Connected ═══\n"
                                "Session ID: %s\n"
@@ -779,7 +946,7 @@ class RTMiddleTier:
                 # Configure the upstream session BEFORE relaying a single browser
                 # frame. Events are processed in order, so nothing the browser
                 # sends (mic audio included) can reach an unconfigured session.
-                await target_ws.send_str(self.build_bootstrap_session_update())
+                await target_ws.send_str(guard.track(self.build_bootstrap_session_update()))
                 logger.info("Upstream session bootstrapped with %d tools before relaying client traffic "
                             "(reasoning=%s, session=%s)", len(self.tools),
                             normalize_reasoning_effort(self.reasoning_effort) if self.reasoning_enabled() else "off",
@@ -884,7 +1051,7 @@ class RTMiddleTier:
                                             else:
                                                 # The bootstrap already configured the session, so the
                                                 # voice-only update cannot race ahead of the tools.
-                                                session_update = self.build_voice_update(new_voice)
+                                                session_update = guard.track(self.build_voice_update(new_voice))
                                                 await target_ws.send_str(session_update)
                                                 logger.info("[VOICE] Sent session.update to OpenAI (session %s): %s", session_id, session_update)
                                                 _vlog(verbose, "─── [Voice Change] Sent session.update voice=%s to OpenAI ───", new_voice)
@@ -903,7 +1070,7 @@ class RTMiddleTier:
                             if _MARKER_RESPONSE_CANCEL in msg.data:
                                 echo.on_barge_in(verbose)
                             # Forward client message to OpenAI.
-                            new_msg = await self._process_message_to_server(msg, ws, verbose, voice_locked=assistant_audio_seen)
+                            new_msg = await self._process_message_to_server(msg, ws, verbose, voice_locked=assistant_audio_seen, guard=guard)
                             if new_msg is not None:
                                 await target_ws.send_str(new_msg)
                             # The browser's session.update marks the start of a conversation.
@@ -937,10 +1104,12 @@ class RTMiddleTier:
                             # The bootstrap session.updated arrives as soon as the socket
                             # opens, so it must NOT trigger the greeting -- the browser's
                             # session.update (conversation start) does that.
-                            if _MARKER_SESSION_UPDATED in data and not session_configured.is_set():
-                                logger.info("session.updated received — tools are configured (session=%s)", session_id)
-                                _vlog(verbose, "─── [Lifecycle] session.updated — session configured ───")
-                                session_configured.set()
+                            if _MARKER_SESSION_UPDATED in data:
+                                guard.on_session_updated()
+                                if not session_configured.is_set():
+                                    logger.info("session.updated received — tools are configured (session=%s)", session_id)
+                                    _vlog(verbose, "─── [Lifecycle] session.updated — session configured ───")
+                                    session_configured.set()
 
                             # Verbose: log conversation transcription events
                             if (verbose or _VERBOSE_GLOBAL):
@@ -952,7 +1121,7 @@ class RTMiddleTier:
                                     except (json.JSONDecodeError, KeyError):
                                         pass
 
-                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending, verbose)
+                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending, verbose, guard=guard)
                             if new_msg is not None:
                                 await ws.send_str(new_msg)
                         elif msg.type == aiohttp.WSMsgType.ERROR:

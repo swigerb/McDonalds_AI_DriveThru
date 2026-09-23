@@ -96,3 +96,9 @@
 ## Sonic parity — item 3: backend voice whitelist (2026-09-22)
 - `rtmt.GA_REALTIME_VOICES` (10 voices) + `DEFAULT_VOICE="marin"` replace the inline 8-voice tuple in the extension.set_voice handler — marin/cedar were silently ignored before. Missing voice key now defaults to marin.
 - Default marin in config.yaml, app.py fallback, main.parameters.json, .env-sample. `VoiceParityTests` pins all four + voices.ts together.
+
+## Sonic parity — item 4: session.update rejection fallback (2026-09-22)
+- Ported Sonic `_SessionUpdateGuard`: every upstream session.update (bootstrap `mcd_bootstrap_*`, voice picker `mcd_voice_*`, browser `mcd_su_*`) carries an event_id and is tracked; a correlated `invalid_request_error` (echoed event_id, or no event_id + session param/none while one of ours is in flight) triggers exactly ONE minimal fallback (`type, instructions, tools, tool_choice` only) per original. A rejected fallback is surfaced to the browser once — never loops.
+- Rejection with no event_id/param (1.5 rejecting `reasoning`) sets `_reasoning_rejected` so every later update drops reasoning.
+- Seam: the `"error"` case in `_process_message_to_client` (errors are not in `_PASSTHROUGH_SERVER_TYPES`, so they reach the parsed path); `guard` threaded through both `_process_message_to_*`; `on_session_updated()` on every ack.
+- McD addition: `test_rejected_bootstrap_still_greets_with_tools` (mic-press greeting after a recovered bootstrap still has the 4 tools) and `test_rejected_voice_change_is_recovered_and_tools_kept`.
