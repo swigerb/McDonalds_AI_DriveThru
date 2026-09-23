@@ -48,6 +48,12 @@ from audio_pipeline import (
 )
 from config_loader import get_config
 from order_state import order_state_singleton
+from rate_limit import (
+    RateLimitConfig,
+    RateLimitRecovery,
+    failed_response_rate_limit,
+    rate_limit_error,
+)
 from session_manager import SessionManager
 
 logger = logging.getLogger("mcdonalds-drive-thru")
@@ -56,6 +62,7 @@ logger = logging.getLogger("mcdonalds-drive-thru")
 _cfg = get_config()
 _conn_cfg = _cfg.get("connection", {})
 _security_cfg = _cfg.get("security", {})
+_rate_limit_cfg = (_cfg.get("resilience") or {}).get("rate_limit") or {}
 
 __all__ = ["RTMiddleTier", "RTToolCall", "Tool", "ToolResult", "ToolResultDirection",
            "configure_realtime_model", "create_hmac_token", "deployment_supports_reasoning",
@@ -71,6 +78,7 @@ _WS_CONNECT_TIMEOUT = aiohttp.ClientTimeout(
     total=_conn_cfg.get("ws_connect_timeout_total", 30),
     connect=_conn_cfg.get("ws_connect_timeout_connect", 10),
 )
+_MARKER_RESPONSE_CREATED = '"response.created"'
 
 
 # ── HMAC Session Token Utilities ──
@@ -401,6 +409,10 @@ class _SessionUpdateGuard:
                 pass
             return event_id
         param = err.get("param") or ""
+        # A rate limit is not a verdict on our payload: only an explicit event_id
+        # ties one to a session.update (see rate_limit.py for the rest).
+        if rate_limit_error(err) is not None:
+            return None
         if (self._in_flight and err.get("type") == "invalid_request_error"
                 and (not param or param.startswith("session"))):
             return self._in_flight.popleft()
@@ -463,6 +475,10 @@ class RTMiddleTier:
         # Flipped if the deployment rejects `reasoning` at runtime despite the
         # name check, so later sessions stop sending it.
         self._reasoning_rejected = False
+        # Rate-limit recovery (config.yaml resilience.rate_limit); the sleep is
+        # swappable so tests don't wait out real retry delays.
+        self.rate_limit_config = RateLimitConfig.from_config(_rate_limit_cfg)
+        self._rate_limit_sleep = asyncio.sleep
         if voice_choice is not None:
             logger.info("Realtime voice choice set to %s", voice_choice)
         if isinstance(credentials, AzureKeyCredential):
@@ -638,7 +654,8 @@ class RTMiddleTier:
             self._token_refresh_task.cancel()
         self._sessions.stop_idle_checker()
 
-    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall], verbose: bool = False, guard: "_SessionUpdateGuard | None" = None) -> str | None:
+    async def _process_message_to_client(self, msg: str, client_ws: web.WebSocketResponse, server_ws: web.WebSocketResponse, tools_pending: dict[str, RTToolCall], verbose: bool = False, guard: "_SessionUpdateGuard | None" = None,
+                                         recovery: RateLimitRecovery | None = None) -> str | None:
         data = msg.data
 
         # FAST PATH: extract type via regex without full JSON parse.
@@ -686,6 +703,10 @@ class RTMiddleTier:
                     if await self._recover_rejected_session_update(message, server_ws, guard, session_id):
                         _vlog(verbose, "  ⚠ session.update rejected — fallback sent: %s", json.dumps(message, default=str)[:500])
                         return None
+                    rate_limited = rate_limit_error(message.get("error"))
+                    if rate_limited is not None and recovery is not None:
+                        await recovery.on_rate_limited(rate_limited, "error event")
+                        return updated_message
                     # Surface OpenAI errors (e.g. rejected session.update, malformed tool schemas)
                     # so they don't silently vanish into the client.
                     logger.error("OpenAI Realtime API error: %s", json.dumps(message, default=str)[:1000])
@@ -821,9 +842,19 @@ class RTMiddleTier:
 
                 case "response.done":
                     fn_calls = []
+                    follow_up_sent = bool(tools_pending)
                     if tools_pending:
                         tools_pending.clear()
                         await server_ws.send_str(_RESPONSE_CREATE_MSG)
+                    rate_limited = failed_response_rate_limit(message) if recovery is not None else None
+                    if rate_limited is not None:
+                        if follow_up_sent:
+                            logger.warning("Rate-limited response had tool calls pending; the tool follow-up "
+                                           "response.create already regenerates it (session=%s)", session_id)
+                        else:
+                            # Retrying re-runs only the model: tools run on output_item.done,
+                            # which a failed response never produced.
+                            await recovery.on_rate_limited(rate_limited, "response.done")
                     if "response" in message:
                         output = message["response"]["output"]
                         fn_calls = [o for o in output if o.get("type") == "function_call"]
@@ -943,6 +974,15 @@ class RTMiddleTier:
                 assistant_audio_seen = False
                 session_configured = asyncio.Event()
                 guard = _SessionUpdateGuard()
+
+                async def _send_to_client(event: dict) -> None:
+                    if not ws.closed:
+                        await ws.send_json(event)
+
+                recovery = RateLimitRecovery(self.rate_limit_config,
+                                             send_upstream=lambda: target_ws.send_str(_RESPONSE_CREATE_MSG),
+                                             send_client=_send_to_client, sleep=self._rate_limit_sleep,
+                                             session_id=session_id)
 
                 _vlog(verbose, "\n═══ [SESSION] Connected ═══\n"
                                "Session ID: %s\n"
@@ -1105,6 +1145,9 @@ class RTMiddleTier:
                                 echo.on_audio_done(loop, target_ws, verbose)
                             elif _MARKER_SPEECH_STARTED in data:
                                 echo.on_speech_started(verbose)
+                                recovery.cancel("the guest started speaking")
+                            elif _MARKER_RESPONSE_CREATED in data:
+                                recovery.on_response_created()
 
                             # The bootstrap session.updated arrives as soon as the socket
                             # opens, so it must NOT trigger the greeting -- the browser's
@@ -1126,7 +1169,8 @@ class RTMiddleTier:
                                     except (json.JSONDecodeError, KeyError):
                                         pass
 
-                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending, verbose, guard=guard)
+                            new_msg = await self._process_message_to_client(msg, ws, target_ws, tools_pending, verbose, guard=guard,
+                                                              recovery=recovery)
                             if new_msg is not None:
                                 await ws.send_str(new_msg)
                         elif msg.type == aiohttp.WSMsgType.ERROR:
@@ -1142,6 +1186,7 @@ class RTMiddleTier:
                 except Exception:
                     logger.exception("Unexpected error in WebSocket forwarding")
                 finally:
+                    recovery.close()
                     _vlog(verbose, "\n═══ [SESSION] Disconnected ═══\n"
                                    "Session ID: %s\n"
                                    "══════════════════════════════", session_id or "?")

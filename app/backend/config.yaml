@@ -90,6 +90,21 @@ security:
   allowed_origins: []
   require_session_token: false
 
+resilience:
+  # Rate-limit recovery on the cloud realtime path (see rate_limit.py). The demos
+  # share one Azure OpenAI quota; a rate-limited response produces no output, so
+  # without this the guest hears silence. Per failed response: retry silently after
+  # the service's hint clamped to [0.5 s, 5 s] (else retry_delay_seconds); if that is
+  # rate-limited too, the browser plays a pre-recorded apology clip and we retry after
+  # the hint clamped to [2 s, 8 s] (else second_retry_delay_seconds); after
+  # max_retries the browser asks the guest to say it again. Env override for enabled:
+  # RATE_LIMIT_RECOVERY_ENABLED=true|false.
+  rate_limit:
+    enabled: true
+    retry_delay_seconds: 1.5
+    second_retry_delay_seconds: 4
+    max_retries: 2
+
 local_mode:
   enabled: false                          # Default: cloud mode
   model_path: "./models/phi4-mini/gpu/gpu-int4-rtn-block-32"  # Phi-4-mini-instruct ONNX model directory (must contain genai_config.json)
