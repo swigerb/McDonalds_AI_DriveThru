@@ -10,6 +10,7 @@ import { useAzureSpeechOnContext } from "@/context/azure-speech-context";
 import { useMenuModeContext } from "@/context/menu-mode-context";
 import { useLocalMode } from "@/context/local-mode-context";
 import { Tooltip } from "@/components/ui/tooltip";
+import { DEFAULT_VOICE, VOICE_OPTIONS, voiceLabel } from "@/lib/voices";
 
 type LocalModeStatus = "off" | "loading" | "ready" | "unavailable";
 
@@ -193,14 +194,13 @@ export default function Settings({ isMobile, showSessionTokens, onShowSessionTok
                             onChange={(e) => onVoiceChoiceChange(e.target.value)}
                             className="w-56 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                         >
-                            <option value="shimmer">Shimmer — Cheerful &amp; Bright</option>
-                            <option value="ash">Ash — Warm &amp; Friendly</option>
-                            <option value="ballad">Ballad — Caring &amp; Soft</option>
-                            <option value="coral">Coral — Confident &amp; Clear</option>
-                            <option value="sage">Sage — Calm &amp; Thoughtful</option>
-                            <option value="verse">Verse — Natural &amp; Adaptable</option>
+                            {VOICE_OPTIONS.map(voice => (
+                                <option key={voice.value} value={voice.value}>
+                                    {voice.label}
+                                </option>
+                            ))}
                         </select>
-                        <span className="text-xs text-muted-foreground">Default: Shimmer</span>
+                        <span className="text-xs text-muted-foreground">Default: {voiceLabel(DEFAULT_VOICE).split(" — ")[0]}</span>
                     </div>
                 </div>
             )}

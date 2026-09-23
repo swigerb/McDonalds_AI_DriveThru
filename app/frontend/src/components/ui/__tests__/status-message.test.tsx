@@ -16,4 +16,14 @@ describe("StatusMessage", () => {
         expect(screen.getByText("status.conversationInProgress")).toBeInTheDocument();
         expect(container.querySelector(".listening-equalizer")).not.toBeNull();
     });
+
+    it("tells the guest the session ended after inactivity", () => {
+        renderWithProvider(<StatusMessage isRecording={false} notice="idle" />);
+        expect(screen.getByText("status.sessionEndedIdle")).toBeInTheDocument();
+    });
+
+    it("tells the guest the connection dropped", () => {
+        renderWithProvider(<StatusMessage isRecording={false} notice="lost" />);
+        expect(screen.getByText("status.connectionLost")).toBeInTheDocument();
+    });
 });

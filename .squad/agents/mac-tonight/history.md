@@ -78,3 +78,44 @@
 - **Decisions Merged:** #34–#35 captured (Phi-4 pipeline, multi-voice TTS)
 - **Tests:** All 423 passing, zero regressions
 - **Next:** Voice models available via download script, ready for demo deployment
+
+## Sonic parity — item 1: server-owned bootstrap session.update (2026-09-22)
+- McD HAD the defect: upstream session was only configured when the browser sent session.update (mic press). A react-use-websocket auto-reconnect with the mic live ran on service defaults (no tools); once the model spoke, our later session.update carrying a voice was rejected wholesale (cannot_update_voice) → no tools for the whole conversation.
+- Ported Sonic fe91eb5: `build_bootstrap_session_update()` is the first upstream frame; `_build_session(session, voice_locked)` is the single seam that overlays server config + translates to GA; `_strip_output_voice` drops audio.output.voice once assistant audio was seen.
+- Replaced McD's old `session_configured` voice deferral (pre-session) with the voice-lock deferral: voice picker sends immediately (bootstrap already registered tools) unless assistant audio exists, then defers to next conversation.
+- Greeting: no longer fired by the (now bootstrap) session.updated; triggered by the browser's session.update and waits up to 5s for session.updated (reconciles decisions.md "session.updated not reliable" fallback).
+- Tests: tests/test_session_bootstrap.py (fake GA upstream harness, incl. McD's mic-press sequence set_voice→session.update). 2 obsolete deferral tests in test_rtmt.py updated to the new contract.
+
+## Sonic parity — item 2: gpt-realtime-2.1 + reasoning.effort (2026-09-22)
+- Template deploys `gpt-realtime-2.1` / `2026-07-07` / GlobalStandard (was 1.5). 1.5 stays a rollback via `AZURE_OPENAI_REALTIME_DEPLOYMENT`.
+- `reasoning`/`parallel_tool_calls` now pass `_to_ga_session`, but `_build_session` adds them ONLY when `_reasoning_model()` (runtime rejection > explicit `model.reasoning_model` > deployment-name regex). Client-supplied values are always stripped — 1.5 rejects the whole update (tools included) if they appear.
+- New `configure_realtime_model(rtmt, model_cfg, environ)` is the one seam app.py (and the item-5 smoke script) use: temperature/max tokens + `AZURE_OPENAI_REALTIME_{REASONING_EFFORT,REASONING_MODEL,TRANSCRIPTION_MODEL}` overrides of config.yaml.
+- config.yaml: `reasoning_effort: low` (Sonic's 174-trial benchmark), `reasoning_model: auto`, `parallel_tool_calls: null`, `transcription_model: whisper-1` (server-owned, overrides the browser's value; gpt-4o-transcribe needs a deployment).
+- Bicep: 3 optional params → env via `union()` so unset = config.yaml wins; wired through main.parameters.json + azure.yaml pipeline vars.
+
+## Sonic parity — item 3: backend voice whitelist (2026-09-22)
+- `rtmt.GA_REALTIME_VOICES` (10 voices) + `DEFAULT_VOICE="marin"` replace the inline 8-voice tuple in the extension.set_voice handler — marin/cedar were silently ignored before. Missing voice key now defaults to marin.
+- Default marin in config.yaml, app.py fallback, main.parameters.json, .env-sample. `VoiceParityTests` pins all four + voices.ts together.
+
+## Sonic parity — item 4: session.update rejection fallback (2026-09-22)
+- Ported Sonic `_SessionUpdateGuard`: every upstream session.update (bootstrap `mcd_bootstrap_*`, voice picker `mcd_voice_*`, browser `mcd_su_*`) carries an event_id and is tracked; a correlated `invalid_request_error` (echoed event_id, or no event_id + session param/none while one of ours is in flight) triggers exactly ONE minimal fallback (`type, instructions, tools, tool_choice` only) per original. A rejected fallback is surfaced to the browser once — never loops.
+- Rejection with no event_id/param (1.5 rejecting `reasoning`) sets `_reasoning_rejected` so every later update drops reasoning.
+- Seam: the `"error"` case in `_process_message_to_client` (errors are not in `_PASSTHROUGH_SERVER_TYPES`, so they reach the parsed path); `guard` threaded through both `_process_message_to_*`; `on_session_updated()` on every ack.
+- McD addition: `test_rejected_bootstrap_still_greets_with_tools` (mic-press greeting after a recovered bootstrap still has the 4 tools) and `test_rejected_voice_change_is_recovered_and_tools_kept`.
+
+## Sonic parity — item 5: realtime smoke check + postdeploy hook (2026-09-22)
+- `scripts/smoke_realtime.{py,ps1,sh}` ported from Sonic. McD adaptation: `build_middle_tier` calls the REAL `tools.attach_tools_rtmt` (dummy search endpoint, never called) and passes `prompt_loader` like app.py, instead of Sonic's re-derived schema map — the smoke payload can't drift from the app's.
+- azure.yaml `postdeploy` hook: `interactive: false`, `continueOnError: true`; wrappers always `exit 0` (skip: `MCD_SKIP_REALTIME_SMOKE=true`). Uses the root `.venv` created by the postprovision hook.
+- Live (read-only, shared cog-axgpampkq3yfa): 2.1 → bootstrap / relayed / fallback all `session.updated` with 4 tools, tool_choice=auto, reasoning low; whisper-1 transcription PASS. 1.5 rollback → all PASS, reasoning not sent.
+
+## Sonic parity — item 6 backend: browser socket without permessage-deflate (2026-09-22)
+- aiohttp 3.14.3 (pinned here too) rejects the first compressed frame after an initial PONG (aio-libs/aiohttp#13274) — exactly a browser socket idle past one heartbeat. `config.yaml connection.ws_compression: false` → `rtmt._WS_COMPRESS`, applied to both cloud `WebSocketResponse`s (main + busy rejection); upstream `ws_connect(compress=0)` (AOAI declines deflate anyway).
+- `session_manager.IDLE_CLOSE_CODE=4000` (unchanged) + `IDLE_CLOSE_REASON="idle_timeout"` (was a prose message) — the frontend keys off 4000 to stop auto-reconnect.
+- NOT changed (local mode out of scope, flagged): processor_router local sockets (L306/L376), its no-processor error socket (L357), and app.py ws_test_handler (L396) still use aiohttp's default compress=True.
+- Tests: `tests/test_ws_transport.py` (7) — drives the real middle tier with Chromium-style framing (PONG then compressed frame).
+
+## Sonic parity — brand spot-check, gpt-realtime-2.1 live (2026-09-22)
+- Harness (scratch, not committed): real McD system prompt + real tools (live Azure AI Search `mcdonalds-menu-items`, real order_state), bootstrap session.update from rtmt, text user turns, first-audio latency measured from response.create to the first output_audio.delta (includes tool round-trips).
+- Correctness (2 reps × 6 scenarios): low 12/12, none 11/12 — at none, "small fries → actually make that a large" once ADDED a large next to the small (low replaced it both times). Menu question ("What comes on a Big Mac?") is search-grounded; in 2 of ~6 low attempts the model said the index doesn't list ingredients (index content, not a reasoning issue).
+- First audio: low median 969 ms / max 2266; none median 1000 ms / max 5391. No regression from low; keep `reasoning_effort: low`.
+- Rate limit: the shared deployment (capacity 10, also serving Sonic prod) returned `response.done status=failed inference_rate_limit_exceeded` under back-to-back test conversations. McD passes this through silently — the guest hears nothing, and there's no retry or apology. Flagged, not changed. The spot-check was throttled (20 s gaps) and rate-limited runs were re-run.

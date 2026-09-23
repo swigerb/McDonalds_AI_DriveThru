@@ -83,3 +83,28 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - ✅ **test_whisper_stt.py** (37 tests): WHISPER_AVAILABLE flag (3), init/config (4), device detection CUDA→ctranslate2→CPU (5), model loading/idempotent/auto-detect (4), unloading (2), properties (2), transcription PCM→float32/segments/executor/vad/language/beam (7), short audio guard (4), error handling/lazy-load/empty-segments (4), constants (2)
 - ✅ **test_local_processor.py** (6 new tests): Transcription message sent to WS, parallel execution verification, graceful skip without STT, STT unloaded on stop, STT failure doesn't crash pipeline
 - **Tests:** 671+ passing (43 new + existing), zero regressions from Whisper changes
+
+## Sonic parity — item 1 mutation checks (2026-09-22)
+- 7/7 mutants killed on rtmt.py bootstrap/voice-lock/greeting logic (no bootstrap frame, voice_locked ignored, picker not deferred, lock never set, bootstrap ack greets, greeting skips wait, bootstrap lacks transcription).
+- Strengthened greeting-wait test with a delayed session.updated ack + timeline so the ordering is actually observable.
+
+## Sonic parity — item 2 mutation check (2026-09-22)
+- 13 mutants on rtmt.py / app.py / config.yaml / main.bicep, 13 killed. 2i ("off" not treated as a disabled value) first SURVIVED — it was only visible as a spurious warning — so added `test_off_is_a_documented_value_not_a_typo` (assertNoLogs) and it was killed.
+
+## Sonic parity — item 3 mutation check (2026-09-22)
+- 14 mutants (voices.ts ×6 incl. BE-side parity checks, settings.tsx, App.tsx, rtmt ×3, config.yaml, main.parameters.json, app.py), 14 killed. App.tsx seed covered by an `?raw` source assertion in voice-picker.test.tsx (rendering App is too heavy for a unit test).
+- Runner fix: subprocess output decoded as utf-8 (vitest prints ✓/×; cp1252 crashed the runner).
+
+## Sonic parity — item 4 mutation check (2026-09-22)
+- 15 mutants (guard/fallback/tool-error seams in rtmt.py), 15 killed. 4j (bootstrap builder without its own event_id) and 4l (voice update untracked) first SURVIVED — `guard.track` stamps anyway, and no test rejected a voice update. Added `test_builders_stamp_their_own_event_ids` and `test_rejected_voice_change_is_recovered_and_tools_kept`; both killed.
+- Tool-error tests (`test_tool_errors.py`) fail 4/5 against pre-fix rtmt (verified via stash).
+
+## Sonic parity — item 5 mutation check (2026-09-22)
+- 16 mutants (smoke_realtime.py ×13, azure.yaml continueOnError, ps1/sh exit code), 16 killed. Tests drive the real smoke functions against an in-process fake GA endpoint (`EchoGA`) that rejects beta keys like GA does — so sending the raw browser session (mutant 5g) is caught.
+
+## Sonic parity — item 6 mutation check (2026-09-22)
+- 23 mutants (rtmt ×4, config.yaml, session_manager ×2, useRealtime ×11, status-message ×2, App.tsx ×3), 23 killed. 6a (`ws_compression` default flipped to True) first SURVIVED because config.yaml always supplies the key; added `test_compression_stays_off_when_config_omits_the_key` (loads a fresh rtmt copy with an empty connection config) and it was killed.
+- Runner needs PYTHONIOENCODING=utf-8 when printing vitest's ❯ glyph.
+
+## Sonic parity — item 7 mutation check (2026-09-22)
+- 9 mutants (main.parameters.json ×3, main.bicep ×5, azure.yaml ×1), 9 killed — incl. un-conditioning the openAi module, flipping the reuse default, and adding a non-role declaration scoped to the shared OpenAI RG. New tests fail 4/6 against the pre-fix parameters file (stash check).

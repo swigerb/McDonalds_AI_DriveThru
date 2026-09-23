@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-import StatusMessage from "@/components/ui/status-message";
+import StatusMessage, { ConnectionNotice } from "@/components/ui/status-message";
 import MenuPanel from "@/components/ui/menu-panel";
 import OrderSummary, { calculateOrderSummary, OrderSummaryProps } from "@/components/ui/order-summary";
 import TranscriptPanel from "@/components/ui/transcript-panel";
@@ -29,6 +29,7 @@ import { AzureSpeechProvider, useAzureSpeechOnContext } from "@/context/azure-sp
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { MenuModeProvider } from "@/context/menu-mode-context";
 import { LocalModeProvider, useLocalMode } from "@/context/local-mode-context";
+import { resolveVoice } from "@/lib/voices";
 
 import dummyTranscriptsData from "@/data/dummyTranscripts.json";
 import dummyOrderData from "@/data/dummyOrder.json";
@@ -119,7 +120,7 @@ function McDonaldsApp() {
         return localStorage.getItem("verboseLogToFile") === "true";
     });
     const [voiceChoice, setVoiceChoice] = useState<string>(() => {
-        return localStorage.getItem("voiceChoice") || "shimmer";
+        return resolveVoice(localStorage.getItem("voiceChoice"));
     });
     const [piperVoice, setPiperVoice] = useState<string>(() => {
         return localStorage.getItem("piperVoice") || "en_US-amy-medium";
@@ -160,6 +161,15 @@ function McDonaldsApp() {
     const startMicInFlightRef = useRef<Promise<void> | null>(null);
     const isAiSpeakingRef = useRef(false);
 
+    // Cloud mode: a closed socket means the server-side session (and its order) is
+    // gone; the next conversation starts fresh. Never auto-resume the mic.
+    const [connectionNotice, setConnectionNotice] = useState<ConnectionNotice>(null);
+    const serverSessionLostRef = useRef(false);
+    const orderItemCountRef = useRef(0);
+    useEffect(() => {
+        orderItemCountRef.current = order.items.length;
+    }, [order]);
+
     const realtime = useRealTime({
         localMode,
         enableInputAudioTranscription: true,
@@ -172,6 +182,17 @@ function McDonaldsApp() {
         },
         onWebSocketClose: () => {
             console.log("[WS] WebSocket connection closed");
+        },
+        onConnectionLost: ({ code, reason, idle }) => {
+            console.warn(`[WS] Connection lost (code=${code}${reason ? `, reason=${reason}` : ""})`);
+            // Local mode and Azure Speech keep their existing behaviour.
+            if (useAzureSpeechOn || localMode) return;
+            serverSessionLostRef.current = true;
+            const wasActive = isSessionActiveRef.current;
+            if (wasActive) void stopConversation();
+            if (idle || wasActive || orderItemCountRef.current > 0) {
+                setConnectionNotice(idle ? "idle" : "lost");
+            }
         },
         onWebSocketError: event => {
             console.error("[WS] WebSocket error:", event);
@@ -318,13 +339,34 @@ function McDonaldsApp() {
         onBargeIn: handleBargeIn
     });
 
+    const stopConversation = async () => {
+        await stopAudioRecording();
+        console.log("[MIC] Audio recording stopped");
+        stopAudioPlayer();
+        isSessionActiveRef.current = false;
+        isAiSpeakingRef.current = false;
+        awaitingGreetingDoneRef.current = false;
+        if (useAzureSpeechOn) {
+            azureSpeech.inputAudioBufferClear();
+        } else {
+            realtime.inputAudioBufferClear();
+        }
+        setIsRecording(false);
+    };
+
     const onToggleListening = async () => {
         console.log("[MIC] Toggle clicked. isRecording:", isRecording, "localMode:", localMode, "readyState:", realtime.readyState);
         console.log("[WS-DIAG] Mic clicked, readyState:", readyStateLabel(realtime.readyState), "wsEndpoint:", realtime.wsEndpoint);
 
         if (!isRecording) {
-            // Check WebSocket connection before proceeding
-            if (realtime.readyState !== ReadyState.OPEN) {
+            const cloudRealtime = !localMode && !useAzureSpeechOn;
+            // Check WebSocket connection before proceeding. After an idle close or
+            // exhausted retries the cloud socket is parked on purpose: reopen it with
+            // a fresh token; startSession() below is queued until it opens.
+            if (cloudRealtime && realtime.needsReconnect) {
+                console.log("[WS] Socket parked (idle close / retries exhausted) — reconnecting");
+                void realtime.reconnect();
+            } else if (realtime.readyState !== ReadyState.OPEN) {
                 const errorMsg = localMode
                     ? "Cannot connect to local server. Is the backend running?"
                     : "WebSocket not connected. Please check your connection and try again.";
@@ -337,6 +379,11 @@ function McDonaldsApp() {
             console.log("[MIC] Starting session...", localMode ? "(local mode)" : "(cloud mode)");
             dismissAllToasts();
             setSessionIdentifiers(null);
+            setConnectionNotice(null);
+            if (cloudRealtime && serverSessionLostRef.current) {
+                serverSessionLostRef.current = false;
+                setOrder(initialOrder);
+            }
 
             // Start session and playback immediately, but delay mic capture until the greeting finishes.
             isSessionActiveRef.current = true;
@@ -389,18 +436,7 @@ function McDonaldsApp() {
             setIsRecording(true);
         } else {
             console.log("[MIC] Stopping session...");
-            await stopAudioRecording();
-            console.log("[MIC] Audio recording stopped");
-            stopAudioPlayer();
-            isSessionActiveRef.current = false;
-            isAiSpeakingRef.current = false;
-            awaitingGreetingDoneRef.current = false;
-            if (useAzureSpeechOn) {
-                azureSpeech.inputAudioBufferClear();
-            } else {
-                realtime.inputAudioBufferClear();
-            }
-            setIsRecording(false);
+            await stopConversation();
         }
     };
 
@@ -539,7 +575,7 @@ function McDonaldsApp() {
                                         </>
                                     )}
                                 </Button>
-                                <StatusMessage isRecording={isRecording} />
+                                <StatusMessage isRecording={isRecording} notice={connectionNotice} />
                                 {localMode && (
                                     <div className="mt-2 max-w-xs text-center font-mono text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
                                         <div>

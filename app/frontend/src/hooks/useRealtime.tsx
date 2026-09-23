@@ -27,6 +27,8 @@ type Parameters = {
     enableInputAudioTranscription?: boolean;
     onWebSocketOpen?: () => void;
     onWebSocketClose?: () => void;
+    /** Fired whenever an open socket closes. The server session (and its order) is gone. */
+    onConnectionLost?: (info: ConnectionLostInfo) => void;
     onWebSocketError?: (event: Event) => void;
     onWebSocketMessage?: (event: MessageEvent<any>) => void;
 
@@ -41,6 +43,13 @@ type Parameters = {
     onReceivedInputAudioTranscriptionCompleted?: (message: ResponseInputAudioTranscriptionCompleted) => void;
     onReceivedError?: (message: Message) => void;
 };
+
+// Server closes idle sessions with this code (session_manager.IDLE_CLOSE_CODE).
+// It is intentional, so the hook stays disconnected until the guest taps again
+// instead of silently opening a new socket that mic audio could leak into.
+export const WS_CLOSE_IDLE_TIMEOUT = 4000;
+
+export type ConnectionLostInfo = { code: number; reason: string; idle: boolean };
 
 // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
 const MAX_RETRIES = 10;
@@ -68,6 +77,7 @@ export default function useRealTime({
     enableInputAudioTranscription,
     onWebSocketOpen,
     onWebSocketClose,
+    onConnectionLost,
     onWebSocketError,
     onWebSocketMessage,
     onReceivedResponseCreated,
@@ -82,6 +92,11 @@ export default function useRealTime({
     onReceivedError
 }: Parameters) {
     const [sessionToken, setSessionToken] = useState<string | null>(null);
+    // Don't open the socket until the token fetch settles, otherwise the first
+    // (token-less) socket is torn down and replaced as soon as the token arrives.
+    const [tokenReady, setTokenReady] = useState(!!localMode || !!useDirectAoaiApi);
+    // false after an idle close or exhausted retries (cloud only): stay down until the guest taps.
+    const [shouldConnect, setShouldConnect] = useState(true);
 
     // Fetch a session token on mount (graceful — null means no token required)
     // In local mode, skip — no Azure auth needed for offline operation
@@ -89,14 +104,17 @@ export default function useRealTime({
         if (localMode) {
             console.log("[LOCAL-MODE] Skipping session token fetch — running locally");
             setSessionToken(null);
+            setTokenReady(true);
             return;
         }
+        if (useDirectAoaiApi) return;
         console.log("[WS] Fetching session token...");
         fetchSessionToken().then((token) => {
             console.log("[WS] Session token:", token ? "obtained" : "not required");
             setSessionToken(token);
+            setTokenReady(true);
         });
-    }, [localMode]);
+    }, [localMode, useDirectAoaiApi]);
 
     const buildWsEndpoint = () => {
         if (localMode) {
@@ -124,7 +142,7 @@ export default function useRealTime({
     const prevReadyStateRef = useRef<ReadyState | null>(null);
     // Ref to break circular dependency: callbacks need sendJsonMessage,
     // but sendJsonMessage comes from useWebSocket which takes the callbacks.
-    const sendJsonMessageRef = useRef<(msg: object) => void>(() => {});
+    const sendJsonMessageRef = useRef<(msg: object, keep?: boolean) => void>(() => {});
 
     const onMessageReceived = useCallback((event: MessageEvent<any>) => {
         onWebSocketMessage?.(event);
@@ -141,7 +159,7 @@ export default function useRealTime({
             case "response.created":
                 // Earliest signal that the AI is about to speak.
                 // Flush any buffered mic audio on the server to prevent echo.
-                sendJsonMessageRef.current({ type: "input_audio_buffer.clear" });
+                sendJsonMessageRef.current({ type: "input_audio_buffer.clear" }, false);
                 onReceivedResponseCreated?.(message);
                 break;
             case "response.done":
@@ -186,7 +204,7 @@ export default function useRealTime({
         onReceivedError
     ]);
 
-    const { sendJsonMessage, readyState } = useWebSocket(wsEndpoint, {
+    const { sendJsonMessage, readyState } = useWebSocket(tokenReady ? wsEndpoint : null, {
         onOpen: () => {
             console.log("[WS] Connection opened", localMode ? "(local mode)" : "(cloud mode)", "→", wsEndpoint);
             retryCountRef.current = 0;
@@ -196,11 +214,15 @@ export default function useRealTime({
         onClose: (event) => {
             console.log("[WS] Connection closed", { code: event.code, reason: event.reason, localMode });
             setRetryCount(prev => prev + 1);
-            // Auth failure → refresh token and let reconnect use the new one
-            // Skip in local mode — no Azure auth needed
-            if (!localMode && (event.code === 4001 || event.reason?.includes("expired"))) {
+            const idle = event.code === WS_CLOSE_IDLE_TIMEOUT;
+            if (idle) {
+                setShouldConnect(false);
+            } else if (!localMode && (event.code === 4001 || event.reason?.includes("expired"))) {
+                // Auth failure → refresh token and let reconnect use the new one
+                // Skip in local mode — no Azure auth needed
                 fetchSessionToken().then(setSessionToken);
             }
+            onConnectionLost?.({ code: event.code, reason: event.reason ?? "", idle });
             onWebSocketClose?.();
         },
         onError: event => {
@@ -208,14 +230,30 @@ export default function useRealTime({
             onWebSocketError?.(event);
         },
         onMessage: onMessageReceived,
-        shouldReconnect: () => true,
+        shouldReconnect: (event: CloseEvent) => event.code !== WS_CLOSE_IDLE_TIMEOUT,
+        // Local mode keeps its old behaviour (the mic tap shows a toast instead).
+        onReconnectStop: () => {
+            if (!localMode) setShouldConnect(false);
+        },
         reconnectAttempts: MAX_RETRIES,
         reconnectInterval: (attemptNumber: number) => {
             const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attemptNumber), MAX_DELAY_MS);
             // Add jitter to prevent thundering herd
             return delay + Math.random() * 500;
         }
-    });
+    }, shouldConnect);
+
+    const isConnected = readyState === ReadyState.OPEN;
+    const needsReconnect = !shouldConnect;
+
+    // Re-open after an idle close or exhausted retries, with a fresh token
+    // (the old one may have expired while the page sat idle).
+    const reconnect = useCallback(async () => {
+        if (shouldConnect) return;
+        if (!localMode && !useDirectAoaiApi) setSessionToken(await fetchSessionToken());
+        setRetryCount(0);
+        setShouldConnect(true);
+    }, [shouldConnect, localMode, useDirectAoaiApi]);
 
     // Keep ref in sync so onMessageReceived can call sendJsonMessage
     useEffect(() => {
@@ -268,7 +306,9 @@ export default function useRealTime({
             audio: base64Audio
         };
 
-        sendJsonMessage(command);
+        // keep=false: drop, never queue, audio while the socket isn't open —
+        // queued frames are replayed onto the next socket ahead of session.update.
+        sendJsonMessage(command, false);
     };
 
     const inputAudioBufferClear = () => {
@@ -276,11 +316,11 @@ export default function useRealTime({
             type: "input_audio_buffer.clear"
         };
 
-        sendJsonMessage(command);
+        sendJsonMessage(command, false);
     };
 
     const cancelResponse = () => {
-        sendJsonMessage({ type: "response.cancel" });
+        sendJsonMessage({ type: "response.cancel" }, false);
     };
 
     const sendVerboseLogging = (enabled: boolean) => {
@@ -306,5 +346,22 @@ export default function useRealTime({
         sendJsonMessage({ type: "extension.set_piper_voice", voice });
     };
 
-    return { startSession, addUserAudio, inputAudioBufferClear, cancelResponse, sendVerboseLogging, sendLogToFile, sendVoiceChoice, sendLocalModeToggle, sendPiperVoiceChoice, readyState, wsEndpoint, retryCount, maxRetries: MAX_RETRIES };
+    return {
+        startSession,
+        addUserAudio,
+        inputAudioBufferClear,
+        cancelResponse,
+        sendVerboseLogging,
+        sendLogToFile,
+        sendVoiceChoice,
+        sendLocalModeToggle,
+        sendPiperVoiceChoice,
+        readyState,
+        wsEndpoint,
+        retryCount,
+        maxRetries: MAX_RETRIES,
+        isConnected,
+        needsReconnect,
+        reconnect
+    };
 }

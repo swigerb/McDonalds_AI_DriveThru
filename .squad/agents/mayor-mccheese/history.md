@@ -62,3 +62,13 @@
 **Outcome:** All infra/DevOps changes committed on `dev` branch.
 - **Tests:** All 423 passing, zero regressions, zero production image impact
 - **Next:** Models ready for on-demand download, ready for developer setup
+
+## Sonic parity — item 5: postdeploy smoke hook (2026-09-22)
+- azure.yaml `hooks.postdeploy` (windows pwsh / posix sh) → `scripts/smoke_realtime.ps1|.sh`, `interactive: false`, `continueOnError: true`. Wrappers print a loud warning and exit 0 on any failure, so an anonymous external `azd up` can never fail on it. `smoke_realtime.sh` committed 100755.
+
+## Sonic parity — item 7: webAppExists reads SERVICE_BACKEND_RESOURCE_EXISTS (2026-09-22)
+- Same bug as Sonic ecc9c55: `main.parameters.json` read `${SERVICE_WEB_RESOURCE_EXISTS=false}` but the azd service is `backend`, so `exists` was always false and any `azd provision` would have swapped the running image for containerapps-helloworld. Fixed to `SERVICE_BACKEND_RESOURCE_EXISTS`.
+- Shared OpenAI (cog-axgpampkq3yfa / rg-sonic-demo) provision analysis: with `AZURE_OPENAI_REUSE_EXISTING=true` the `openAi` AVM module (account + deployments) is skipped (`if (!reuseExistingOpenAi)`); the only thing McD's template deploys into rg-sonic-demo is `openAiRoleBackend` (Cognitive Services OpenAI User for mcd-demo-aca-identity) — already present (read-only `az role assignment list`), deterministic guid name → no-op. `searchRoleBackend` (Search Index Data Reader) also lands in rg-sonic-demo, also already present. `openAiRoleSearchService` / search module / storage role are skipped (reuse search). No deployment on the shared account is declared or modified.
+- Live deployments (read-only): gpt-realtime-2.1 2026-07-07 GlobalStandard cap 10; gpt-realtime-1.5 2026-02-23 cap 10; text-embedding-3-large v1 Standard 30. Danger if someone flips reuse=false with the same account name: the module would redeclare 2.1 at `AZURE_OPENAI_REALTIME_DEPLOYMENT_CAPACITY` (default 1 → would shrink Sonic's live capacity of 10); 1.5 isn't declared, so it would be left as is (ARM incremental mode doesn't delete it). Guarded by `SharedOpenAiGuardTests`.
+- azd env `.azure/mcd-demo/.env` (gitignored): AZURE_OPENAI_REALTIME_DEPLOYMENT 1.5→gpt-realtime-2.1, VOICE_CHOICE alloy→marin.
+- Tests: `tests/test_azd_service_wiring.py` (Sonic's 3 + webAppExists→backend exists wiring + 2 shared-OpenAI guards).

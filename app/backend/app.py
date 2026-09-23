@@ -15,7 +15,7 @@ from config_loader import get_config, get_local_mode_config
 from local_search import attach_local_tools
 from processor_router import ProcessorRouter
 from prompt_loader import PromptLoader
-from rtmt import RTMiddleTier, create_hmac_token
+from rtmt import RTMiddleTier, configure_realtime_model, create_hmac_token
 from tools import attach_tools_rtmt
 
 # Production: INFO; override with LOG_LEVEL env var for debugging
@@ -256,12 +256,11 @@ async def create_app() -> web.Application:
                 credentials=llm_credential,
                 endpoint=llm_endpoint,
                 deployment=llm_deployment,
-                voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "shimmer"),
+                voice_choice=os.environ.get("AZURE_OPENAI_REALTIME_VOICE_CHOICE") or model_cfg.get("default_voice", "marin"),
                 prompt_loader=prompt_loader,
             )
             rtmt.app_secret = app_secret
-            rtmt.temperature = model_cfg.get("temperature", 0.6)
-            rtmt.max_tokens = model_cfg.get("max_response_output_tokens", 4096)
+            configure_realtime_model(rtmt, model_cfg)
 
             # System message: prefer externalized YAML prompt, fall back to hardcoded
             if prompt_loader is not None:

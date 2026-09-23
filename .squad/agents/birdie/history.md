@@ -145,3 +145,15 @@ _No sessions yet._
 - All 15 tests pass, `tsc -b` clean, `npm run build` succeeds
 - CSS size: 39.36 kB → 56.05 kB (Tailwind 4 includes more utilities by default; gzip 7.83→10.07 kB)
 - McDonald's brand vars (--brand-red, #FFBC0D, #DB0007) confirmed in built CSS
+
+## Sonic parity — item 3: marin default + all ten GA voices (2026-09-22)
+- New `src/lib/voices.ts` (VOICE_OPTIONS ×10, DEFAULT_VOICE="marin", resolveVoice) is the single frontend list; settings.tsx renders the picker from it (was 6 hard-coded options, hiding marin/cedar/alloy/echo) and the "Default:" hint derives from it.
+- App.tsx seeds voiceChoice via `resolveVoice(localStorage…)` — a stale/unknown stored voice falls back to marin instead of the old hard-coded "shimmer". Important because McD's App sends extension.set_voice on every mic press, so the frontend default is what the guest actually hears.
+- Tests: `components/ui/__tests__/voice-picker.test.tsx` (ported from Sonic; McD needs MenuMode + LocalMode providers and the "AI Voice" label). Local (Piper) voice picker untouched.
+
+## Sonic parity — item 6: idle close parks the socket, no queued audio (2026-09-22)
+- `useRealtime.tsx`: socket URL is null until the session token fetch settles (no token-less first connect); `shouldReconnect` returns false for 4000 (our idle close), and onClose(4000) / onReconnectStop park the cloud socket (`needsReconnect`). `reconnect()` fetches a fresh token and reopens. New `onConnectionLost({code, reason, idle})` callback.
+- `keep=false` on input_audio_buffer.append / .clear (incl. the response.created echo flush) and response.cancel — react-use-websocket queues by default and replayed stale audio onto the next socket ahead of session.update. session.update and extension.set_voice still queue (they must reach the next socket).
+- App.tsx (cloud realtime only; local mode + Azure Speech early-return): connection loss stops an active conversation and shows a StatusMessage notice (`status.sessionEndedIdle` / `status.connectionLost`, en/es/fr/ja); next mic tap on a parked socket calls reconnect() instead of the "not connected" toast; start after a lost server session resets the order (server order state is per-session).
+- The hook is shared with local mode: keep=false and 4000 handling apply there too (harmless — local never sends 4000); onReconnectStop does NOT park local mode (pinned by test).
+- Tests: `hooks/__tests__/useRealtime.test.tsx` (8), `hooks/__tests__/app-connection-wiring.test.tsx` (4, `?raw`), status-message +2.
