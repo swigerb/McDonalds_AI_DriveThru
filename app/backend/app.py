@@ -70,6 +70,26 @@ def _get_bool_env(variable_name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def load_app_secret(environ=None) -> bytes:
+    """HMAC secret for /api/auth/session tokens.
+
+    APP_SESSION_SECRET (a Container App secret in Azure, see infra/main.bicep)
+    is shared by every replica and survives restarts, so a token minted by one
+    process validates in another. Without it (local dev) a random per-process
+    secret is used, which is only safe with a single process.
+    """
+    env = os.environ if environ is None else environ
+    configured = (env.get("APP_SESSION_SECRET") or "").strip()
+    if configured:
+        if len(configured) < 32:
+            logger.warning("APP_SESSION_SECRET is shorter than 32 characters; use a longer random value")
+        return configured.encode("utf-8")
+    if (env.get("RUNNING_IN_PRODUCTION") or "").strip().lower() in {"1", "true", "yes", "on"}:
+        logger.warning("APP_SESSION_SECRET is not set; using a per-process random secret, so session tokens "
+                       "will not validate across replicas or restarts")
+    return os.urandom(32)
+
+
 # ---------------------------------------------------------------------------
 # Middleware
 # ---------------------------------------------------------------------------
@@ -237,7 +257,8 @@ async def create_app() -> web.Application:
     rtmt = None
     conn_cfg = _cfg.get("connection", {})
     model_cfg = _cfg.get("model", {})
-    app_secret = os.urandom(32)
+    # Shared HMAC secret for session tokens (APP_SESSION_SECRET; random for local dev)
+    app_secret = load_app_secret()
     if not missing_vars:
         try:
             credential = None

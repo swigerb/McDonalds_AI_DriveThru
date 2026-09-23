@@ -1,6 +1,6 @@
-# Customizing the VoiceRAG deployment
+# Customizing the McDonald's AI Drive-Thru deployment
 
-This guide shows you how to customize the [VoiceRAG](../README.md#deploying-the-app) deployment to specify different options.
+This guide shows you how to customize the [McDonald's AI Drive-Thru](../README.md#deploying-to-azure) deployment to specify different options.
 If your goal is to reuse existing services (OpenAI or Search), see the [existing services guide](./existing_services.md) instead.
 
 ## Customizing the real-time voice choice
@@ -99,3 +99,36 @@ other UI language plays English). They are pre-recorded because the model is the
 Regenerate them after a voice change with `python scripts/generate_apology_clips.py [--deployment <name>] [--voice
 marin]`; it reads each clip back through whisper-1 so you can check the wording. Adding a UI locale needs a phrase
 in that script and in `src/lib/rate-limit-apology.ts` (`tests/test_apology_clips.py` fails until it has a clip).
+
+## Scaling, session affinity and the session-token secret
+
+Order state, the resume credential and the reconnect grace hold (see [order_resume.md](order_resume.md)) live in the
+backend process's memory. Two rules follow from that:
+
+- **One worker per replica.** `app/Dockerfile` runs gunicorn with `--workers 1`. With two workers, a reconnect has
+  about a 50% chance of reaching a process that doesn't have the order. aiohttp is async, so one worker easily carries
+  the per-replica session cap (`security.max_concurrent_sessions`).
+- **Sticky ingress.** `infra/main.bicep` sets `stickySessionsAffinity: 'sticky'` on the backend Container App
+  (`ingress.stickySessions.affinity`). Envoy sets an affinity cookie on the page load, and the browser sends it on the
+  websocket upgrade, so a reconnect lands on the same replica. Sticky sessions need single revision mode, which is the
+  default in `infra/core/host/container-app.bicep`. Min/max replicas are unchanged (1/5). A resume still fails, and
+  falls back to a fresh order, when that replica is gone (scale-in, restart, redeploy).
+
+`/api/auth/session` signs its HMAC tokens with `APP_SESSION_SECRET`. The value is a Container App secret
+(`app-session-secret`), so every replica and restart validates every other's tokens. That is required before
+`security.require_session_token` can be turned on.
+
+- By default each `azd provision` generates a random value (`newGuid()` twice).
+- To keep one value across provisions, pin it in the azd environment:
+
+  ```shell
+  azd env set APP_SESSION_SECRET "$(openssl rand -base64 48)"
+  ```
+
+- A changed secret changes `APP_SESSION_SECRET_FINGERPRINT` in the template. That rolls a new revision, so all replicas
+  restart on the new value together.
+- Locally, when `APP_SESSION_SECRET` is unset, the app falls back to a random per-process secret.
+- Sending a secrets list replaces the app's secrets. With EasyAuth on and `AZURE_AUTH_CLIENT_SECRET` set in the azd
+  environment, `aad-client-secret` is part of that list. With EasyAuth on and `AZURE_AUTH_CLIENT_SECRET` empty (the
+  secret was set out-of-band with `az containerapp secret set`), the existing `aad-client-secret` is read back and
+  re-sent on each provision (`preserveExistingSecretNames`).

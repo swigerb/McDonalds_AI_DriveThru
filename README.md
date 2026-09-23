@@ -217,6 +217,7 @@ The entire round trip — guest speech → AI understanding → tool execution �
 
 - **Voice picker**: The settings dialog exposes all ten GA realtime voices (marin and cedar — OpenAI's recommended voices — plus alloy, ash, ballad, coral, echo, sage, shimmer, verse), listed in `app/frontend/src/lib/voices.ts`. The default is **marin** (`model.default_voice` in `app/backend/config.yaml`, `DEFAULT_VOICE` in `voices.ts`). The choice is persisted in the browser and sent to the middle tier, which reissues a `session.update` with the voice at `audio.output.voice`. The service locks the voice once the crew member has spoken, so a change made mid-conversation applies from the next conversation.
 - **Session config can't silently fail**: GA rejects a `session.update` wholesale if any one field is unsupported — tools included. Every `session.update` the middle tier sends carries an `event_id`; if the service rejects one, the middle tier resends a minimal update (instructions + tools only) so the crew member keeps its tools, and a failing tool call returns an apology to the model instead of ending the conversation. `azd deploy` runs a non-fatal smoke check (`scripts/smoke_realtime.py`) that verifies the live deployment accepts the exact session config. See [docs/customizing_deploy.md](docs/customizing_deploy.md#post-deploy-realtime-smoke-check).
+- **Orders survive a dropped connection** (cloud realtime mode): after a Wi-Fi blip or a missed heartbeat, the browser reconnects within 2 minutes and gets the same order back. The mic restarts and the crew member carries on without greeting again. Idle sessions still end after 5 minutes, and **Start a new order** clears the ticket. Local mode and Azure Speech mode don't resume. See [docs/order_resume.md](docs/order_resume.md).
 ### Architecture Diagram
 
 The `RTClient` in the frontend receives the audio input, sends that to the Python backend which uses an `RTMiddleTier` object to interface with the Azure OpenAI Realtime API, and includes a tool for searching Azure AI Search.
@@ -251,7 +252,7 @@ The architecture implements a **WebSocket middle tier** that bridges the browser
 **Infrastructure:**
 - Bicep IaC for reproducible deployments
 - Azure Container Apps with auto-scaling (20 concurrent requests/replica, max 5 replicas)
-- Gunicorn with 2 async workers, 120s timeout, 65s keep-alive
+- Gunicorn with 1 async worker (order/resume state is in-process) and sticky ingress affinity, 120s timeout, 65s keep-alive
 - Docker with layer caching for fast rebuilds
 - Health probes: startup (50s), liveness (30s), readiness (10s)
 - Azure Developer CLI (`azd`) for one-command provisioning

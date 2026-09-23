@@ -123,3 +123,18 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 - Frontend: 23 mutants (language fallback/splitting, speaking-flag clear, mute, final unmute, already-speaking unmute guard, stale-clip guard, play-rejection path, session guard, final branch, dismiss, pause, recovering flag, clip language, useRealtime routing, StatusMessage keys ×2, App wiring ×5, es key removal), 23 killed. The stale-clip guard survived until a "dismissed before play() rejects" test was added.
 - Clips: 3 source mutants (generator phrase list, frontend language list, clip path) + 4 file mutants (missing ja clip, 16 kHz, silent, 6 s), 7 killed.
 - Self-inflicted regressions caught by the full suite this round (not by the targeted runs): the rebrand guard rejected the sibling brand name in a new docstring/comment (reworded), and the R2 `TenantTests` leaked `tools._prompt_loader` into `test_tool_calling` (isolated with `_isolate_tools_global`). Lesson: run the full suite before each commit, not just the new file.
+- **Order resume port — mutation + e2e (2026-09-23, feat/order-resume):** Every mutant killed:
+
+  | Step | Mutants |
+  | --- | --- |
+  | Doc headings | 3/3 |
+  | s0 infra | 14/14 |
+  | s1 grace hold | 15 + 1 replacement for an equivalent mutant |
+  | s2 handshake | 20/20 + 1 combined (the three single-use guards are redundant by design) |
+  | s3 rehydrate/nudge | 20/20 |
+  | fe protocol | 29/29 |
+  | fe UI | 38/38 |
+  | e2e | 2/2 |
+
+  - Two fe-UI survivors needed new App tests: a second failed reconnect keeps "was mid-conversation", and a give-up with no resume in flight stays silent.
+  - `scripts/e2e_order_resume.py`: headless Edge 153, 55/55. The e2e mutants dropped the voice re-send and the held tap; each failed its intended check.
