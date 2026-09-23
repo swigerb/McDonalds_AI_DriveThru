@@ -58,12 +58,20 @@ After `azd deploy` / `azd up`, a **non-fatal** `postdeploy` hook runs `scripts/s
 exact bootstrap, relayed-browser and fallback `session.update` payloads from the app code (`config.yaml`, the real
 system prompt and `tools.attach_tools_rtmt`), sends them to the deployed realtime model, and checks each comes back
 as `session.updated` with all four tools, `tool_choice: auto`, the instructions and (on 2.1) the reasoning effort.
-It then checks that guest speech is actually transcribed with the configured transcription model.
+It then checks that guest speech is actually transcribed with the configured transcription model: the model
+reads a fixed order aloud (the phrase goes in the response instructions, not a user turn, so it recites rather
+than answers) and the transcript must match that phrase **word for word** (case, punctuation and one or two
+whisper slips aside; `TRANSCRIPTION_MIN_SIMILARITY` = 0.85). A transcript like "Sure, I can't place the order
+for you..." fails the check instead of passing on a keyword.
 
 - It never fails the deployment; problems are printed as a loud warning. Exit codes of the Python script:
   `0` pass, `1` a check failed, `2` could not run (auth, network, missing settings).
 - Run it by hand: `python scripts/smoke_realtime.py` (reads the azd env), or
   `python scripts/smoke_realtime.py --endpoint https://<aoai>.openai.azure.com/ --deployment gpt-realtime-1.5`.
-  Auth: `AZURE_OPENAI_EASTUS2_API_KEY` if set, else your Azure CLI / azd login ("Cognitive Services OpenAI User").
+  Auth: `AZURE_OPENAI_EASTUS2_API_KEY` if set, else an Entra ID token for the azd env's `AZURE_TENANT_ID` /
+  `AZURE_SUBSCRIPTION_ID` ("Cognitive Services OpenAI User"), not whichever `az` / `azd` account is active; a
+  token from another tenant gets HTTP 400 "Tenant provided in token does not match resource token". Override
+  with `--tenant <id>` / `--subscription <id>` (precedence: flag > environment variable > azd env). It tries
+  `az` for that subscription, then `azd` and `az` pinned to that tenant, and reports every failure if all fail.
 - Skip it: `azd env set MCD_SKIP_REALTIME_SMOKE true`.
 - Local mode (Phi-4/Piper) is not checked; it never talks to Azure OpenAI.

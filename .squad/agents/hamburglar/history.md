@@ -114,3 +114,6 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 
 ## Round 3 — R3 mutation check (2026-09-23)
 - 6 mutants (es/fr/ja/en locale values, fr key removal, a Contoso string in status-message.tsx), 6 killed. Runner needs `encoding=utf-8` on subprocess output (vitest glyphs crash cp1252).
+
+## Round 3 — R2 mutation check (2026-09-23)
+- 19 mutants on `scripts/smoke_realtime.py` (similarity gate, threshold 0.5/0.95, phrase back in a user turn / dropped from instructions, empty check, case/order normalisation, check_transcription bypassing the judge, credential order/pinning/fallback/continue-on-failure/first-line errors, CLI>env>azd precedence, azd skipped with explicit endpoint, identity not passed through run/main), 19 killed. The canned answered transcript is the one Sonic's keyword check passed on.
