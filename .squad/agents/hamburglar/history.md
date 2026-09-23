@@ -111,3 +111,6 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 
 ## Round 3 — L1 mutation check (2026-09-23)
 - 10 mutants (processor_router ×6, app.py ×2, rtmt ×2), 10 killed. The behavioural test alone (AST scan deselected) kills `compress=True` on the local fast path — it reproduces the real 1002, not just the kwarg. The scan asserts it found >= 6 constructions so an empty scan can't pass.
+
+## Round 3 — R3 mutation check (2026-09-23)
+- 6 mutants (es/fr/ja/en locale values, fr key removal, a Contoso string in status-message.tsx), 6 killed. Runner needs `encoding=utf-8` on subprocess output (vitest glyphs crash cp1252).
