@@ -275,7 +275,7 @@ async def _synthesize(url: str, headers: dict, text: str, timeout: float) -> byt
             "instructions": "You are a text-to-speech engine. Say only what you are told to say.",
             "audio": {"input": {"turn_detection": None}, "output": {"voice": "alloy"}}}})
         # The phrase goes in the response instructions, not a user turn: given a user
-        # turn, gpt-realtime-2.1 answered the order instead of reading it (Dunkin c4249de:
+        # turn, gpt-realtime-2.1 answered the order instead of reading it (reference-repo fix c4249de:
         # 3/3 paraphrased that way; this form 6/6 verbatim on 2.1 and 1.5).
         await ws.send_json({"type": "response.create", "response": {
             "instructions": f"Say exactly this sentence, word for word, and nothing else: \"{text}\""}})

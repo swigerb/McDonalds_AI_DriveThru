@@ -222,7 +222,7 @@ class SmokePayloadTests(unittest.TestCase):
 
 
 class SynthesizeTests(unittest.IsolatedAsyncioTestCase):
-    """The test audio must be the phrase read aloud, not the model's reply to it (Dunkin c4249de)."""
+    """The test audio must be the phrase read aloud, not the model's reply to it (reference-repo fix c4249de)."""
 
     async def test_phrase_is_sent_as_response_instructions_not_a_user_turn(self):
         received = []
@@ -368,7 +368,7 @@ class CheckTranscriptionTests(unittest.IsolatedAsyncioTestCase):
 
 
 class TenantTests(unittest.TestCase):
-    """The token must come from the resource's tenant, not the active `az` or `azd` default (Dunkin c4249de)."""
+    """The token must come from the resource's tenant, not the active `az` or `azd` default (reference-repo fix c4249de)."""
 
     NAMES = ["AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID", "AZURE_OPENAI_EASTUS2_ENDPOINT",
              "AZURE_OPENAI_REALTIME_DEPLOYMENT"]

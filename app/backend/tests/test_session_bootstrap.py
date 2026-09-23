@@ -618,7 +618,7 @@ class ReasoningAndTranscriptionConfigTests(unittest.TestCase):
             self.assertFalse(deployment_supports_reasoning(name), name)
 
     def test_data_zone_2_1_deployment_is_a_reasoning_model(self):
-        """McDonald's and Dunkin share `gpt-realtime-2.1-dz` (DataZoneStandard) on the shared account.
+        """McDonald's shares `gpt-realtime-2.1-dz` with another demo (DataZoneStandard) on the shared account.
         Under reasoning_model: auto it must still send `reasoning`; the 1.5 rollback with the same
         suffix must not."""
         from rtmt import configure_realtime_model, deployment_supports_reasoning
