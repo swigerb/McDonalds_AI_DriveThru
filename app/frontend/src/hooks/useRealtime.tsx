@@ -12,7 +12,8 @@ import {
     ExtensionMiddleTierToolResponse,
     ResponseInputAudioTranscriptionCompleted,
     ExtensionSessionMetadata,
-    ExtensionRoundTripToken
+    ExtensionRoundTripToken,
+    ExtensionRateLimited
 } from "@/types";
 
 export { ReadyState };
@@ -39,6 +40,7 @@ type Parameters = {
     onReceivedExtensionMiddleTierToolResponse?: (message: ExtensionMiddleTierToolResponse) => void;
     onReceivedSessionMetadata?: (message: ExtensionSessionMetadata) => void;
     onReceivedRoundTripToken?: (message: ExtensionRoundTripToken) => void;
+    onReceivedExtensionRateLimited?: (message: ExtensionRateLimited) => void;
     onReceivedResponseAudioTranscriptDelta?: (message: ResponseAudioTranscriptDelta) => void;
     onReceivedInputAudioTranscriptionCompleted?: (message: ResponseInputAudioTranscriptionCompleted) => void;
     onReceivedError?: (message: Message) => void;
@@ -89,6 +91,7 @@ export default function useRealTime({
     onReceivedInputAudioTranscriptionCompleted,
     onReceivedSessionMetadata,
     onReceivedRoundTripToken,
+    onReceivedExtensionRateLimited,
     onReceivedError
 }: Parameters) {
     const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -186,6 +189,9 @@ export default function useRealTime({
             case "extension.round_trip_token":
                 onReceivedRoundTripToken?.(message as ExtensionRoundTripToken);
                 break;
+            case "extension.rate_limited":
+                onReceivedExtensionRateLimited?.(message as ExtensionRateLimited);
+                break;
             case "error":
                 onReceivedError?.(message);
                 break;
@@ -201,6 +207,7 @@ export default function useRealTime({
         onReceivedExtensionMiddleTierToolResponse,
         onReceivedSessionMetadata,
         onReceivedRoundTripToken,
+        onReceivedExtensionRateLimited,
         onReceivedError
     ]);
 

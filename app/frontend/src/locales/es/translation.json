@@ -11,7 +11,9 @@
         "notRecordingMessage": "¡Bienvenido al Drive-Thru de McDonald's!",
         "conversationInProgress": "Conversación en progreso",
         "sessionEndedIdle": "La sesión terminó por inactividad. Toca el micrófono para empezar un nuevo pedido.",
-        "connectionLost": "Se perdió la conexión. Toca el micrófono para empezar de nuevo."
+        "connectionLost": "Se perdió la conexión. Toca el micrófono para empezar de nuevo.",
+        "rateLimited": "Un momento…",
+        "rateLimitedFinal": "Estamos un poco ocupados ahora mismo. Por favor, repítelo."
     },
     "history": {
         "transcriptHistory": "Historial de transcripciones",
