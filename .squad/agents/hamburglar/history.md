@@ -98,3 +98,6 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 ## Sonic parity — item 4 mutation check (2026-09-22)
 - 15 mutants (guard/fallback/tool-error seams in rtmt.py), 15 killed. 4j (bootstrap builder without its own event_id) and 4l (voice update untracked) first SURVIVED — `guard.track` stamps anyway, and no test rejected a voice update. Added `test_builders_stamp_their_own_event_ids` and `test_rejected_voice_change_is_recovered_and_tools_kept`; both killed.
 - Tool-error tests (`test_tool_errors.py`) fail 4/5 against pre-fix rtmt (verified via stash).
+
+## Sonic parity — item 5 mutation check (2026-09-22)
+- 16 mutants (smoke_realtime.py ×13, azure.yaml continueOnError, ps1/sh exit code), 16 killed. Tests drive the real smoke functions against an in-process fake GA endpoint (`EchoGA`) that rejects beta keys like GA does — so sending the raw browser session (mutant 5g) is caught.

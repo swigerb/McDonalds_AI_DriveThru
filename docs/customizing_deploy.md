@@ -42,3 +42,25 @@ treated as non-reasoning). If the service still rejects a session update, the ba
 - `parallel_tool_calls` defaults to `null` (service default; 2.1 already batches calls, `false` is ~1.3 s slower).
 - Transcription: `whisper-1` works with no extra deployment. `gpt-4o-transcribe` / `gpt-4o-mini-transcribe` pass
   `session.update`, but every turn then fails with `DeploymentNotFound` unless you deploy that model on the resource.
+
+## Post-deploy realtime smoke check
+
+GA rejects a `session.update` **wholesale** if any one field is unsupported, and the tools go with it: the crew
+member keeps talking but never records the order. Every `session.update` the middle tier sends carries an
+`event_id`; if the service rejects one, the middle tier logs it and resends a minimal update (instructions + tools
+only), once. A tool that fails at runtime (e.g. an Azure AI Search error) returns an apology to the model instead
+of ending the conversation.
+
+After `azd deploy` / `azd up`, a **non-fatal** `postdeploy` hook runs `scripts/smoke_realtime.py`. It builds the
+exact bootstrap, relayed-browser and fallback `session.update` payloads from the app code (`config.yaml`, the real
+system prompt and `tools.attach_tools_rtmt`), sends them to the deployed realtime model, and checks each comes back
+as `session.updated` with all four tools, `tool_choice: auto`, the instructions and (on 2.1) the reasoning effort.
+It then checks that guest speech is actually transcribed with the configured transcription model.
+
+- It never fails the deployment; problems are printed as a loud warning. Exit codes of the Python script:
+  `0` pass, `1` a check failed, `2` could not run (auth, network, missing settings).
+- Run it by hand: `python scripts/smoke_realtime.py` (reads the azd env), or
+  `python scripts/smoke_realtime.py --endpoint https://<aoai>.openai.azure.com/ --deployment gpt-realtime-1.5`.
+  Auth: `AZURE_OPENAI_EASTUS2_API_KEY` if set, else your Azure CLI / azd login ("Cognitive Services OpenAI User").
+- Skip it: `azd env set MCD_SKIP_REALTIME_SMOKE true`.
+- Local mode (Phi-4/Piper) is not checked; it never talks to Azure OpenAI.

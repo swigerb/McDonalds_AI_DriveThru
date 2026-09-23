@@ -102,3 +102,8 @@
 - Rejection with no event_id/param (1.5 rejecting `reasoning`) sets `_reasoning_rejected` so every later update drops reasoning.
 - Seam: the `"error"` case in `_process_message_to_client` (errors are not in `_PASSTHROUGH_SERVER_TYPES`, so they reach the parsed path); `guard` threaded through both `_process_message_to_*`; `on_session_updated()` on every ack.
 - McD addition: `test_rejected_bootstrap_still_greets_with_tools` (mic-press greeting after a recovered bootstrap still has the 4 tools) and `test_rejected_voice_change_is_recovered_and_tools_kept`.
+
+## Sonic parity — item 5: realtime smoke check + postdeploy hook (2026-09-22)
+- `scripts/smoke_realtime.{py,ps1,sh}` ported from Sonic. McD adaptation: `build_middle_tier` calls the REAL `tools.attach_tools_rtmt` (dummy search endpoint, never called) and passes `prompt_loader` like app.py, instead of Sonic's re-derived schema map — the smoke payload can't drift from the app's.
+- azure.yaml `postdeploy` hook: `interactive: false`, `continueOnError: true`; wrappers always `exit 0` (skip: `MCD_SKIP_REALTIME_SMOKE=true`). Uses the root `.venv` created by the postprovision hook.
+- Live (read-only, shared cog-axgpampkq3yfa): 2.1 → bootstrap / relayed / fallback all `session.updated` with 4 tools, tool_choice=auto, reasoning low; whisper-1 transcription PASS. 1.5 rollback → all PASS, reasoning not sent.

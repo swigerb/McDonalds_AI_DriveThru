@@ -62,3 +62,6 @@
 **Outcome:** All infra/DevOps changes committed on `dev` branch.
 - **Tests:** All 423 passing, zero regressions, zero production image impact
 - **Next:** Models ready for on-demand download, ready for developer setup
+
+## Sonic parity — item 5: postdeploy smoke hook (2026-09-22)
+- azure.yaml `hooks.postdeploy` (windows pwsh / posix sh) → `scripts/smoke_realtime.ps1|.sh`, `interactive: false`, `continueOnError: true`. Wrappers print a loud warning and exit 0 on any failure, so an anonymous external `azd up` can never fail on it. `smoke_realtime.sh` committed 100755.
