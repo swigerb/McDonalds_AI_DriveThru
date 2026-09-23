@@ -108,3 +108,18 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 
 ## Sonic parity — item 7 mutation check (2026-09-22)
 - 9 mutants (main.parameters.json ×3, main.bicep ×5, azure.yaml ×1), 9 killed — incl. un-conditioning the openAi module, flipping the reuse default, and adding a non-role declaration scoped to the shared OpenAI RG. New tests fail 4/6 against the pre-fix parameters file (stash check).
+
+## Round 3 — L1 mutation check (2026-09-23)
+- 10 mutants (processor_router ×6, app.py ×2, rtmt ×2), 10 killed. The behavioural test alone (AST scan deselected) kills `compress=True` on the local fast path — it reproduces the real 1002, not just the kwarg. The scan asserts it found >= 6 constructions so an empty scan can't pass.
+
+## Round 3 — R3 mutation check (2026-09-23)
+- 6 mutants (es/fr/ja/en locale values, fr key removal, a Contoso string in status-message.tsx), 6 killed. Runner needs `encoding=utf-8` on subprocess output (vitest glyphs crash cp1252).
+
+## Round 3 — R2 mutation check (2026-09-23)
+- 19 mutants on `scripts/smoke_realtime.py` (similarity gate, threshold 0.5/0.95, phrase back in a user turn / dropped from instructions, empty check, case/order normalisation, check_transcription bypassing the judge, credential order/pinning/fallback/continue-on-failure/first-line errors, CLI>env>azd precedence, azd skipped with explicit endpoint, identity not passed through run/main), 19 killed. The canned answered transcript is the one Sonic's keyword check passed on.
+
+## Round 3 — R1 mutation check (2026-09-23)
+- Backend: 29 mutants on `rate_limit.py` / `rtmt.py` integration (detection by code vs type, failed-only, ms hints, hint ignored/unclamped, both clamp bounds, first-retry silence, second-retry notice and delay, final notice, max-retries off-by-one, no-stacking guard, disabled flag, env true/false overrides, cancel reset, own vs foreign response.created, cancel on speech_started, error/response.done detection in rtmt, session.update correlation, tool-follow-up double-retry guard, retry actually sends response.create, config wiring, config.yaml delay, send failure swallowed), 29 killed.
+- Frontend: 23 mutants (language fallback/splitting, speaking-flag clear, mute, final unmute, already-speaking unmute guard, stale-clip guard, play-rejection path, session guard, final branch, dismiss, pause, recovering flag, clip language, useRealtime routing, StatusMessage keys ×2, App wiring ×5, es key removal), 23 killed. The stale-clip guard survived until a "dismissed before play() rejects" test was added.
+- Clips: 3 source mutants (generator phrase list, frontend language list, clip path) + 4 file mutants (missing ja clip, 16 kHz, silent, 6 s), 7 killed.
+- Self-inflicted regressions caught by the full suite this round (not by the targeted runs): the rebrand guard rejected the sibling brand name in a new docstring/comment (reworded), and the R2 `TenantTests` leaked `tools._prompt_loader` into `test_tool_calling` (isolated with `_isolate_tools_global`). Lesson: run the full suite before each commit, not just the new file.

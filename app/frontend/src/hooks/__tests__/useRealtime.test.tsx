@@ -113,6 +113,17 @@ describe("useRealTime connection lifecycle (cloud)", () => {
         act(() => last().options.onMessage({ data: JSON.stringify({ type: "response.created" }) } as MessageEvent));
         expect(ws.send).toHaveBeenCalledWith({ type: "input_audio_buffer.clear" }, false);
     });
+
+    it("routes extension.rate_limited to its callback", async () => {
+        const onReceivedExtensionRateLimited = vi.fn();
+        const onReceivedError = vi.fn();
+        renderHook(() => useRealTime({ enableInputAudioTranscription: true, onReceivedExtensionRateLimited, onReceivedError }));
+        await waitFor(() => expect(last().url).toBe("/realtime?token=tok1&mode=cloud"));
+        const event = { type: "extension.rate_limited", attempt: 2, final: true };
+        act(() => last().options.onMessage({ data: JSON.stringify(event) } as MessageEvent));
+        expect(onReceivedExtensionRateLimited).toHaveBeenCalledWith(event);
+        expect(onReceivedError).not.toHaveBeenCalled();
+    });
 });
 
 describe("useRealTime local mode is unchanged", () => {

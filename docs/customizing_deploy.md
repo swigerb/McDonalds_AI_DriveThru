@@ -27,6 +27,9 @@ If you've already run `azd up` and want to first preview the voice with the deve
 The template deploys `gpt-realtime-2.1` (version `2026-07-07`, GlobalStandard). `gpt-realtime-1.5` remains a
 supported rollback: `azd env set AZURE_OPENAI_REALTIME_DEPLOYMENT gpt-realtime-1.5`.
 
+The deployment name is configurable (`AZURE_OPENAI_REALTIME_DEPLOYMENT`). On the shared demo account McDonald's
+uses `gpt-realtime-2.1-dz` (the same model on a DataZoneStandard deployment), so a custom or suffixed name is fine.
+
 `model.reasoning_effort` in `app/backend/config.yaml` (default `low`; env `AZURE_OPENAI_REALTIME_REASONING_EFFORT`,
 `off` disables) is sent as `session.reasoning.effort` only when the deployment is a reasoning model.
 `model.reasoning_model` (env `AZURE_OPENAI_REALTIME_REASONING_MODEL`: `auto` | `true` | `false`) says whether it is;
@@ -55,12 +58,44 @@ After `azd deploy` / `azd up`, a **non-fatal** `postdeploy` hook runs `scripts/s
 exact bootstrap, relayed-browser and fallback `session.update` payloads from the app code (`config.yaml`, the real
 system prompt and `tools.attach_tools_rtmt`), sends them to the deployed realtime model, and checks each comes back
 as `session.updated` with all four tools, `tool_choice: auto`, the instructions and (on 2.1) the reasoning effort.
-It then checks that guest speech is actually transcribed with the configured transcription model.
+It then checks that guest speech is actually transcribed with the configured transcription model: the model
+reads a fixed order aloud (the phrase goes in the response instructions, not a user turn, so it recites rather
+than answers) and the transcript must match that phrase **word for word** (case, punctuation and one or two
+whisper slips aside; `TRANSCRIPTION_MIN_SIMILARITY` = 0.85). A transcript like "Sure, I can't place the order
+for you..." fails the check instead of passing on a keyword.
 
 - It never fails the deployment; problems are printed as a loud warning. Exit codes of the Python script:
   `0` pass, `1` a check failed, `2` could not run (auth, network, missing settings).
 - Run it by hand: `python scripts/smoke_realtime.py` (reads the azd env), or
   `python scripts/smoke_realtime.py --endpoint https://<aoai>.openai.azure.com/ --deployment gpt-realtime-1.5`.
-  Auth: `AZURE_OPENAI_EASTUS2_API_KEY` if set, else your Azure CLI / azd login ("Cognitive Services OpenAI User").
+  Auth: `AZURE_OPENAI_EASTUS2_API_KEY` if set, else an Entra ID token for the azd env's `AZURE_TENANT_ID` /
+  `AZURE_SUBSCRIPTION_ID` ("Cognitive Services OpenAI User"), not whichever `az` / `azd` account is active; a
+  token from another tenant gets HTTP 400 "Tenant provided in token does not match resource token". Override
+  with `--tenant <id>` / `--subscription <id>` (precedence: flag > environment variable > azd env). It tries
+  `az` for that subscription, then `azd` and `az` pinned to that tenant, and reports every failure if all fail.
 - Skip it: `azd env set MCD_SKIP_REALTIME_SMOKE true`.
 - Local mode (Phi-4/Piper) is not checked; it never talks to Azure OpenAI.
+
+## Rate-limit recovery
+
+When the realtime deployment is out of quota for a moment (an `error` whose code or type contains `rate_limit`,
+or a `response.done` with `status: failed` for that reason) the middle tier retries the reply instead of leaving
+the guest in silence (`app/backend/rate_limit.py`):
+
+1. First hit: a silent `response.create` retry after `retry_delay_seconds` (1.5 s), or the service's "try again in
+   N s" hint clamped to 0.5-5 s.
+2. Second hit: the browser gets `extension.rate_limited` and plays a short local apology clip ("Sorry, give me just
+   a second.") with the mic muted, and the middle tier retries once more after `second_retry_delay_seconds` (4 s,
+   hint clamped to 2-8 s).
+3. After `max_retries` (2): `extension.rate_limited` with `final: true`; the guest sees "please say that again" and
+   the mic reopens. Nothing more is retried.
+
+Guest speech (barge-in) or any new response cancels a pending retry and resets the ladder, so a retry never talks
+over the guest. Rate limits on a `session.update` keep the minimal-update fallback above. Settings live under
+`resilience.rate_limit` in `app/backend/config.yaml`; `RATE_LIMIT_RECOVERY_ENABLED=false` turns it off.
+
+The clips are `app/frontend/public/audio/rate-limit-apology-<lang>.wav`, one per UI locale (en, es, fr, ja; any
+other UI language plays English). They are pre-recorded because the model is the thing that is rate-limited.
+Regenerate them after a voice change with `python scripts/generate_apology_clips.py [--deployment <name>] [--voice
+marin]`; it reads each clip back through whisper-1 so you can check the wording. Adding a UI locale needs a phrase
+in that script and in `src/lib/rate-limit-apology.ts` (`tests/test_apology_clips.py` fails until it has a clip).

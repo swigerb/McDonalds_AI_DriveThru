@@ -98,3 +98,10 @@ export type ExtensionRoundTripToken = {
     roundTripIndex: number;
     roundTripToken: string;
 };
+
+// The middle tier is retrying a rate-limited response (app/backend/rate_limit.py).
+export type ExtensionRateLimited = {
+    type: "extension.rate_limited";
+    attempt: number;
+    final?: boolean;
+};

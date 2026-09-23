@@ -26,4 +26,16 @@ describe("StatusMessage", () => {
         renderWithProvider(<StatusMessage isRecording={false} notice="lost" />);
         expect(screen.getByText("status.connectionLost")).toBeInTheDocument();
     });
+
+    it("says one moment while a rate-limited reply is retried, keeping the live equalizer", () => {
+        const { container } = renderWithProvider(<StatusMessage isRecording busyNotice="busy" />);
+        expect(screen.getByText("status.rateLimited")).toBeInTheDocument();
+        expect(screen.queryByText("status.conversationInProgress")).toBeNull();
+        expect(container.querySelector(".listening-equalizer")).not.toBeNull();
+    });
+
+    it("asks the guest to repeat themselves once the retries are exhausted", () => {
+        renderWithProvider(<StatusMessage isRecording busyNotice="final" />);
+        expect(screen.getByText("status.rateLimitedFinal")).toBeInTheDocument();
+    });
 });

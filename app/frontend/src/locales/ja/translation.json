@@ -1,7 +1,7 @@
 {
     "app": {
-        "title": "データと話す",
-        "footer": "Azure AI Search + Azure OpenAI で構築",
+        "title": "マクドナルド 音声注文",
+        "footer": "Azure AI、Azure OpenAI、Azure Speech で構築",
         "showTranscript": "トランスクリプトを表示",
         "stopRecording": "録音を停止",
         "startRecording": "録音を開始",
@@ -11,7 +11,9 @@
         "notRecordingMessage": "マクドナルドのドライブスルーへようこそ！",
         "conversationInProgress": "会話が進行中",
         "sessionEndedIdle": "操作がなかったためセッションが終了しました。マイクをタップして新しい注文を始めてください。",
-        "connectionLost": "接続が切れました。マイクをタップしてもう一度始めてください。"
+        "connectionLost": "接続が切れました。マイクをタップしてもう一度始めてください。",
+        "rateLimited": "少々お待ちください…",
+        "rateLimitedFinal": "ただいま混み合っています。もう一度おっしゃってください。"
     },
     "history": {
         "transcriptHistory": "トランスクリプト履歴",
@@ -20,5 +22,8 @@
     "groundingFiles": {
         "title": "グラウンディング ファイル",
         "description": "回答をグラウンディングするために使用されるファイル。"
+    },
+    "menu": {
+        "title": "メニュー"
     }
 }

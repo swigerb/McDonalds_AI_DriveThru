@@ -6,13 +6,17 @@ exercised here against a fake GA realtime endpoint; the azd hook must never be
 able to fail a deployment.
 """
 
+import asyncio
+import base64
 import io
 import json
+import os
 import re
 import sys
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from aiohttp import web
@@ -215,6 +219,279 @@ class SmokePayloadTests(unittest.TestCase):
             code = smoke_realtime.main(["--endpoint", "https://e", "--deployment", "d"])
         self.assertEqual(code, 2)
         self.assertIn("no token", err.getvalue())
+
+
+class SynthesizeTests(unittest.IsolatedAsyncioTestCase):
+    """The test audio must be the phrase read aloud, not the model's reply to it (reference-repo fix c4249de)."""
+
+    async def test_phrase_is_sent_as_response_instructions_not_a_user_turn(self):
+        received = []
+
+        async def handler(request):
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+            async for msg in ws:
+                event = json.loads(msg.data)
+                received.append(event)
+                if event["type"] == "response.create":
+                    await ws.send_json({"type": "response.output_audio.delta", "delta": "AAAA"})
+                    await ws.send_json({"type": "response.done"})
+            return ws
+
+        app = web.Application()
+        app.router.add_get("/openai/v1/realtime", handler)
+        server = TestServer(app)
+        await server.start_server()
+        try:
+            url = str(server.make_url("/openai/v1/realtime?model=gpt-realtime-2.1-dz")).replace("http", "ws", 1)
+            pcm = await smoke_realtime._synthesize(url, {}, smoke_realtime.TRANSCRIPTION_PHRASE, 5)
+        finally:
+            await server.close()
+
+        self.assertEqual(pcm, b"\x00\x00\x00")
+        kinds = [e["type"] for e in received]
+        self.assertNotIn("conversation.item.create", kinds)
+        create = next(e for e in received if e["type"] == "response.create")
+        self.assertIn(f'"{smoke_realtime.TRANSCRIPTION_PHRASE}"', create["response"]["instructions"])
+        self.assertIn("word for word", create["response"]["instructions"])
+        self.assertNotIn(smoke_realtime.TRANSCRIPTION_PHRASE, received[0]["session"]["instructions"])
+        self.assertIsNone(received[0]["session"]["audio"]["input"]["turn_detection"])
+
+
+# What Sonic's check passed on (2026-09-23): gpt-realtime-2.1 answered the phrase instead of reciting it.
+ANSWERED_TRANSCRIPT = "Sure, I can't place the order for you, but it sounds tasty! Anything else?"
+
+
+class TranscriptVerbatimTests(unittest.TestCase):
+    """The transcription step passes only on (essentially) the phrase word for word."""
+
+    def test_answered_instead_of_recited_fails(self):
+        for transcript in (ANSWERED_TRANSCRIPT,
+                           "Sure! A Big Mac meal with a large Coke. Anything else for you today?",
+                           "Hi, can I get a Big Mac meal, please?"):
+            with self.subTest(transcript=transcript):
+                failures, report = smoke_realtime.judge_transcript("whisper-1", transcript)
+                self.assertEqual(len(failures), 1, failures)
+                self.assertIn("is not the test phrase", failures[0])
+                self.assertEqual(report, [])
+
+    def test_verbatim_passes_whatever_the_case_and_punctuation(self):
+        for transcript in (smoke_realtime.TRANSCRIPTION_PHRASE,
+                           "hi can i get a big mac meal with a large coke please",
+                           "Hi! Can I get a Big Mac meal with a large Coke please.",
+                           "Hey, can I get a Big Mac meal with a large Coke, please?"):   # one whisper slip
+            with self.subTest(transcript=transcript):
+                failures, report = smoke_realtime.judge_transcript("whisper-1", transcript)
+                self.assertEqual(failures, [])
+                self.assertTrue(report[0].startswith("PASS  transcription (whisper-1)"), report)
+
+    def test_empty_transcript_fails(self):
+        failures, _ = smoke_realtime.judge_transcript("whisper-1", "  ")
+        self.assertIn("empty transcript", failures[0])
+
+    def test_similarity_normalises_but_keeps_word_order(self):
+        sim = smoke_realtime.transcript_similarity
+        self.assertEqual(sim("Big Mac, please!", "big mac please"), 1.0)
+        self.assertEqual(sim("Café au lait", "cafe au lait"), 1.0)
+        self.assertLess(sim("big mac please", "please mac big"), smoke_realtime.TRANSCRIPTION_MIN_SIMILARITY)
+        self.assertEqual(sim("x", ""), 0.0)
+
+
+class TranscribeGA:
+    """Fake /openai/v1/realtime for check_transcription: synthesises 'audio', then 'transcribes' it as `transcript`."""
+
+    def __init__(self, transcript):
+        self.transcript = transcript
+
+    def app(self):
+        app = web.Application()
+        app.router.add_get("/openai/v1/realtime", self.handler)
+        return app
+
+    async def handler(self, request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        async for msg in ws:
+            event = json.loads(msg.data)
+            if event["type"] == "session.update":
+                await ws.send_json({"type": "session.updated", "session": event["session"]})
+            elif event["type"] == "response.create":
+                await ws.send_json({"type": "response.output_audio.delta",
+                                    "delta": base64.b64encode(b"\x00" * 9600).decode()})
+                await ws.send_json({"type": "response.done"})
+            elif event["type"] == "input_audio_buffer.commit":
+                await ws.send_json({"type": "conversation.item.input_audio_transcription.completed",
+                                    "transcript": self.transcript})
+        return ws
+
+
+class CheckTranscriptionTests(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
+        _isolate_tools_global(self)
+        self.rtmt = smoke_realtime.build_middle_tier("https://e", "gpt-realtime-2.1-dz", environ={})
+
+    async def _run(self, transcript):
+        server = TestServer(TranscribeGA(transcript).app())
+        await server.start_server()
+        try:
+            url = str(server.make_url("/openai/v1/realtime?model=gpt-realtime-2.1-dz")).replace("http", "ws", 1)
+            return await smoke_realtime.check_transcription(self.rtmt, url, {}, 5)
+        finally:
+            await server.close()
+
+    async def test_answered_transcript_fails_the_check(self):
+        failures, report = await self._run(ANSWERED_TRANSCRIPT)
+        self.assertEqual(len(failures), 1, failures)
+        self.assertIn("whisper-1", failures[0])
+        self.assertEqual(report, [])
+
+    async def test_verbatim_transcript_passes_the_check(self):
+        failures, report = await self._run("Hi, can I get a Big Mac meal with a large Coke, please?")
+        self.assertEqual(failures, [])
+        self.assertIn("similarity 1.00", report[0])
+
+    async def test_run_exits_1_on_an_answered_transcript(self):
+        server = TestServer(TranscribeGA(ANSWERED_TRANSCRIPT).app())
+        await server.start_server()
+        try:
+            url = str(server.make_url("/openai/v1/realtime?model=gpt-realtime-2.1-dz")).replace("http", "ws", 1)
+            with patch.object(smoke_realtime, "check_session_updates", return_value=([], [])), \
+                    patch.object(smoke_realtime, "realtime_url", return_value=url), \
+                    redirect_stdout(io.StringIO()) as out:
+                code = await smoke_realtime.run("https://x", "gpt-realtime-2.1-dz", voice=None, timeout=5,
+                                                skip_transcription=False, headers={})
+        finally:
+            await server.close()
+        self.assertEqual(code, 1)
+        self.assertIn("SMOKE CHECK FAILED", out.getvalue())
+
+
+class TenantTests(unittest.TestCase):
+    """The token must come from the resource's tenant, not the active `az` or `azd` default (reference-repo fix c4249de)."""
+
+    NAMES = ["AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID", "AZURE_OPENAI_EASTUS2_ENDPOINT",
+             "AZURE_OPENAI_REALTIME_DEPLOYMENT"]
+    AZD = {"AZURE_OPENAI_EASTUS2_ENDPOINT": "https://x", "AZURE_OPENAI_REALTIME_DEPLOYMENT": "d",
+           "AZURE_TENANT_ID": "azd-tenant", "AZURE_SUBSCRIPTION_ID": "azd-sub"}
+    EXPLICIT = ["--endpoint", "https://x", "--deployment", "d"]
+
+    def _main_identity(self, argv, env, azd):
+        seen = {}
+
+        async def fake_run(*_a, **kwargs):
+            seen["identity"] = (kwargs.get("tenant_id"), kwargs.get("subscription_id"))
+            return 0
+        saved = {n: os.environ.pop(n, None) for n in self.NAMES}
+        try:
+            os.environ.update(env)
+            with patch.object(smoke_realtime, "_azd_env_values", return_value=azd), \
+                    patch.object(smoke_realtime, "run", fake_run):
+                self.assertEqual(smoke_realtime.main(argv), 0)
+        finally:
+            for n in self.NAMES:
+                os.environ.pop(n, None)
+                if saved[n] is not None:
+                    os.environ[n] = saved[n]
+        return seen["identity"]
+
+    def test_azd_env_identity_is_used(self):
+        self.assertEqual(self._main_identity([], {}, self.AZD), ("azd-tenant", "azd-sub"))
+
+    def test_azd_env_identity_is_used_even_with_explicit_endpoint_and_deployment(self):
+        self.assertEqual(self._main_identity(self.EXPLICIT, {}, self.AZD), ("azd-tenant", "azd-sub"))
+
+    def test_env_then_cli_override_azd(self):
+        env = {"AZURE_TENANT_ID": "env-tenant", "AZURE_SUBSCRIPTION_ID": "env-sub"}
+        self.assertEqual(self._main_identity([], env, self.AZD), ("env-tenant", "env-sub"))
+        self.assertEqual(self._main_identity(["--tenant", "cli-tenant", "--subscription", "cli-sub"], env, self.AZD),
+                         ("cli-tenant", "cli-sub"))
+
+    def test_each_value_falls_back_to_azd_independently(self):
+        self.assertEqual(self._main_identity(["--tenant", "cli-tenant"], {}, self.AZD), ("cli-tenant", "azd-sub"))
+        self.assertEqual(self._main_identity([], {"AZURE_SUBSCRIPTION_ID": "env-sub"}, self.AZD),
+                         ("azd-tenant", "env-sub"))
+
+    def test_nothing_anywhere_is_none(self):
+        self.assertEqual(self._main_identity(self.EXPLICIT, {}, {}), (None, None))
+
+    def test_run_passes_identity_to_auth(self):
+        _isolate_tools_global(self)  # run() builds the middle tier before it asks for a token
+        seen = {}
+
+        def fake_auth(*args):
+            seen["args"] = args
+            raise smoke_realtime.SmokeError("stop here")
+        with patch.object(smoke_realtime, "get_auth_headers", fake_auth), \
+                self.assertRaises(smoke_realtime.SmokeError), redirect_stdout(io.StringIO()):
+            asyncio.run(smoke_realtime.run("https://x", "d", voice=None, timeout=1, skip_transcription=True,
+                                           tenant_id="t", subscription_id="s"))
+        self.assertEqual(seen["args"], ("t", "s"))
+
+    def _auth(self, tenant_id, subscription_id, fail=()):
+        """Returns (headers or SmokeError, credentials built, credentials asked for a token)."""
+        built, asked = [], []
+
+        class FakeCred:
+            def __init__(self, kind, **kwargs):
+                self.kind = kind
+                built.append((kind, kwargs.get("tenant_id") or kwargs.get("subscription")))
+
+            def get_token(self, *scopes, **_kw):
+                asked.append(self.kind)
+                if self.kind in fail:
+                    raise RuntimeError(f"{self.kind} said no\nsecond line")
+                return SimpleNamespace(token=f"tok-{self.kind}", expires_on=0)
+
+        def az(**k):
+            return FakeCred("az-sub" if k.get("subscription") else "az", **k)
+
+        import azure.identity as identity
+        with patch.dict(os.environ, {"AZURE_OPENAI_EASTUS2_API_KEY": ""}), \
+                patch.object(identity, "AzureDeveloperCliCredential", lambda **k: FakeCred("azd", **k)), \
+                patch.object(identity, "AzureCliCredential", az), \
+                patch.object(identity, "DefaultAzureCredential", lambda **k: FakeCred("default", **k)):
+            try:
+                result = smoke_realtime.get_auth_headers(tenant_id, subscription_id)
+            except smoke_realtime.SmokeError as exc:
+                result = exc
+        return result, built, asked
+
+    def test_subscription_first_then_tenant_pinned_clis(self):
+        headers, built, asked = self._auth("tenant-x", "sub-y")
+        self.assertEqual(built, [("az-sub", "sub-y"), ("azd", "tenant-x"), ("az", "tenant-x")])
+        self.assertEqual(asked, ["az-sub"])
+        self.assertEqual(headers, {"Authorization": "Bearer " + "tok-az-sub"})
+
+    def test_hard_failure_moves_on_to_the_next_credential(self):
+        headers, _, asked = self._auth("tenant-x", "sub-y", fail=("az-sub", "azd"))
+        self.assertEqual(asked, ["az-sub", "azd", "az"])
+        self.assertEqual(headers, {"Authorization": "Bearer " + "tok-az"})
+
+    def test_all_failing_reports_every_credential(self):
+        err, _, asked = self._auth("tenant-x", "sub-y", fail=("az-sub", "azd", "az"))
+        self.assertIsInstance(err, smoke_realtime.SmokeError)
+        self.assertEqual(asked, ["az-sub", "azd", "az"])
+        self.assertIn("az-sub said no", str(err))
+        self.assertIn("azd said no", str(err))
+        self.assertNotIn("second line", str(err))
+
+    def test_tenant_only_pins_both_clis(self):
+        _, built, _ = self._auth("tenant-x", None)
+        self.assertEqual(built, [("azd", "tenant-x"), ("az", "tenant-x")])
+
+    def test_subscription_only(self):
+        _, built, _ = self._auth(None, "sub-y")
+        self.assertEqual(built, [("az-sub", "sub-y")])
+
+    def test_nothing_falls_back_to_default_credential(self):
+        headers, built, _ = self._auth(None, None)
+        self.assertEqual(built, [("default", None)])
+        self.assertEqual(headers, {"Authorization": "Bearer " + "tok-default"})
+
+    def test_api_key_short_circuits_entra(self):
+        with patch.dict(os.environ, {"AZURE_OPENAI_EASTUS2_API_KEY": "k"}):
+            self.assertEqual(smoke_realtime.get_auth_headers("t", "s"), {"api-key": "k"})
 
 
 class PostdeployHookTests(unittest.TestCase):

@@ -2,12 +2,15 @@ import "./status-message.css";
 import { useTranslation } from "react-i18next";
 import { memo } from "react";
 import { useLocalMode } from "@/context/local-mode-context";
+import type { RateLimitNotice } from "@/hooks/useRateLimitApology";
 
 export type ConnectionNotice = "idle" | "lost" | null;
 
 type Properties = {
     isRecording: boolean;
     notice?: ConnectionNotice;
+    /** Shown in place of "Conversation in progress" while the server retries a rate-limited reply. */
+    busyNotice?: RateLimitNotice;
 };
 
 const NOTICE_KEYS: Record<Exclude<ConnectionNotice, null>, string> = {
@@ -15,7 +18,12 @@ const NOTICE_KEYS: Record<Exclude<ConnectionNotice, null>, string> = {
     lost: "status.connectionLost"
 };
 
-export default memo(function StatusMessage({ isRecording, notice = null }: Properties) {
+const BUSY_KEYS: Record<Exclude<RateLimitNotice, null>, string> = {
+    busy: "status.rateLimited",
+    final: "status.rateLimitedFinal"
+};
+
+export default memo(function StatusMessage({ isRecording, notice = null, busyNotice = null }: Properties) {
     const { t } = useTranslation();
     const { localMode } = useLocalMode();
 
@@ -48,7 +56,7 @@ export default memo(function StatusMessage({ isRecording, notice = null }: Prope
                 ))}
             </div>
             <p className="mb-4 ml-2 mt-6 font-semibold text-primary">
-                {t("status.conversationInProgress")}
+                {t(busyNotice ? BUSY_KEYS[busyNotice] : "status.conversationInProgress")}
             </p>
             <span className="mb-4 ml-2 mt-6">{modeIndicator}</span>
         </div>

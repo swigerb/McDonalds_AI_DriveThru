@@ -6,7 +6,7 @@ PONG. aiohttp 3.14.2/3.14.3 then rejects the first permessage-deflate data frame
 ("Received frame with non-zero reserved bits", aio-libs/aiohttp#13274) and kills
 the socket. McDonald's pins the same aiohttp (3.14.3), so it had the same bug.
 These tests drive the real cloud middle tier with the same client framing. The
-local (Phi-4/Piper) sockets in processor_router are intentionally out of scope.
+local (Phi-4/Piper) sockets are covered by test_ws_compression_guard.py.
 """
 
 import asyncio

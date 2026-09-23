@@ -20,6 +20,7 @@ import { ReadyState } from "react-use-websocket";
 import useAzureSpeech from "@/hooks/useAzureSpeech";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
 import useAudioPlayer from "@/hooks/useAudioPlayer";
+import useRateLimitApology from "@/hooks/useRateLimitApology";
 
 import { ExtensionMiddleTierToolResponse, ExtensionRoundTripToken, ExtensionSessionMetadata } from "./types";
 
@@ -85,6 +86,7 @@ function McDonaldsApp() {
     const { theme } = useTheme();
     const { logout, authEnabled } = useAuth();
     const { localMode } = useLocalMode();
+    const { t, i18n } = useTranslation();
 
     const [transcripts, setTranscripts] = useState<Array<{ text: string; isUser: boolean; timestamp: Date }>>([]);
     const dummyTranscripts = useMemo<Array<{ text: string; isUser: boolean; timestamp: Date }>>(
@@ -213,12 +215,14 @@ function McDonaldsApp() {
         },
         onReceivedResponseAudioDelta: message => {
             if (!isSessionActiveRef.current) return;
+            rateLimitApology.dismiss();
             greetingAudioSeenRef.current = true;
             playAudio(message.delta);
         },
         onReceivedInputAudioBufferSpeechStarted: () => {
             // User speech detected - stop AI playback (barge-in) and unmute mic
             stopAudioPlayer();
+            rateLimitApology.dismiss();
             if (isAiSpeakingRef.current) {
                 isAiSpeakingRef.current = false;
                 unmuteAudioRecording();
@@ -236,6 +240,11 @@ function McDonaldsApp() {
         },
         onReceivedSessionMetadata: handleSessionIdentifiers,
         onReceivedRoundTripToken: handleSessionIdentifiers,
+        onReceivedExtensionRateLimited: message => {
+            rateLimitApology.onRateLimited(message);
+            // Gave up on a rate-limited greeting: open the mic so the guest can start.
+            if (message.final) startMicAfterGreeting();
+        },
         onReceivedInputAudioTranscriptionCompleted: message => {
             const newTranscriptItem = {
                 text: message.transcript,
@@ -261,23 +270,7 @@ function McDonaldsApp() {
                 unmuteAudioRecording();
             }
 
-            if (awaitingGreetingDoneRef.current && isSessionActiveRef.current) {
-                awaitingGreetingDoneRef.current = false;
-
-                if (!startMicInFlightRef.current) {
-                    startMicInFlightRef.current = (async () => {
-                        // If we received audio deltas for the greeting, wait until playback drains.
-                        if (greetingAudioSeenRef.current) {
-                            await waitForAudioDrain(2000);
-                        }
-
-                        if (!isSessionActiveRef.current) return;
-                        await startAudioRecording();
-                    })().finally(() => {
-                        startMicInFlightRef.current = null;
-                    });
-                }
-            }
+            startMicAfterGreeting();
         }
     });
 
@@ -339,10 +332,36 @@ function McDonaldsApp() {
         onBargeIn: handleBargeIn
     });
 
+    const rateLimitApology = useRateLimitApology({
+        isSessionActiveRef,
+        isAiSpeakingRef,
+        mute: muteAudioRecording,
+        unmute: unmuteAudioRecording,
+        getLanguage: () => i18n.resolvedLanguage || i18n.language
+    });
+
+    const startMicAfterGreeting = () => {
+        if (!awaitingGreetingDoneRef.current || !isSessionActiveRef.current) return;
+        awaitingGreetingDoneRef.current = false;
+        if (startMicInFlightRef.current) return;
+        startMicInFlightRef.current = (async () => {
+            // If we received audio deltas for the greeting, wait until playback drains.
+            if (greetingAudioSeenRef.current) {
+                await waitForAudioDrain(2000);
+            }
+
+            if (!isSessionActiveRef.current) return;
+            await startAudioRecording();
+        })().finally(() => {
+            startMicInFlightRef.current = null;
+        });
+    };
+
     const stopConversation = async () => {
         await stopAudioRecording();
         console.log("[MIC] Audio recording stopped");
         stopAudioPlayer();
+        rateLimitApology.dismiss();
         isSessionActiveRef.current = false;
         isAiSpeakingRef.current = false;
         awaitingGreetingDoneRef.current = false;
@@ -425,6 +444,8 @@ function McDonaldsApp() {
                 window.setTimeout(() => {
                     if (!isSessionActiveRef.current) return;
                     if (!awaitingGreetingDoneRef.current) return;
+                    // A rate-limited greeting is being retried; its response.done (or the final notice) opens the mic.
+                    if (rateLimitApology.isRecovering()) return;
                     awaitingGreetingDoneRef.current = false;
                     if (startMicInFlightRef.current) return;
                     startMicInFlightRef.current = startAudioRecording().finally(() => {
@@ -439,8 +460,6 @@ function McDonaldsApp() {
             await stopConversation();
         }
     };
-
-    const { t } = useTranslation();
 
     useEffect(() => {
         const checkMobile = () => {
@@ -575,7 +594,7 @@ function McDonaldsApp() {
                                         </>
                                     )}
                                 </Button>
-                                <StatusMessage isRecording={isRecording} notice={connectionNotice} />
+                                <StatusMessage isRecording={isRecording} notice={connectionNotice} busyNotice={rateLimitApology.notice} />
                                 {localMode && (
                                     <div className="mt-2 max-w-xs text-center font-mono text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
                                         <div>

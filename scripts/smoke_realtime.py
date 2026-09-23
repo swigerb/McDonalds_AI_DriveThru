@@ -25,9 +25,15 @@ Local mode (Phi-4/Piper) is not checked: it never talks to Azure OpenAI.
 
 Endpoint/deployment default to AZURE_OPENAI_EASTUS2_ENDPOINT /
 AZURE_OPENAI_REALTIME_DEPLOYMENT, read from the environment or `azd env
-get-values`. Auth: AZURE_OPENAI_EASTUS2_API_KEY if set, else Entra ID via
-DefaultAzureCredential (Azure CLI / azd login; needs "Cognitive Services OpenAI
-User" on the resource, which `azd up` grants the deploying principal).
+get-values`. Auth: AZURE_OPENAI_EASTUS2_API_KEY if set, else an Entra ID token
+for the azd env's AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID (override with
+--tenant / --subscription), not whichever `az` / `azd` account happens to be
+active (needs "Cognitive Services OpenAI User" on the resource, which `azd up`
+grants the deploying principal).
+
+The transcription check passes only if the transcript is essentially the test
+phrase word for word: a model that answers the phrase instead of reciting it
+("Sure, I can't place the order for you...") is a failure, not a pass.
 
 Exit codes: 0 = all checks passed, 1 = a check failed, 2 = could not run
 (missing endpoint/deployment, auth or network failure).
@@ -38,11 +44,14 @@ import argparse
 import asyncio
 import base64
 import copy
+import difflib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
+import unicodedata
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +74,10 @@ BROWSER_SESSION = {
 }
 
 TRANSCRIPTION_PHRASE = "Hi, can I get a Big Mac meal with a large Coke, please?"
-TRANSCRIPTION_KEYWORD = "big mac"
+# Word-sequence similarity (difflib ratio over normalised words) the transcript
+# must reach. 0.85 tolerates one or two whisper slips ("Hey" for "Hi", "BigMac")
+# in the 12-word phrase; an answer instead of a recital scores far below it.
+TRANSCRIPTION_MIN_SIMILARITY = 0.85
 
 
 class SmokeError(Exception):
@@ -127,16 +139,51 @@ def build_middle_tier(endpoint: str, deployment: str, voice: str | None = None,
     return rtmt
 
 
-def get_auth_headers() -> dict[str, str]:
+_TOKEN_SCOPE = "https://cognitiveservices.azure.com/.default"
+
+
+def _credentials(tenant_id: str | None, subscription_id: str | None) -> list:
+    """Credentials to try, most specific first.
+
+    The token must come from the resource's tenant. Following whatever `az` or
+    `azd` default is active gets HTTP 400 "Tenant provided in token does not match
+    resource token" as soon as that default is another tenant, which is common on
+    a machine with several sign-ins.
+    """
+    from azure.identity import (
+        AzureCliCredential,
+        AzureDeveloperCliCredential,
+        DefaultAzureCredential,
+    )
+    creds = []
+    if subscription_id:
+        # Picks the `az` sign-in that owns the azd env's subscription, without
+        # changing the global `az account` default.
+        creds.append(AzureCliCredential(subscription=subscription_id, process_timeout=60))
+    if tenant_id:
+        creds.append(AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60))
+        creds.append(AzureCliCredential(tenant_id=tenant_id, process_timeout=60))
+    if not creds:
+        creds.append(DefaultAzureCredential(exclude_interactive_browser_credential=True))
+    return creds
+
+
+def get_auth_headers(tenant_id: str | None = None, subscription_id: str | None = None) -> dict[str, str]:
     if key := os.environ.get("AZURE_OPENAI_EASTUS2_API_KEY"):
         return {"api-key": key}
+    errors = []
     try:
-        from azure.identity import DefaultAzureCredential
-        token = DefaultAzureCredential(exclude_interactive_browser_credential=True).get_token(
-            "https://cognitiveservices.azure.com/.default").token
+        credentials = _credentials(tenant_id, subscription_id)
     except Exception as exc:  # noqa: BLE001 - any credential failure means "cannot run"
         raise SmokeError(f"could not get an Entra ID token for Azure OpenAI: {exc}") from exc
-    return {"Authorization": f"Bearer {token}"}
+    # Tried in turn: unlike ChainedTokenCredential, a hard auth error (e.g. azd
+    # signed in as a user who isn't in the tenant) moves on to the next one.
+    for credential in credentials:
+        try:
+            return {"Authorization": "Bearer " + credential.get_token(_TOKEN_SCOPE).token}
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{type(credential).__name__}: {str(exc).splitlines()[0] if str(exc) else exc!r}")
+    raise SmokeError("could not get an Entra ID token for Azure OpenAI: " + "; ".join(errors))
 
 
 def realtime_url(endpoint: str, deployment: str) -> str:
@@ -225,12 +272,13 @@ async def _synthesize(url: str, headers: dict, text: str, timeout: float) -> byt
     async with aiohttp.ClientSession() as http, http.ws_connect(url, headers=headers) as ws:
         await ws.send_json({"type": "session.update", "session": {
             "type": "realtime",
-            "instructions": ("You are a text-to-speech engine, not an assistant. Speak the user's message aloud "
-                             "word for word, exactly as written, and say nothing else. Never answer or react to it."),
+            "instructions": "You are a text-to-speech engine. Say only what you are told to say.",
             "audio": {"input": {"turn_detection": None}, "output": {"voice": "alloy"}}}})
-        await ws.send_json({"type": "conversation.item.create", "item": {
-            "type": "message", "role": "user", "content": [{"type": "input_text", "text": text}]}})
-        await ws.send_json({"type": "response.create"})
+        # The phrase goes in the response instructions, not a user turn: given a user
+        # turn, gpt-realtime-2.1 answered the order instead of reading it (reference-repo fix c4249de:
+        # 3/3 paraphrased that way; this form 6/6 verbatim on 2.1 and 1.5).
+        await ws.send_json({"type": "response.create", "response": {
+            "instructions": f"Say exactly this sentence, word for word, and nothing else: \"{text}\""}})
         deadline = time.monotonic() + timeout
         while (remaining := deadline - time.monotonic()) > 0:
             event = await _next_event(ws, remaining)
@@ -243,6 +291,31 @@ async def _synthesize(url: str, headers: dict, text: str, timeout: float) -> byt
             elif event["type"] == "error":
                 raise SmokeError(f"could not synthesize test audio: {event.get('error')}")
     return bytes(pcm)
+
+
+def _normalised_words(text: str) -> list[str]:
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").lower()
+    return re.sub(r"[^a-z0-9']+", " ", text).replace("'", "").split()
+
+
+def transcript_similarity(expected: str, transcript: str) -> float:
+    """0..1 similarity of the normalised word sequences (case, punctuation and accents ignored)."""
+    want, got = _normalised_words(expected), _normalised_words(transcript)
+    if not want or not got:
+        return 0.0
+    return difflib.SequenceMatcher(None, want, got, autojunk=False).ratio()
+
+
+def judge_transcript(model: str | None, transcript: str) -> tuple[list[str], list[str]]:
+    """(failures, report) for a completed transcription of TRANSCRIPTION_PHRASE."""
+    if not transcript.strip():
+        return [f"transcription ({model}): completed with an empty transcript"], []
+    score = transcript_similarity(TRANSCRIPTION_PHRASE, transcript)
+    if score < TRANSCRIPTION_MIN_SIMILARITY:
+        return [f"transcription ({model}): transcript {transcript!r} is not the test phrase "
+                f"{TRANSCRIPTION_PHRASE!r} (similarity {score:.2f} < {TRANSCRIPTION_MIN_SIMILARITY:.2f}) -- "
+                "the TTS step answered instead of reciting, or guest speech is mis-transcribed"], []
+    return [], [f"PASS  transcription ({model}): {transcript!r} (similarity {score:.2f})"]
 
 
 async def check_transcription(rtmt: RTMiddleTier, url: str, headers: dict, timeout: float) -> tuple[list[str], list[str]]:
@@ -271,13 +344,7 @@ async def check_transcription(rtmt: RTMiddleTier, url: str, headers: dict, timeo
                 continue
             kind = event.get("type")
             if kind == "conversation.item.input_audio_transcription.completed":
-                transcript = event.get("transcript") or ""
-                if not transcript.strip():
-                    return [f"transcription ({model}): completed with an empty transcript"], []
-                # The test audio is model-generated; a model that paraphrases instead of
-                # reading verbatim still proves transcription works, so only note it.
-                note = "" if TRANSCRIPTION_KEYWORD in transcript.lower() else " (test audio was paraphrased by the TTS step)"
-                return [], [f"PASS  transcription ({model}): {transcript!r}{note}"]
+                return judge_transcript(model, event.get("transcript") or "")
             if kind == "conversation.item.input_audio_transcription.failed":
                 err = event.get("error") or {}
                 return [f"transcription ({model}): FAILED code={err.get('code')} message={err.get('message')} "
@@ -288,13 +355,14 @@ async def check_transcription(rtmt: RTMiddleTier, url: str, headers: dict, timeo
 
 
 async def run(endpoint: str, deployment: str, *, voice: str | None, timeout: float,
-              skip_transcription: bool) -> int:
+              skip_transcription: bool, headers: dict[str, str] | None = None,
+              tenant_id: str | None = None, subscription_id: str | None = None) -> int:
     rtmt = build_middle_tier(endpoint, deployment, voice)
     url = realtime_url(endpoint, deployment)
     print(f"Realtime smoke check: deployment={deployment} voice={rtmt.voice_choice} "
           f"transcription={rtmt.transcription_model} "
           f"reasoning={rtmt.reasoning_effort if rtmt.reasoning_enabled() else 'off'}")
-    headers = get_auth_headers()
+    headers = get_auth_headers(tenant_id, subscription_id) if headers is None else headers
     try:
         failures, report = await check_session_updates(rtmt, url, headers, timeout)
         if not skip_transcription:
@@ -320,6 +388,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--endpoint", help="Azure OpenAI endpoint (default: AZURE_OPENAI_EASTUS2_ENDPOINT)")
     parser.add_argument("--deployment", help="Realtime deployment (default: AZURE_OPENAI_REALTIME_DEPLOYMENT)")
     parser.add_argument("--voice", help="Voice to send (default: AZURE_OPENAI_REALTIME_VOICE_CHOICE or config.yaml)")
+    parser.add_argument("--tenant", help="Entra tenant of the Azure OpenAI resource (default: AZURE_TENANT_ID)")
+    parser.add_argument("--subscription", help="Subscription whose `az` sign-in to use (default: AZURE_SUBSCRIPTION_ID)")
     parser.add_argument("--timeout", type=float, default=20.0, help="Seconds to wait per server reply (default 20)")
     parser.add_argument("--skip-transcription", action="store_true",
                         help="Skip the live speech-transcription check")
@@ -337,9 +407,18 @@ def main(argv: list[str] | None = None) -> int:
                  "AZURE_OPENAI_REALTIME_VOICE_CHOICE"):
         if name not in os.environ and azd_values.get(name):
             os.environ[name] = azd_values[name]
+    # Precedence per value: CLI > env > azd env (even when --endpoint/--deployment skipped the azd read).
+    identity = {}
+    for name, cli in (("AZURE_TENANT_ID", args.tenant), ("AZURE_SUBSCRIPTION_ID", args.subscription)):
+        identity[name] = cli or os.environ.get(name)
+    if not all(identity.values()):
+        azd_values = azd_values or _azd_env_values()
+        for name, value in identity.items():
+            identity[name] = value or azd_values.get(name) or None
     try:
         return asyncio.run(run(endpoint, deployment, voice=args.voice, timeout=args.timeout,
-                               skip_transcription=args.skip_transcription))
+                               skip_transcription=args.skip_transcription,
+                               tenant_id=identity["AZURE_TENANT_ID"], subscription_id=identity["AZURE_SUBSCRIPTION_ID"]))
     except SmokeError as exc:
         print(f"Realtime smoke check could not run: {exc}", file=sys.stderr)
         return 2

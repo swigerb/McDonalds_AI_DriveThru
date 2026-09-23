@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from config_loader import get_config, get_local_mode_config
 from local_search import attach_local_tools
-from processor_router import ProcessorRouter
+from processor_router import WS_COMPRESS, ProcessorRouter
 from prompt_loader import PromptLoader
 from rtmt import RTMiddleTier, configure_realtime_model, create_hmac_token
 from tools import attach_tools_rtmt
@@ -393,7 +393,7 @@ async def create_app() -> web.Application:
     # connect to /api/ws-test but not /realtime, the problem is in the
     # realtime handler, not the server's WebSocket support.
     async def ws_test_handler(request: web.Request) -> web.WebSocketResponse:
-        ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True)
+        ws = web.WebSocketResponse(heartbeat=15.0, autoping=True, autoclose=True, compress=WS_COMPRESS)
         await ws.prepare(request)
         logger.info("[ws-test] WebSocket test connection opened")
         await ws.send_json({"type": "ws-test.connected", "message": "WebSocket echo test active"})

@@ -1,7 +1,7 @@
 {
     "app": {
-        "title": "Parlez à vos données",
-        "footer": "Créée avec Azure AI Search + Azure OpenAI",
+        "title": "Commande vocale McDonald's",
+        "footer": "Conçu avec Azure AI, Azure OpenAI et Azure Speech",
         "showTranscript": "Afficher la transcription",
         "stopRecording": "Arrêter l'enregistrement",
         "startRecording": "Commencer l'enregistrement",
@@ -11,7 +11,9 @@
         "notRecordingMessage": "Bienvenue au Drive-Thru McDonald's !",
         "conversationInProgress": "Conversation en cours",
         "sessionEndedIdle": "Session terminée pour inactivité. Touchez le micro pour commencer une nouvelle commande.",
-        "connectionLost": "Connexion perdue. Touchez le micro pour recommencer."
+        "connectionLost": "Connexion perdue. Touchez le micro pour recommencer.",
+        "rateLimited": "Un instant…",
+        "rateLimitedFinal": "Nous sommes un peu débordés. Pouvez-vous répéter, s'il vous plaît ?"
     },
     "history": {
         "transcriptHistory": "Historique de la transcription",
@@ -20,5 +22,8 @@
     "groundingFiles": {
         "title": "Fichiers d'ancrage",
         "description": "Fichiers utilisés pour ancrer les réponses."
+    },
+    "menu": {
+        "title": "Menu"
     }
 }
