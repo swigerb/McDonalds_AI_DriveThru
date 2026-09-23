@@ -105,3 +105,6 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 ## Sonic parity — item 6 mutation check (2026-09-22)
 - 23 mutants (rtmt ×4, config.yaml, session_manager ×2, useRealtime ×11, status-message ×2, App.tsx ×3), 23 killed. 6a (`ws_compression` default flipped to True) first SURVIVED because config.yaml always supplies the key; added `test_compression_stays_off_when_config_omits_the_key` (loads a fresh rtmt copy with an empty connection config) and it was killed.
 - Runner needs PYTHONIOENCODING=utf-8 when printing vitest's ❯ glyph.
+
+## Sonic parity — item 7 mutation check (2026-09-22)
+- 9 mutants (main.parameters.json ×3, main.bicep ×5, azure.yaml ×1), 9 killed — incl. un-conditioning the openAi module, flipping the reuse default, and adding a non-role declaration scoped to the shared OpenAI RG. New tests fail 4/6 against the pre-fix parameters file (stash check).
