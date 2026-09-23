@@ -113,3 +113,9 @@
 - `session_manager.IDLE_CLOSE_CODE=4000` (unchanged) + `IDLE_CLOSE_REASON="idle_timeout"` (was a prose message) — the frontend keys off 4000 to stop auto-reconnect.
 - NOT changed (local mode out of scope, flagged): processor_router local sockets (L306/L376), its no-processor error socket (L357), and app.py ws_test_handler (L396) still use aiohttp's default compress=True.
 - Tests: `tests/test_ws_transport.py` (7) — drives the real middle tier with Chromium-style framing (PONG then compressed frame).
+
+## Sonic parity — brand spot-check, gpt-realtime-2.1 live (2026-09-22)
+- Harness (scratch, not committed): real McD system prompt + real tools (live Azure AI Search `mcdonalds-menu-items`, real order_state), bootstrap session.update from rtmt, text user turns, first-audio latency measured from response.create to the first output_audio.delta (includes tool round-trips).
+- Correctness (2 reps × 6 scenarios): low 12/12, none 11/12 — at none, "small fries → actually make that a large" once ADDED a large next to the small (low replaced it both times). Menu question ("What comes on a Big Mac?") is search-grounded; in 2 of ~6 low attempts the model said the index doesn't list ingredients (index content, not a reasoning issue).
+- First audio: low median 969 ms / max 2266; none median 1000 ms / max 5391. No regression from low; keep `reasoning_effort: low`.
+- Rate limit: the shared deployment (capacity 10, also serving Sonic prod) returned `response.done status=failed inference_rate_limit_exceeded` under back-to-back test conversations. McD passes this through silently — the guest hears nothing, and there's no retry or apology. Flagged, not changed. The spot-check was throttled (20 s gaps) and rate-limited runs were re-run.

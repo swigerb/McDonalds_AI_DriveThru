@@ -42,3 +42,8 @@
 - **Decisions Merged:** #40–#41 captured (offline mode documentation, user directives)
 - **Links:** Piper voices reference (huggingface.co/rhasspy/piper-voices), Azure Local compatibility callout
 - **Next:** Documentation complete, ready for user guidance and deployment guides
+
+## Sonic parity review — feat/sonic-parity (2026-09-22)
+- Items 1–7 landed as separate commits on the cloud realtime path only; local mode (Phi-4/Piper) untouched except for the shared browser hook (keep=false plus 4000 handling, harmless for local).
+- Silent-model flags (raised by the brief): (1) FIXED — a tool exception used to escape `response.output_item.done` and kill the session with no function_call_output; it now returns an apology result. (2) OPEN — `tools.search`: only `search_client.search()` is guarded, so pager iteration and the semantic retry can raise (now caught by the seam with a generic apology). (3) OPEN — `response.done status=failed` (e.g. rate limit on the shared deployment) is relayed silently, with no retry or apology. (4) OPEN — local/test sockets (processor_router L306/L357/L376, app.py ws_test_handler) keep the aiohttp default compress=True (aiohttp#13274).
+- Shared OpenAI: provision with reuse=true touches rg-sonic-demo only through two already-existing role assignments; it declares no deployments.
