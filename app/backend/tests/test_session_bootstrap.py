@@ -617,6 +617,20 @@ class ReasoningAndTranscriptionConfigTests(unittest.TestCase):
                      "gpt-realtime-mini-2025-10-06", "gpt-4o-realtime-preview"):
             self.assertFalse(deployment_supports_reasoning(name), name)
 
+    def test_data_zone_2_1_deployment_is_a_reasoning_model(self):
+        """McDonald's and Dunkin share `gpt-realtime-2.1-dz` (DataZoneStandard) on the shared account.
+        Under reasoning_model: auto it must still send `reasoning`; the 1.5 rollback with the same
+        suffix must not."""
+        from rtmt import configure_realtime_model, deployment_supports_reasoning
+        self.assertTrue(deployment_supports_reasoning("gpt-realtime-2.1-dz"))
+        self.assertFalse(deployment_supports_reasoning("gpt-realtime-1.5-dz"))
+        rtmt = configure_realtime_model(self._rtmt("gpt-realtime-2.1-dz"),
+                                        {"reasoning_effort": "low", "reasoning_model": "auto"}, environ={})
+        self.assertTrue(rtmt.reasoning_enabled())
+        self.assertEqual(self._bootstrap(rtmt)["reasoning"], {"effort": "low"})
+        self.assertEqual(rtmt._build_session({})["reasoning"], {"effort": "low"})
+        self.assertEqual(json.loads(rtmt.build_fallback_session_update())["session"].get("reasoning"), None)
+
     def test_client_cannot_inject_reasoning(self):
         rtmt = self._rtmt("gpt-realtime-1.5")
         session = rtmt._build_session({"reasoning": {"effort": "high"}, "parallel_tool_calls": True})

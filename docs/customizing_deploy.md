@@ -27,6 +27,9 @@ If you've already run `azd up` and want to first preview the voice with the deve
 The template deploys `gpt-realtime-2.1` (version `2026-07-07`, GlobalStandard). `gpt-realtime-1.5` remains a
 supported rollback: `azd env set AZURE_OPENAI_REALTIME_DEPLOYMENT gpt-realtime-1.5`.
 
+The deployment name is configurable (`AZURE_OPENAI_REALTIME_DEPLOYMENT`). On the shared demo account McDonald's
+uses `gpt-realtime-2.1-dz` (the same model on a DataZoneStandard deployment), so a custom or suffixed name is fine.
+
 `model.reasoning_effort` in `app/backend/config.yaml` (default `low`; env `AZURE_OPENAI_REALTIME_REASONING_EFFORT`,
 `off` disables) is sent as `session.reasoning.effort` only when the deployment is a reasoning model.
 `model.reasoning_model` (env `AZURE_OPENAI_REALTIME_REASONING_MODEL`: `auto` | `true` | `false`) says whether it is;
