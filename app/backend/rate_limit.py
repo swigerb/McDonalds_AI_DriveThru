@@ -180,6 +180,10 @@ class RateLimitRecovery:
             return
         self.cancel("a new response started")
 
+    def set_session_id(self, session_id: str | None) -> None:
+        """Follow a resumed session (logging only)."""
+        self._session_id = session_id
+
     def close(self) -> None:
         if self.retry_pending:
             self._task.cancel()
