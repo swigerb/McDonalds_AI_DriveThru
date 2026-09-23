@@ -53,3 +53,12 @@
 - Reviewed R1 for talk-over risk: every retry path is cancelled by guest speech; the clip is played with the mic muted so it can't cancel the retry itself; `final` always reopens the mic. Local mode (Phi-4/Piper) doesn't emit `extension.rate_limited` and is otherwise untouched apart from L1.
 - Needs a deploy to confirm: real rate-limit event shapes and hint text on the shared deployment, clip playback + mute in a real browser, and the azd env — `mcd-demo` still has `AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime-2.1`, not the `-dz` deployment McDonald's is meant to use (Brian's call).
 - Still open from the Sonic-parity review: `tools.search` guards only `search_client.search()` (generic apology via the tool-error seam covers the rest). The docs heading "Customizing the VoiceRAG deployment" is a template leftover outside R3's i18n scope.
+- **Order resume port — review (2026-09-23, feat/order-resume):**
+  - Scope held to the cloud realtime path. Local (Phi-4/Piper) and Azure Speech modes are unchanged: their tests pass and they show no resume UI.
+  - Deltas from Sonic are documented in `docs/order_resume.md` ("How it maps onto McDonald's"): the router seam, R1 composition, the voice re-send, the held tap, no ctx_monitor feeding, and `resumeEnabled`.
+  - Only a deploy can confirm:
+    - the sticky affinity cookie on the ws upgrade;
+    - the session secret surviving provision;
+    - the real-browser mic auto-restart on the deployed origin.
+  - No push/merge/deploy.
+  - Closed: the 'Customizing the VoiceRAG deployment' template heading (and the other template-branded doc headings) was fixed in 9f28e0e, with a heading guard in test_rebrand_verification.
