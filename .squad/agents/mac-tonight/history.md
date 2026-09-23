@@ -107,3 +107,9 @@
 - `scripts/smoke_realtime.{py,ps1,sh}` ported from Sonic. McD adaptation: `build_middle_tier` calls the REAL `tools.attach_tools_rtmt` (dummy search endpoint, never called) and passes `prompt_loader` like app.py, instead of Sonic's re-derived schema map — the smoke payload can't drift from the app's.
 - azure.yaml `postdeploy` hook: `interactive: false`, `continueOnError: true`; wrappers always `exit 0` (skip: `MCD_SKIP_REALTIME_SMOKE=true`). Uses the root `.venv` created by the postprovision hook.
 - Live (read-only, shared cog-axgpampkq3yfa): 2.1 → bootstrap / relayed / fallback all `session.updated` with 4 tools, tool_choice=auto, reasoning low; whisper-1 transcription PASS. 1.5 rollback → all PASS, reasoning not sent.
+
+## Sonic parity — item 6 backend: browser socket without permessage-deflate (2026-09-22)
+- aiohttp 3.14.3 (pinned here too) rejects the first compressed frame after an initial PONG (aio-libs/aiohttp#13274) — exactly a browser socket idle past one heartbeat. `config.yaml connection.ws_compression: false` → `rtmt._WS_COMPRESS`, applied to both cloud `WebSocketResponse`s (main + busy rejection); upstream `ws_connect(compress=0)` (AOAI declines deflate anyway).
+- `session_manager.IDLE_CLOSE_CODE=4000` (unchanged) + `IDLE_CLOSE_REASON="idle_timeout"` (was a prose message) — the frontend keys off 4000 to stop auto-reconnect.
+- NOT changed (local mode out of scope, flagged): processor_router local sockets (L306/L376), its no-processor error socket (L357), and app.py ws_test_handler (L396) still use aiohttp's default compress=True.
+- Tests: `tests/test_ws_transport.py` (7) — drives the real middle tier with Chromium-style framing (PONG then compressed frame).

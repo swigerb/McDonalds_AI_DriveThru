@@ -101,3 +101,7 @@ All 560 total tests pass (137 new + 423 existing), zero regressions.
 
 ## Sonic parity — item 5 mutation check (2026-09-22)
 - 16 mutants (smoke_realtime.py ×13, azure.yaml continueOnError, ps1/sh exit code), 16 killed. Tests drive the real smoke functions against an in-process fake GA endpoint (`EchoGA`) that rejects beta keys like GA does — so sending the raw browser session (mutant 5g) is caught.
+
+## Sonic parity — item 6 mutation check (2026-09-22)
+- 23 mutants (rtmt ×4, config.yaml, session_manager ×2, useRealtime ×11, status-message ×2, App.tsx ×3), 23 killed. 6a (`ws_compression` default flipped to True) first SURVIVED because config.yaml always supplies the key; added `test_compression_stays_off_when_config_omits_the_key` (loads a fresh rtmt copy with an empty connection config) and it was killed.
+- Runner needs PYTHONIOENCODING=utf-8 when printing vitest's ❯ glyph.
