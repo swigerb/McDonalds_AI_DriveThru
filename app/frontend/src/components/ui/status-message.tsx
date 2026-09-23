@@ -4,7 +4,7 @@ import { memo } from "react";
 import { useLocalMode } from "@/context/local-mode-context";
 import type { RateLimitNotice } from "@/hooks/useRateLimitApology";
 
-export type ConnectionNotice = "idle" | "lost" | null;
+export type ConnectionNotice = "idle" | "lost" | "reconnecting" | "resumed" | "tapToResume" | "resumeRejected" | "superseded" | null;
 
 type Properties = {
     isRecording: boolean;
@@ -15,7 +15,12 @@ type Properties = {
 
 const NOTICE_KEYS: Record<Exclude<ConnectionNotice, null>, string> = {
     idle: "status.sessionEndedIdle",
-    lost: "status.connectionLost"
+    lost: "status.connectionLost",
+    reconnecting: "status.reconnecting",
+    resumed: "status.resumed",
+    tapToResume: "status.resumedTapToContinue",
+    resumeRejected: "status.resumeRejected",
+    superseded: "status.superseded"
 };
 
 const BUSY_KEYS: Record<Exclude<RateLimitNotice, null>, string> = {
@@ -56,7 +61,7 @@ export default memo(function StatusMessage({ isRecording, notice = null, busyNot
                 ))}
             </div>
             <p className="mb-4 ml-2 mt-6 font-semibold text-primary">
-                {t(busyNotice ? BUSY_KEYS[busyNotice] : "status.conversationInProgress")}
+                {t(busyNotice ? BUSY_KEYS[busyNotice] : notice === "resumed" ? NOTICE_KEYS.resumed : "status.conversationInProgress")}
             </p>
             <span className="mb-4 ml-2 mt-6">{modeIndicator}</span>
         </div>

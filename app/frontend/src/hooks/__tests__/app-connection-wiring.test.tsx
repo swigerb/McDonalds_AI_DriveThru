@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import appSource from "@/App.tsx?raw";
 
-// App.tsx is too entangled (audio worklets, speech SDK, MSAL) to mount in jsdom,
-// so pin the cloud-only connection-lost wiring at the source level.
+// Source-level pins for the cloud-only connection-lost wiring. The behaviour
+// (including order resume) is exercised on a mounted App in __tests__/App.resume.test.tsx.
 describe("App connection-lost wiring", () => {
     it("leaves local mode and Azure Speech on their existing path", () => {
         expect(appSource).toMatch(/onConnectionLost:[\s\S]{0,300}if \(useAzureSpeechOn \|\| localMode\) return;/);
@@ -11,7 +11,7 @@ describe("App connection-lost wiring", () => {
 
     it("surfaces the idle notice and stops an active conversation", () => {
         expect(appSource).toMatch(/if \(wasActive\) void stopConversation\(\);/);
-        expect(appSource).toContain('setConnectionNotice(idle ? "idle" : "lost")');
+        expect(appSource).toContain('setConnectionNotice(idle ? "idle" : kind === "superseded" ? "superseded" : "lost")');
         expect(appSource).toContain("notice={connectionNotice}");
     });
 

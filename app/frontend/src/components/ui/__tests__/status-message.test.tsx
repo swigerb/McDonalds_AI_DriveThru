@@ -38,4 +38,33 @@ describe("StatusMessage", () => {
         renderWithProvider(<StatusMessage isRecording busyNotice="final" />);
         expect(screen.getByText("status.rateLimitedFinal")).toBeInTheDocument();
     });
+
+    it.each([
+        ["reconnecting", "status.reconnecting"],
+        ["resumed", "status.resumed"],
+        ["tapToResume", "status.resumedTapToContinue"],
+        ["resumeRejected", "status.resumeRejected"],
+        ["superseded", "status.superseded"]
+    ] as const)("renders the %s notice when the mic is off", (notice, key) => {
+        renderWithProvider(<StatusMessage isRecording={false} notice={notice} />);
+        expect(screen.getByText(key)).toBeInTheDocument();
+    });
+
+    it("shows the reconnected line while listening after a resume", () => {
+        const { container } = renderWithProvider(<StatusMessage isRecording notice="resumed" />);
+        expect(screen.getByText("status.resumed")).toBeInTheDocument();
+        expect(screen.queryByText("status.conversationInProgress")).not.toBeInTheDocument();
+        expect(container.querySelector(".listening-equalizer")).not.toBeNull();
+    });
+
+    it("other notices don't replace the listening label", () => {
+        renderWithProvider(<StatusMessage isRecording notice="reconnecting" />);
+        expect(screen.getByText("status.conversationInProgress")).toBeInTheDocument();
+    });
+
+    it("a rate-limit notice outranks the reconnected line", () => {
+        renderWithProvider(<StatusMessage isRecording notice="resumed" busyNotice="busy" />);
+        expect(screen.getByText("status.rateLimited")).toBeInTheDocument();
+        expect(screen.queryByText("status.resumed")).not.toBeInTheDocument();
+    });
 });
