@@ -343,6 +343,50 @@ class SessionBootstrapTests(_RealtimeHarness):
         await browser.close()
 
 
+class SessionScrubTests(_RealtimeHarness):
+    """The middle tier must never leak the system prompt or tool schemas to the
+    browser. `session.created` already strips them before relaying; this locks
+    in that `session.updated` gets the same treatment (GitHub issue #4 /
+    Sonic reference repo #27 -- found by the cross-backend conformance suite).
+    """
+
+    async def test_session_updated_relayed_to_browser_has_no_instructions_or_tools(self):
+        browser = await self.client.ws_connect("/realtime")
+        # Bootstrap fires a session.update at us immediately on connect; collect
+        # browser-bound frames until the resulting session.updated ack arrives.
+        events: list[dict] = []
+
+        async def collect_until_updated():
+            while True:
+                msg = await browser.receive()
+                event = json.loads(msg.data)
+                events.append(event)
+                if event.get("type") == "session.updated":
+                    return
+
+        await asyncio.wait_for(collect_until_updated(), 5.0)
+
+        created = [e for e in events if e["type"] == "session.created"]
+        updated = [e for e in events if e["type"] == "session.updated"]
+        self.assertEqual(len(created), 1)
+        self.assertGreaterEqual(len(updated), 1)
+
+        # Sanity check: the *upstream* fake really did receive our real prompt
+        # and tool schemas -- otherwise this test would pass for the wrong
+        # reason (nothing sensitive was ever in flight).
+        self.assertEqual(self.fake.session["instructions"], SYSTEM_PROMPT)
+        self.assertEqual([t.get("name") for t in self.fake.session["tools"]], TOOL_NAMES)
+
+        for event in created + updated:
+            session = event["session"]
+            self.assertFalse(session.get("instructions"),
+                              f"{event['type']} leaked the system prompt to the browser: {session.get('instructions')!r}")
+            self.assertEqual(session.get("tools"), [],
+                              f"{event['type']} leaked tool schemas to the browser: {session.get('tools')!r}")
+
+        await browser.close()
+
+
 class SessionUpdateFallbackTests(_RealtimeHarness):
     """A rejected session.update must never silently cost us the tools.
 
